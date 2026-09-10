@@ -1,0 +1,543 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  RESIDENT
+  SERVICE_PROVIDER
+  BUSINESS_OWNER
+  MODERATOR
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+  REVIEW_REQUIRED
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  RESERVED
+  SOLD
+  PAUSED
+  REMOVED
+}
+
+enum ListingCondition {
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum BusinessKind {
+  SERVICE_PROVIDER
+  LOCAL_BUSINESS
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVOKED
+}
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  REMOVED
+}
+
+enum ReportReason {
+  SCAM_FRAUD
+  PROHIBITED
+  DUPLICATE
+  HARASSMENT
+  MISLEADING
+  WRONG_CATEGORY
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum PromotionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  PAUSED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+enum LeadType {
+  WHATSAPP
+  PHONE
+  QUOTE
+  DIRECTIONS
+  PROFILE_VIEW
+}
+
+model User {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  email                    String?                @unique
+  phone                    String?                @unique
+  role                     UserRole               @default(RESIDENT)
+  status                   AccountStatus          @default(ACTIVE)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  deletedAt                DateTime?
+  profile                  Profile?
+  phoneVerifications       PhoneVerification[]
+  residentVerifications   ResidentVerification[] @relation("VerificationSubject")
+  reviewedVerifications    ResidentVerification[] @relation("VerificationReviewer")
+  listings                 Listing[]
+  favorites                Favorite[]
+  businessClaims           BusinessClaim[]
+  reviewsWritten           Review[]               @relation("ReviewAuthor")
+  reports                  Report[]               @relation("ReportReporter")
+  moderationActions        ModerationAction[]
+  subscriptions            Subscription[]
+  leadEvents               LeadEvent[]            @relation("LeadActor")
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  analyticsEvents          AnalyticsEvent[]
+  businessesOwned          Business[]
+  reviewResponses          ReviewResponse[]
+}
+
+model Profile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @db.Uuid
+  displayName       String
+  avatarUrl         String?
+  broadZoneId       String?  @db.Uuid
+  memberSince       DateTime @default(now())
+  verificationState VerificationStatus @default(UNVERIFIED)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  broadZone         Zone?    @relation(fields: [broadZoneId], references: [id], onDelete: SetNull)
+}
+
+model PhoneVerification {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  phone          String
+  provider       String
+  providerRef    String?
+  verifiedAt     DateTime?
+  attempts       Int      @default(0)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([phone])
+}
+
+model ResidentVerification {
+  id             String             @id @default(uuid()) @db.Uuid
+  userId         String             @db.Uuid
+  status         VerificationStatus @default(PENDING)
+  resultToken    String?
+  reviewerId     String?            @db.Uuid
+  reason         String?
+  submittedAt    DateTime           @default(now())
+  reviewedAt     DateTime?
+  user           User               @relation("VerificationSubject", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer       User?              @relation("VerificationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  @@index([status, submittedAt])
+}
+
+model Zone {
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String       @unique
+  sortOrder      Int          @default(0)
+  isActive       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  profiles       Profile[]
+  listings       Listing[]
+  serviceAreas   ServiceArea[]
+  businesses     Business[]
+}
+
+model Category {
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String       @unique
+  parentId       String?      @db.Uuid
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  parent         Category?    @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Category[]   @relation("CategoryTree")
+  listings       Listing[]
+  businessLinks  BusinessCategory[]
+  offers         Offer[]
+}
+
+model Listing {
+  id             String            @id @default(uuid()) @db.Uuid
+  ownerId        String            @db.Uuid
+  categoryId     String            @db.Uuid
+  zoneId         String?           @db.Uuid
+  title          String
+  slug           String            @unique
+  description    String
+  priceMinor     Int?
+  currency       String            @default("EGP")
+  condition      ListingCondition
+  status         ListingStatus     @default(PENDING_REVIEW)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  publishedAt    DateTime?
+  deletedAt      DateTime?
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  category       Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  zone           Zone?             @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  images         ListingImage[]
+  favorites      Favorite[]
+  reports        Report[]
+  reviews        Review[]
+  leadEvents     LeadEvent[]
+  promotions     Promotion[]
+  @@index([status, categoryId, zoneId, createdAt])
+}
+
+model ListingImage {
+  id             String   @id @default(uuid()) @db.Uuid
+  listingId      String   @db.Uuid
+  objectKey      String
+  thumbnailKey   String?
+  mimeType       String
+  byteSize       Int
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  listing        Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Favorite {
+  userId         String   @db.Uuid
+  listingId      String   @db.Uuid
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing        Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  @@id([userId, listingId])
+}
+
+model Business {
+  id             String             @id @default(uuid()) @db.Uuid
+  ownerId        String?            @db.Uuid
+  zoneId         String?            @db.Uuid
+  kind           BusinessKind
+  name           String
+  slug           String             @unique
+  description    String
+  phone          String?
+  whatsapp       String?
+  websiteUrl     String?
+  socialUrl      String?
+  isVerified     Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  owner          User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  zone           Zone?              @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  claims         BusinessClaim[]
+  categories     BusinessCategory[]
+  images         BusinessImage[]
+  hours          BusinessHours[]
+  serviceAreas   ServiceArea[]
+  offers         Offer[]
+  reviews        Review[]
+  reports        Report[]
+  leadEvents     LeadEvent[]
+  promotions     Promotion[]
+}
+
+model BusinessClaim {
+  id             String       @id @default(uuid()) @db.Uuid
+  businessId     String       @db.Uuid
+  claimantId     String       @db.Uuid
+  status         ClaimStatus  @default(PENDING)
+  reason         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  claimant       User         @relation(fields: [claimantId], references: [id], onDelete: Cascade)
+  @@unique([businessId, claimantId])
+}
+
+model BusinessCategory {
+  businessId     String   @db.Uuid
+  categoryId     String   @db.Uuid
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@id([businessId, categoryId])
+}
+
+model BusinessImage {
+  id             String   @id @default(uuid()) @db.Uuid
+  businessId     String   @db.Uuid
+  objectKey      String
+  sortOrder      Int      @default(0)
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model BusinessHours {
+  id             String   @id @default(uuid()) @db.Uuid
+  businessId     String   @db.Uuid
+  weekday        Int
+  opensAt        String?
+  closesAt       String?
+  isClosed       Boolean  @default(false)
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, weekday])
+}
+
+model ServiceArea {
+  id             String   @id @default(uuid()) @db.Uuid
+  businessId     String   @db.Uuid
+  zoneId         String   @db.Uuid
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  zone           Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  @@unique([businessId, zoneId])
+}
+
+model Offer {
+  id             String          @id @default(uuid()) @db.Uuid
+  businessId     String          @db.Uuid
+  categoryId     String?         @db.Uuid
+  title          String
+  description    String
+  terms          String?
+  startsAt       DateTime
+  endsAt         DateTime
+  status         PromotionStatus @default(DRAFT)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  promotions     Promotion[]
+  @@index([status, startsAt, endsAt])
+}
+
+model Review {
+  id             String        @id @default(uuid()) @db.Uuid
+  authorId       String        @db.Uuid
+  listingId      String?       @db.Uuid
+  businessId     String?       @db.Uuid
+  rating         Int
+  body           String
+  status         ReviewStatus  @default(PENDING)
+  interactionKey String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  author         User          @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  listing        Listing?      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  business       Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  response       ReviewResponse?
+  reports        Report[]
+  @@index([businessId, status])
+}
+
+model ReviewResponse {
+  id             String   @id @default(uuid()) @db.Uuid
+  reviewId       String   @unique @db.Uuid
+  authorId       String   @db.Uuid
+  body           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  review         Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+}
+
+model Report {
+  id             String       @id @default(uuid()) @db.Uuid
+  reporterId     String?      @db.Uuid
+  listingId      String?      @db.Uuid
+  businessId     String?      @db.Uuid
+  reviewId       String?      @db.Uuid
+  reason         ReportReason
+  details        String?
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  resolvedAt     DateTime?
+  reporter       User?        @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  listing        Listing?     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  business       Business?    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  review         Review?      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+}
+
+model ModerationAction {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorId        String   @db.Uuid
+  targetType     String
+  targetId       String   @db.Uuid
+  action         String
+  notes          String?
+  createdAt      DateTime @default(now())
+  actor          User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([targetType, targetId, createdAt])
+}
+
+model Plan {
+  id             String         @id @default(uuid()) @db.Uuid
+  key            String         @unique
+  name           String
+  description    String
+  priceMinor     Int?
+  currency       String         @default("EGP")
+  durationDays   Int?
+  isActive       Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subscriptions  Subscription[]
+  entitlements   Entitlement[]
+}
+
+model Subscription {
+  id             String             @id @default(uuid()) @db.Uuid
+  userId         String             @db.Uuid
+  planId         String             @db.Uuid
+  status         SubscriptionStatus @default(ACTIVE)
+  startsAt       DateTime
+  expiresAt      DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  entitlements   Entitlement[]
+  payments       Payment[]
+  @@index([userId, status, expiresAt])
+}
+
+model Entitlement {
+  id             String        @id @default(uuid()) @db.Uuid
+  planId         String        @db.Uuid
+  subscriptionId String?       @db.Uuid
+  key            String
+  value          String?
+  startsAt       DateTime
+  expiresAt      DateTime?
+  plan           Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  @@unique([subscriptionId, key])
+}
+
+model Promotion {
+  id             String          @id @default(uuid()) @db.Uuid
+  businessId     String          @db.Uuid
+  listingId      String?         @db.Uuid
+  offerId        String?         @db.Uuid
+  label          String
+  status         PromotionStatus @default(DRAFT)
+  startsAt       DateTime
+  endsAt         DateTime
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  listing        Listing?        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offer          Offer?          @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  @@index([status, startsAt, endsAt])
+}
+
+model Payment {
+  id             String             @id @default(uuid()) @db.Uuid
+  subscriptionId String?            @db.Uuid
+  gateway        String
+  gatewayEventId String?            @unique
+  amountMinor    Int
+  currency       String             @default("EGP")
+  status         PaymentStatus      @default(CREATED)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  subscription   Subscription?      @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  invoice        InvoiceRecord?
+}
+
+model InvoiceRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  paymentId      String   @unique @db.Uuid
+  reference      String   @unique
+  issuedAt       DateTime @default(now())
+  metadataJson   Json?
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model LeadEvent {
+  id             String     @id @default(uuid()) @db.Uuid
+  type           LeadType
+  userId         String?    @db.Uuid
+  listingId      String?    @db.Uuid
+  businessId     String?    @db.Uuid
+  occurredAt     DateTime   @default(now())
+  user           User?      @relation("LeadActor", fields: [userId], references: [id], onDelete: SetNull)
+  listing        Listing?   @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  business       Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  @@index([type, occurredAt])
+}
+
+model AnalyticsEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  userId         String?  @db.Uuid
+  properties     Json?
+  occurredAt     DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([name, occurredAt])
+}
+
+model Notification {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  kind           String
+  payload        Json
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorId        String?  @db.Uuid
+  action         String
+  targetType     String
+  targetId       String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  actor          User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  @@index([targetType, targetId, createdAt])
+}

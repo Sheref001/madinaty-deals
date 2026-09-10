@@ -1,0 +1,93 @@
+/* Classifieds-style browsing, using Madinaty branding and logical RTL spacing. */
+.topbar { padding-inline: max(24px, calc((100vw - 1280px) / 2)); gap: 20px; background: white; min-height: 88px; height: auto; padding-block: 16px; }
+.top-search { max-width: none; height: 48px; border-radius: 8px; }
+.top-actions { gap: 12px; }
+.search-scope, .search-zone { max-width: 140px; min-width: 0; width: 120px; height: 100%; border: 0; border-inline-start: 1px solid var(--line); color: var(--ink); background: white; padding: 8px; font-size: 12px; }
+.search-submit { border: 0; background: var(--teal); color: white; align-self: stretch; width: 48px; border-radius: 0 7px 7px 0; flex-shrink: 0; display: grid; place-items: center; }
+[dir="rtl"] .search-submit { border-radius: 7px 0 0 7px; }
+.header-saved { display: flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--teal); font-size: 12px; padding: 8px; }
+.header-post { white-space: nowrap; min-height: 44px; font-size: 13px; }
+.market-nav { background: white; border-block-end: 1px solid var(--line); padding-inline: max(24px, calc((100vw - 1280px) / 2)); }
+.market-nav .nav-list { flex-direction: row; gap: 16px; overflow-x: auto; }
+.market-nav .nav-item { flex-shrink: 0; width: auto; border-radius: 0; height: 52px; gap: 8px; border-block-end: 3px solid transparent; }
+.market-nav .nav-item.active { border-color: var(--teal); box-shadow: none; background: transparent; }
+.market-nav :is(.nav-divider,.nav-section-label) { display: none; }
+.main-content { margin-inline: auto; max-width: 1280px; padding: 28px 24px 60px; }
+.home-view,.browse-view,.admin-view { max-width: none; }
+.hero-grid { display: block; min-height: 0; padding: 28px 32px; background: #eaf2ed; border: 1px solid #d6e5dc; border-radius: 14px; }
+.hero-copy h1 { font-size: clamp(28px,3vw,42px); margin-block: 12px; line-height: 1.25; }
+.hero-copy > p { max-width: 760px; font-size: 14px; }
+.hero-actions { margin-block-start: 16px; }
+.hero-search { max-width: 720px; margin-block-start: 18px; }
+.trust-strip { margin-block: 20px 30px; }
+.category-grid { grid-template-columns: repeat(6,minmax(0,1fr)); gap: 12px; }
+.category-card { flex-direction: column; justify-content: start; text-align: center; padding: 18px 8px; gap: 12px; border-radius: 12px; }
+.category-card > svg { display: none; }
+.category-card > span:nth-child(2) { gap: 10px; }
+.category-card small { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.category-icon { width: 58px; height: 58px; border-radius: 50%; }
+.category-icon svg { width: 28px; height: 28px; }
+.home-listings { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.home-listings .result-detail strong { font-size: 17px; }
+.section-block { margin-block-end: 34px; }
+.section-heading h2 { font-size: 26px; }
+.page-intro { min-height: 0; }
+.page-intro h1 { font-size: 34px; }
+.browse-tabs { margin-block-start: 25px; }
+.market-results-layout { display: grid; grid-template-columns: 235px minmax(0,1fr); gap: 24px; align-items: start; }
+.market-filters { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 20px; }
+.market-filters h2 { font-size: 19px; line-height: 1.4; letter-spacing: normal; }
+.market-filters label { display: grid; gap: 8px; font-size: 12px; color: var(--ink); }
+.market-filters select,.market-filters input { width: 100%; min-width: 0; min-height: 40px; border: 1px solid #ccd9d1; border-radius: 6px; background: white; color: var(--ink); padding: 8px; }
+.market-filters fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+.market-filters legend { font-size: 13px; margin-block-end: 12px; }
+.price-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.market-filters p[role="alert"] { color: #9c2525; font-size: 12px; line-height: 1.6; }
+.results-column { min-width: 0; }
+.results-controls,.layout-switch { display: flex; align-items: center; gap: 8px; }
+.layout-switch { border: 1px solid var(--line); border-radius: 8px; padding: 3px; background: white; }
+.layout-switch button { display: grid; place-items: center; width: 36px; height: 34px; border: 0; border-radius: 5px; background: white; color: var(--ink-soft); }
+.layout-switch button[aria-pressed="true"] { background: var(--teal); color: white; }
+.results-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.results-grid.list-layout { grid-template-columns: 1fr; }
+.list-layout .result-card { display: grid; grid-template-columns: 190px minmax(0,1fr); }
+.list-layout .result-image { height: 100%; min-height: 190px; }
+.list-layout .result-body { padding: 18px 20px; }
+.list-layout .result-body h3 { font-size: 18px; }
+.list-layout .result-subtitle { font-size: 13px; }
+.list-layout .result-detail strong { font-size: 20px; }
+.result-card:hover { transform: none; }
+.listing-title { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.listing-title:hover { color: var(--teal); text-decoration: underline; }
+.ad-details { display: grid; gap: 16px; }
+.ad-details > p { line-height: 1.8; overflow-wrap: anywhere; }
+.ad-details > strong { font-size: 25px; color: var(--teal); }
+.ad-details aside { display: flex; gap: 12px; padding: 16px; background: #edf4ef; border-radius: 10px; font-size: 13px; line-height: 1.8; }
+.ad-details svg { flex-shrink: 0; }
+.list-layout .result-footer { display: flex; }
+@media (max-width:1100px) {
+  .topbar { flex-wrap: wrap; gap: 12px; }.top-search { order: 3; flex-basis: 100%; }
+  .search-scope,.search-zone { width: 150px; max-width: 150px; }
+  .home-listings,.results-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .category-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .market-nav .nav-list { gap: 4px; }.market-nav .nav-item { padding-inline: 10px; }
+}
+@media (max-width:760px) {
+  .topbar { padding: 10px 14px; gap: 8px; position: relative; }
+  .top-actions { gap: 7px; }.header-saved span { display: none; }.header-saved { padding: 4px; }.header-post { min-height: 38px; font-size: 11px; padding-inline: 9px; }.avatar-button { display: none; }
+  .top-search { flex-wrap: wrap; height: auto; padding: 0; overflow: hidden; gap: 0; }
+  .top-search > svg { margin-inline-start: 10px; }.top-search input { height: 44px; flex-basis: calc(100% - 46px); }
+  .search-scope,.search-zone { flex: 1; max-width: none; width: 0; min-height: 40px; border-block-start: 1px solid var(--line); font-size: 11px; }
+  .search-submit { height: 40px; border-radius: 0 !important; }
+  .market-nav { padding-inline: 8px; }.market-nav .nav-item { font-size: 11px; height: 46px; }.market-nav .nav-item svg { width: 15px; }
+  .main-content { padding: 18px 14px 85px; margin-inline: 0; }.hero-grid { padding: 20px; }
+  html[lang="ar"] .hero-copy h1 { font-size: 28px; }.hero-copy h1 { font-size: 28px; }
+  .home-listings,.results-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .category-grid { gap: 8px; }.category-card { padding: 14px 6px; }.category-card b { font-size: 11px; }
+  .trust-strip { margin-block-end: 26px; }.hero-search { height: 48px; }.hero-search input { font-size: 12px; }
+  .market-results-layout { grid-template-columns: 1fr; gap: 12px; }.collection-filters { display: none; }.collection-filters.is-open { display: block; }
+  .filter-button { display: inline-flex; }.market-filters { gap: 14px; }
+  .list-layout .result-card { grid-template-columns: 110px minmax(0,1fr); }.list-layout .result-image { min-height: 170px; }.list-layout .result-body { padding: 12px; }.list-layout .result-body h3 { font-size: 14px; }.list-layout .result-subtitle { font-size: 11px; }.list-layout .result-detail { flex-wrap: wrap; }.list-layout .result-detail strong { font-size: 16px; }.list-layout .result-footer { display: grid; }
+  .page-intro h1 { font-size: 28px; }.results-meta { gap: 8px; }.brand > span:last-child { display: flex; }.language-switch { min-height: 38px; font-size: 12px; padding: 6px; }
+}
+@media (max-width:380px) { .header-saved { display: none; }.list-layout .result-card { grid-template-columns: 90px minmax(0,1fr); }.topbar .brand > span:last-child { font-size: 12px; }.category-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }

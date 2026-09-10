@@ -344,8 +344,8 @@ function ResultCard({ result, compact = false, favorite = false, onFavorite, onC
       {isListing && <strong>{t(formatPrice(result.price))}</strong>}
       <p><MapPin size={15} />{t(result.zone)} · {t(result.createdAt)}</p>
       {isListing && <p>{t('Condition')}: {t(result.condition)} · {t(result.seller)}</p>}
-      <aside><ShieldCheck size={18} /><p>{t('Choose a busy public place. Inspect the item before paying, and never share an OTP or send a deposit to an unknown seller.')}</p></aside>
-      <p className="modal-intro">{t('Demo listing: contact and transactions are not connected yet.')}</p>
+      <aside><ShieldCheck size={18} /><p>{t(getSafetyMessage(result))}</p></aside>
+      <p className="modal-intro">{t('Demo content: contact and transactions are not connected yet.')}</p>
       {onFavorite && <button className="button button-outline" onClick={() => onFavorite(result)}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{t(favorite ? 'Remove from saved' : 'Save listing')}</button>}
     </div></ModalShell>}
   </article>;
@@ -355,6 +355,14 @@ function ResultArt({ result }: { result: SearchResult }) {
   const { t } = useTranslation();
   const letter = result.type === 'listing' ? result.title.charAt(0) : result.type === 'service' ? '↗' : result.type === 'business' ? '✦' : '%';
   return <><span className="art-letter">{t(letter)}</span><span className="art-line art-line-one" /><span className="art-line art-line-two" />{result.type === 'listing' && <span className="art-object">{t(result.image === 'tv' ? '▣' : result.image === 'chair' ? '⌒' : result.image === 'scooter' ? '◒' : '▰')}</span>}{result.type === 'service' && <span className="art-service-mark"><Wrench size={38} /></span>}{result.type === 'business' && <span className="art-business-mark"><Store size={38} /></span>}{result.type === 'offer' && <span className="art-offer-mark"><Tag size={36} /></span>}</>;
+}
+
+function getSafetyMessage(result: SearchResult): string {
+  if (result.type === 'listing' && result.category === 'Cars & motorcycles') return 'For vehicles: inspect with a trusted mechanic, verify ownership and registration documents, and do not send a deposit before the details are confirmed.';
+  if (result.type === 'listing') return 'Choose a busy public place. Inspect the item before paying, and never share an OTP or send a deposit to an unknown seller.';
+  if (result.type === 'service') return 'Agree on the scope, price and timing in writing. Check reviews and credentials where relevant, avoid full payment upfront to an unknown provider, and never share an OTP or password.';
+  if (result.type === 'business') return 'Confirm the business name, hours, price and delivery details through its listed contact. Be careful with unexpected payment links and never share an OTP.';
+  return 'Check the offer terms, expiry date, redemption conditions and final price before paying. Use the business’s listed contact and avoid suspicious payment links.';
 }
 
 function EmptyState({ view, query, onReset }: { view: View; query: string; onReset: () => void }) {

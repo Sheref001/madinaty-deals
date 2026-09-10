@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap');
 
 :root {
   --ink: #132d2d;
@@ -224,7 +224,7 @@ html[lang="ar"] :is(h1,h2,h3,.brand,.eyebrow,.section-label,.result-topline,.off
 
 html[lang="ar"] .brand > span:last-child,
 html[lang="ar"] .brand-small {
-  font-family: 'Cairo', 'DM Sans', sans-serif;
+  font-family: 'IBM Plex Sans Arabic', 'DM Sans', sans-serif;
   letter-spacing: 0;
 }
 html[lang="ar"] .brand > span:last-child { line-height: .95; font-size: 18px; font-weight: 800; gap: 2px; }

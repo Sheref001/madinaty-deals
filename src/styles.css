@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap');
 
 :root {
   --ink: #132d2d;
@@ -220,6 +221,18 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .language-switch { flex-shrink: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--teal); padding: 8px 10px; font-size: 13px; min-height: 40px; }
 html[lang="ar"] { font-family: Tahoma, Arial, sans-serif; }
 html[lang="ar"] :is(h1,h2,h3,.brand,.eyebrow,.section-label,.result-topline,.offer-stamp,.brand em,.brand-small em) { letter-spacing: normal; font-family: inherit; }
+
+html[lang="ar"] .brand > span:last-child,
+html[lang="ar"] .brand-small {
+  font-family: 'Cairo', 'DM Sans', sans-serif;
+  letter-spacing: 0;
+}
+html[lang="ar"] .brand > span:last-child { line-height: .95; font-size: 18px; font-weight: 800; gap: 2px; }
+html[lang="ar"] .brand > span:last-child b { color: var(--teal-dark); text-shadow: 0 1px 0 rgba(255,255,255,.9); }
+html[lang="ar"] .brand > span:last-child em { color: var(--orange); font-size: .9em; font-weight: 700; font-style: normal; position: relative; padding-inline-end: 9px; }
+html[lang="ar"] .brand > span:last-child em::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); inset-inline-end: 0; top: 50%; transform: translateY(-50%); }
+html[lang="ar"] .brand-small { font-weight: 800; }
+html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
 html[lang="ar"] :is(h1,h2) { line-height: 1.45; }
 html[lang="ar"] :is(h1 i,h2 i) { font-family: inherit; font-style: normal; }
 html[lang="ar"] :is(.hero-copy p,.modal-intro,.result-subtitle,.page-intro p) { line-height: 1.8; }
@@ -232,6 +245,7 @@ html[lang="ar"] :is(.brand > span:last-child,.brand em) { line-height: 1.25; }
 @media (max-width: 760px) {
   .brand-mark { flex-basis: 40px; width: 40px; height: 40px; border-radius: 13px; }
   .brand-mark-compact { flex-basis: 40px; }
+  html[lang="ar"] .brand > span:last-child { font-size: 15px; }
 }
 [dir="rtl"] .sidebar { right: 0; left: auto; }
 [dir="rtl"] .drawer-panel { right: 0; left: auto; transform: translateX(100%); }

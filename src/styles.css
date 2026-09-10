@@ -249,7 +249,7 @@ html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
 .single-split { grid-template-columns: 1fr; }
 .service-policy-note { padding: 11px 12px; display: flex; gap: 9px; align-items: flex-start; border: 1px solid #cfe4d2; border-radius: 10px; background: #edf7ed; color: var(--teal); }.service-policy-note > span { display: grid; gap: 3px; }.service-policy-note b { font-size: 11px; }.service-policy-note small { color: var(--ink-soft); font-size: 10px; line-height: 1.5; }
 .rental-policy-note { padding: 12px; display: flex; gap: 9px; align-items: flex-start; border: 1px solid #ead4a4; border-radius: 10px; background: #fff8e6; color: #8c681d; margin-block-end: 13px; }.rental-policy-note > span { display: grid; gap: 4px; }.rental-policy-note b { font-size: 11px; }.rental-policy-note small { color: #7c6b48; font-size: 10px; line-height: 1.5; }
-.content-policy-note { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; margin-block: 10px 13px; }.content-policy-note svg { color: var(--teal); flex: 0 0 auto; margin-top: 1px; }
+.content-policy-note { display: none; }
 .service-choice { color: #985322; background: #fff0df; }.business-choice { color: #68487d; background: #f1e8f7; }.offer-choice { color: #a36c12; background: #fff5ce; }
 .disabled-choice { opacity: .55; cursor: not-allowed; }.back-to-choices { border: 0; background: none; color: var(--teal); padding: 0; margin-block-end: 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
 html[dir="rtl"] .back-to-choices svg { transform: rotate(180deg); }

@@ -238,11 +238,9 @@ function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: Vi
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
     <svg viewBox="0 0 64 64" role="presentation">
-      <circle className="logo-ring" cx="32" cy="32" r="25" />
-      <path className="logo-arch" d="M15 43V28c0-9.4 7.6-17 17-17s17 7.6 17 17v15" />
-      <path className="logo-m" d="M15 44V25l9 13 8-16 8 16 9-13v19" />
-      <path className="logo-base" d="M13 49h38" />
-      <circle className="logo-accent" cx="32" cy="12" r="2.5" />
+      <path className="logo-m-fill" d="M13 46V18h8.6L32 32.7 42.4 18H51v28h-8V30.9L32 46 21 30.9V46z" />
+      <path className="logo-m-cut" d="M32 35.2 37.4 28 40 31.7 32 42.2 24 31.7l2.6-3.7z" />
+      <path className="logo-accent-bar" d="M22 51h20" />
     </svg>
   </span>;
 }

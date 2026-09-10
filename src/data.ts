@@ -15,6 +15,7 @@ export const categories = [
   { label: 'Furniture & home', icon: 'sofa', count: 128 },
   { label: 'Electronics', icon: 'monitor', count: 86 },
   { label: 'Kids & family', icon: 'baby', count: 74 },
+  { label: 'Cars & motorcycles', icon: 'car-front', count: 36 },
   { label: 'Home services', icon: 'wrench', count: 52 },
   { label: 'Food & coffee', icon: 'utensils', count: 41 },
   { label: 'Poultry & groceries', icon: 'utensils', count: 18 },

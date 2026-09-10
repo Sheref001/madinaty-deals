@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
   Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowRight, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
-  Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package,
+  Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront,
   Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp,
   Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw,
 } from 'lucide-react';
@@ -27,6 +27,7 @@ const iconMap: Record<string, LucideIcon> = {
   wrench: Wrench,
   utensils: Utensils,
   'heart-pulse': HeartPulse,
+  'car-front': CarFront,
 };
 
 const navItems: { id: View; label: string; icon: LucideIcon }[] = [

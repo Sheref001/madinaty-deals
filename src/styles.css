@@ -60,16 +60,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .brand > span:last-child { display: flex; flex-direction: column; align-items: flex-start; line-height: .88; font-size: 16px; }
 .brand b { font-weight: 700; }
 .brand em, .brand-small em { color: var(--orange); font-family: 'Playfair Display', serif; font-weight: 500; font-style: italic; }
-.brand-mark { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; color: var(--white); background: var(--teal); overflow: hidden; box-shadow: 0 7px 16px rgba(13,91,88,.18), inset 0 -5px 0 rgba(0,0,0,.12); transform: rotate(-3deg); transition: transform .2s ease, box-shadow .2s ease; }
-.brand:hover .brand-mark { transform: rotate(0) scale(1.05); box-shadow: 0 9px 20px rgba(13,91,88,.24), inset 0 -5px 0 rgba(0,0,0,.12); }
+.brand-mark { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid rgba(244,212,106,.55); border-radius: 16px; color: var(--white); background: linear-gradient(145deg, #0d6863, #073d3c); overflow: hidden; box-shadow: 0 7px 16px rgba(13,91,88,.18), inset 0 1px 0 rgba(255,255,255,.16); transform: rotate(-2deg); transition: transform .2s ease, box-shadow .2s ease; }
+.brand:hover .brand-mark { transform: rotate(0) scale(1.05); box-shadow: 0 9px 20px rgba(13,91,88,.24), 0 0 0 4px rgba(244,212,106,.1), inset 0 1px 0 rgba(255,255,255,.16); }
 .brand-mark svg { width: 100%; height: 100%; transform: rotate(3deg); }
-.logo-sun { fill: var(--orange); }
-.logo-hill { fill: var(--lime); }
-.logo-building { fill: #dff0d4; }
-.logo-building-back { opacity: .95; }
-.logo-window { fill: var(--teal); opacity: .65; }
-.logo-m { fill: var(--orange); stroke: #fff5dd; stroke-width: 1.2; }
-.logo-spark { fill: var(--yellow); }
+.logo-ring { fill: none; stroke: rgba(191,227,205,.5); stroke-width: 1; }
+.logo-arch { fill: none; stroke: var(--lime); stroke-width: 1.6; stroke-linecap: round; opacity: .9; }
+.logo-m { fill: none; stroke: #fff8e8; stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; }
+.logo-base { fill: none; stroke: var(--orange); stroke-width: 2.5; stroke-linecap: round; }
+.logo-accent { fill: var(--yellow); }
 .brand-mark-compact { width: 40px; height: 40px; border-radius: 13px; }
 .dashboard-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dashboard-actions .button { min-height: 36px; font-size: 11px; }

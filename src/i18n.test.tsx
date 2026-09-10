@@ -35,8 +35,8 @@ describe('Arabic and English experience', () => {
     fireEvent.change(category, { target: { value: 'Electronics' } });
     expect(category.value).toBe('Electronics');
     const zone = screen.getByLabelText('المنطقة') as HTMLSelectElement;
-    expect(zone.value).toBe('Zone 1 (configure)');
-    expect(zone.selectedOptions[0].textContent).toBe('المنطقة ١ (قيد الإعداد)');
+    expect(zone.value).toBe('B1');
+    expect(zone.selectedOptions[0].textContent).toBe('B1');
   });
 
   it('searches Arabic and English seed content, including Arabic diacritics', () => {

@@ -5,13 +5,13 @@ import { filterResults, getViewResults, matchesQuery } from './domain';
 describe('discovery domain rules', () => {
   it('matches a query across title, subtitle, category and zone', () => {
     expect(matchesQuery(listings[0], 'oak')).toBe(true);
-    expect(matchesQuery(listings[0], 'Zone 1')).toBe(true);
+    expect(matchesQuery(listings[0], 'B1')).toBe(true);
     expect(matchesQuery(listings[0], 'plumbing')).toBe(false);
   });
 
   it('filters by zone and verified state without exposing private data', () => {
-    const filtered = filterResults(allResults, { query: '', zone: 'Zone 1 (configure)', verifiedOnly: true, sort: 'recommended' });
-    expect(filtered.every((result) => result.zone === 'Zone 1 (configure)' || result.zone === 'All zones')).toBe(true);
+    const filtered = filterResults(allResults, { query: '', zone: 'B1', verifiedOnly: true, sort: 'recommended' });
+    expect(filtered.every((result) => result.zone === 'B1' || result.zone === 'All zones')).toBe(true);
     expect(filtered.every((result) => result.verified === true || ('sellerVerified' in result && result.sellerVerified === true))).toBe(true);
   });
 

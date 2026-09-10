@@ -29,6 +29,7 @@ it('previews details without publishing and preserves them when editing', () => 
 it('previews and publishes a service with area and WhatsApp contact', () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
+  expect(screen.getByText('No residency verification required')).toBeTruthy();
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Math tutoring for students' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Private lessons for school students and exam preparation.' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });

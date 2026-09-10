@@ -249,6 +249,7 @@ html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
 .post-choice > span:nth-child(2) { flex: 1; display: grid; gap: 5px; }
 .post-choice b { font-size: 14px; }.post-choice small { color: var(--ink-soft); line-height: 1.45; font-size: 11px; }
 .post-choice-icon { width: 43px; height: 43px; border-radius: 13px; display: grid; place-items: center; flex: 0 0 auto; color: var(--teal); background: #e7f3ea; }
+.service-policy-note { padding: 11px 12px; display: flex; gap: 9px; align-items: flex-start; border: 1px solid #cfe4d2; border-radius: 10px; background: #edf7ed; color: var(--teal); }.service-policy-note > span { display: grid; gap: 3px; }.service-policy-note b { font-size: 11px; }.service-policy-note small { color: var(--ink-soft); font-size: 10px; line-height: 1.5; }
 .service-choice { color: #985322; background: #fff0df; }.business-choice { color: #68487d; background: #f1e8f7; }.offer-choice { color: #a36c12; background: #fff5ce; }
 .disabled-choice { opacity: .55; cursor: not-allowed; }.back-to-choices { border: 0; background: none; color: var(--teal); padding: 0; margin-block-end: 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
 html[dir="rtl"] .back-to-choices svg { transform: rotate(180deg); }

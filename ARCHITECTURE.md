@@ -23,7 +23,7 @@ The app uses Vite + React + TypeScript. The current local data layer is intentio
 - Mobile-first home, marketplace, services, businesses, offers and saved views.
 - Global and collection search with zone, verified-only and sort filters.
 - Responsive semantic UI with keyboard focus states, labels, dialog semantics and mobile navigation.
-- Resident listing flow with review-queue language; no invented verification or zone evidence.
+- Resident listing flow with review-queue language; service providers use a separate path and are not required to prove Madinaty residency.
 - Save/favorite, contact lead, verification submission and report flows.
 - A small trust-desk shell for reports, verification reviews and business claims.
 - Analytics event instrumentation through a replaceable `track()` provider abstraction.

@@ -31,6 +31,7 @@ npm run build
 - Ordinary resident listings are free in the validation UI.
 - Contact actions are represented as instrumented WhatsApp/phone/quote actions; no phone number is exposed in public card markup.
 - Verification submissions explicitly stay private and are shown as pending manual review.
+- Resident verification is optional and applies to resident sellers; external service providers (tutors, plumbers, carpenters, movers, etc.) are not asked to prove that they live in Madinaty. Their service details and contact information can be reviewed instead.
 - Paid placement is not active. Any future Featured/Sponsored inventory must be clearly labeled and controlled by feature flags.
 - No production credentials, legal approvals, prices, verification rules or official zone dataset are included.
 

@@ -29,6 +29,7 @@ const iconMap: Record<string, LucideIcon> = {
   utensils: Utensils,
   'heart-pulse': HeartPulse,
   'car-front': CarFront,
+  building: Building2,
   'shopping-basket': ShoppingBasket,
 };
 
@@ -73,6 +74,9 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [toast, setToast] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [residentVerified] = useState(() => localStorage.getItem('madinaty-resident-verified') === 'true');
+  const rentalMonthKey = `madinaty-rental-posts-${new Date().getFullYear()}-${new Date().getMonth() + 1}`;
+  const [rentalPostsThisMonth, setRentalPostsThisMonth] = useState(() => Number(localStorage.getItem(rentalMonthKey) ?? 0));
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -136,6 +140,20 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   };
 
   const publishListing = (listing: Listing) => {
+    if (listing.category === 'Apartment rentals') {
+      if (!residentVerified) {
+        setModal('verify');
+        setToast('Apartment rentals require verified Madinaty residency');
+        return;
+      }
+      if (rentalPostsThisMonth >= 1) {
+        setToast('You can post one apartment rental per month');
+        return;
+      }
+      const nextCount = rentalPostsThisMonth + 1;
+      setRentalPostsThisMonth(nextCount);
+      localStorage.setItem(rentalMonthKey, String(nextCount));
+    }
     setResults((current) => [listing, ...current]);
     setModal(null);
     setView('browse');
@@ -217,7 +235,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       </div>
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
-      {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} />}
+      {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <VerifyModal onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('verification_submitted'); setToast('Verification submitted for manual review'); }} />}
     </div>
@@ -407,7 +425,7 @@ function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
-function PostModal({ onClose, onPublish, onPublishService }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void }) {
+function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {
   const { t } = useTranslation();
   const [postType, setPostType] = useState<'choose' | 'listing' | 'service'>('choose');
   return <ModalShell title={postType === 'choose' ? 'Post something' : postType === 'service' ? 'Offer a service' : 'Post a free listing'} eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}>
@@ -415,7 +433,7 @@ function PostModal({ onClose, onPublish, onPublishService }: { onClose: () => vo
       <button className="post-choice" onClick={() => setPostType('listing')}><span className="post-choice-icon"><Package size={23} /></span><span><b>{t('Sell an item')}</b><small>{t('Furniture, electronics and more')}</small></span><ArrowRight size={17} /></button>
       <button className="post-choice" onClick={() => setPostType('service')}><span className="post-choice-icon service-choice"><Wrench size={23} /></span><span><b>{t('Offer a service')}</b><small>{t('Tutoring, repairs and local help')}</small></span><ArrowRight size={17} /></button>
       <button className="post-choice disabled-choice" disabled><span className="post-choice-icon business-choice"><Store size={23} /></span><span><b>{t('Add a business')}</b><small>{t('Business profiles coming next')}</small></span><ArrowRight size={17} /></button>
-    </div> : postType === 'service' ? <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ServiceForm onPublish={onPublishService} /></> : <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ListingForm onPublish={onPublish} /></>}
+    </div> : postType === 'service' ? <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ServiceForm onPublish={onPublishService} /></> : <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ListingForm onPublish={onPublish} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} /></>}
   </ModalShell>;
 }
 

@@ -16,6 +16,7 @@ export const categories = [
   { label: 'Electronics', icon: 'monitor', count: 86 },
   { label: 'Kids & family', icon: 'baby', count: 74 },
   { label: 'Cars & motorcycles', icon: 'car-front', count: 36 },
+  { label: 'Apartment rentals', icon: 'building', count: 12 },
   { label: 'Home services', icon: 'wrench', count: 52 },
   { label: 'Food & coffee', icon: 'utensils', count: 41 },
   { label: 'Groceries', icon: 'shopping-basket', count: 18 },

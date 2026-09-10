@@ -5,7 +5,7 @@ import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
 import type { Listing, ListingCondition } from './types';
 
-export default function ListingForm({ onPublish }: { onPublish: (listing: Listing) => void }) {
+export default function ListingForm({ onPublish, residentVerified = false, rentalPostsThisMonth = 0 }: { onPublish: (listing: Listing) => void; residentVerified?: boolean; rentalPostsThisMonth?: number }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -14,6 +14,7 @@ export default function ListingForm({ onPublish }: { onPublish: (listing: Listin
   const [zone, setZone] = useState(zones[1]);
   const [condition, setCondition] = useState<ListingCondition>('Good');
   const [preview, setPreview] = useState(false);
+  const isApartmentRental = category === 'Apartment rentals';
   const valid = title.trim().length >= 5 && description.trim().length >= 10 && Number.isFinite(Number(price)) && Number(price) > 0;
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -31,8 +32,9 @@ export default function ListingForm({ onPublish }: { onPublish: (listing: Listin
       <p className="privacy-note"><ShieldCheck size={16} />{t('Apartment details stay private')}</p>
     </section> : <>
       <p className="modal-intro">{t('Tell neighbours what makes your item useful. Mention any wear or defects so they know what to expect.')}</p>
+      {isApartmentRental && <div className="rental-policy-note"><ShieldCheck size={17} /><span><b>{t('Resident-only apartment rentals')}</b><small>{residentVerified ? t('Verified residents may post one apartment rental per calendar month.') : t('You must verify that you live in Madinaty before posting an apartment rental. Brokers and dealers are not allowed.')}</small>{residentVerified && <small>{t(`${Math.max(0, 1 - rentalPostsThisMonth)} rental post remaining this month`)}</small>}</span></div>}
       <label>{t('What are you selling?')}<input autoFocus dir="auto" value={title} onChange={event => setTitle(event.target.value)} placeholder={t('e.g. Solid oak coffee table')} minLength={5} maxLength={120} required /></label>
-      <div className="form-row"><label>{t('Category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'shopping-basket'].includes(item.icon)).map(item => <option value={item.label} key={item.label}>{t(item.label)}</option>)}</select></label>
+      <div className="form-row"><label>{t('Category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'building', 'shopping-basket'].includes(item.icon)).map(item => <option value={item.label} key={item.label}>{t(item.label)}</option>)}</select></label>
       <label>{t('Price (EGP)')}<input type="number" min="0.01" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0" required /></label></div>
       <label>{t('Description')}<textarea dir="auto" rows={4} minLength={10} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('Size, age, included accessories and any signs of use')} required /></label>
       <div className="form-row"><label>{t('Condition')}<select value={condition} onChange={event => setCondition(event.target.value as ListingCondition)}>{(['Like new', 'Good', 'Fair'] as const).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>

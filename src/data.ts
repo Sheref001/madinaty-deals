@@ -18,7 +18,7 @@ export const categories = [
   { label: 'Cars & motorcycles', icon: 'car-front', count: 36 },
   { label: 'Home services', icon: 'wrench', count: 52 },
   { label: 'Food & coffee', icon: 'utensils', count: 41 },
-  { label: 'Groceries', icon: 'utensils', count: 18 },
+  { label: 'Groceries', icon: 'shopping-basket', count: 18 },
   { label: 'Health & fitness', icon: 'heart-pulse', count: 29 },
 ];
 

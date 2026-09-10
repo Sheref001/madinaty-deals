@@ -18,7 +18,7 @@ export const categories = [
   { label: 'Cars & motorcycles', icon: 'car-front', count: 36 },
   { label: 'Home services', icon: 'wrench', count: 52 },
   { label: 'Food & coffee', icon: 'utensils', count: 41 },
-  { label: 'Poultry & groceries', icon: 'utensils', count: 18 },
+  { label: 'Groceries', icon: 'utensils', count: 18 },
   { label: 'Health & fitness', icon: 'heart-pulse', count: 29 },
 ];
 
@@ -66,7 +66,7 @@ export const services: Service[] = [
 
 export const businesses: Business[] = [
   {
-    id: 'business-poultry-demo', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & local delivery', category: 'Poultry & groceries', rating: 4.9, reviewCount: 12,
+    id: 'business-poultry-demo', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & local delivery', category: 'Groceries', rating: 4.9, reviewCount: 12,
     hours: 'Daily · hours to be confirmed', phone: '', whatsapp: '', zone: 'Craft Zone', createdAt: 'Featured demo ad', image: 'poultry', accent: 'coral', verified: false, featured: true,
   },
   {

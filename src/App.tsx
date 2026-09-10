@@ -13,6 +13,7 @@ import { filterResults, getViewResults, type BrowseFilters } from './domain';
 import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
+import { featureFlags } from './featureFlags';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -37,6 +38,9 @@ const navItems: { id: View; label: string; icon: LucideIcon }[] = [
   { id: 'businesses', label: 'Businesses', icon: Store },
   { id: 'offers', label: 'Offers', icon: Tag },
 ];
+const visibleNavItems = navItems.filter(item => item.id !== 'offers' || featureFlags.offers);
+const searchScopes = (['search', 'browse', 'services', 'businesses', ...(featureFlags.offers ? ['offers'] : [])] as View[]);
+const searchScopeLabels = ['All categories', 'Buy & sell', 'Services', 'Businesses', ...(featureFlags.offers ? ['Offers'] : [])];
 
 function App() {
   const [language, setLanguage] = useState<Language>(initialLanguage);
@@ -81,6 +85,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   }, [favorites, query, results, sort, verifiedOnly, view, zone]);
 
   const goTo = (nextView: View) => {
+    if (nextView === 'offers' && !featureFlags.offers) return;
     setView(nextView);
     setQuery('');
     setMobileNavOpen(false);
@@ -156,7 +161,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <form className="top-search" onSubmit={handleSearch} role="search">
           <Search size={18} aria-hidden="true" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search items, services or places")} aria-label={t("Search items, services or places")} />
-          <select className="search-scope" aria-label={t('Search in')} value={searchType} onChange={event => setSearchType(event.target.value as View)}>{(['search','browse','services','businesses','offers'] as const).map((scope,index) => <option value={scope} key={scope}>{t(['All categories','Buy & sell','Services','Businesses','Offers'][index])}</option>)}</select>
+          <select className="search-scope" aria-label={t('Search in')} value={searchType} onChange={event => setSearchType(event.target.value as View)}>{searchScopes.map((scope,index) => <option value={scope} key={scope}>{t(searchScopeLabels[index])}</option>)}</select>
           <select className="search-zone" aria-label={t('Search location')} value={zone} onChange={event => setZone(event.target.value)}>{zones.map(value => <option value={value} key={value}>{t(value)}</option>)}</select>
           <button className="search-submit" type="submit" aria-label={t('Search')}><Search size={18} /></button>
         </form>
@@ -206,7 +211,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       </main>
 
       <div className="mobile-bottom-nav">
-        {navItems.slice(0, 4).map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
+        {visibleNavItems.slice(0, 4).map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
         <button className="mobile-post" onClick={() => setModal('post')} aria-label={t("Post a listing")}><Plus size={22} /></button>
       </div>
 
@@ -221,7 +226,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: View) => void; favoriteCount: number }) {
   const { t } = useTranslation();
   return <nav className="nav-list" aria-label={t("Main navigation")}>
-    {navItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
+    {visibleNavItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
     <NavItem item={{ id: 'saved', label: 'Saved', icon: Bookmark }} active={view === 'saved'} onClick={() => goTo('saved')} count={favoriteCount} />
     <div className="nav-divider" />
     <span className="section-label nav-section-label">{t("For businesses")}</span>
@@ -282,9 +287,9 @@ function HomeView({ goTo, onPost, onSearch, results, favorites, onFavorite }: { 
       <div className="card-grid home-listings">{results.filter(result => result.type === 'listing').slice(0, 8).map((result) => <ResultCard key={result.id} result={result} compact favorite={favorites.has(result.id)} onFavorite={onFavorite} />)}</div>
     </section>
 
-    <section className="split-section">
+    <section className={`split-section ${featureFlags.offers ? '' : 'single-split'}`}>
       <button className="split-card split-card-dark" onClick={() => goTo('services')}><span className="eyebrow eyebrow-light">{t("NEED A HAND?")}</span><h2>{t("Trusted help,")}<br /><i>{t("close to home.")}</i></h2><p>{t("Find providers your neighbours have actually used.")}</p><span className="text-link light">{t("Explore services ")}<ArrowRight size={15} /></span><span className="split-decoration"><Wrench size={70} /></span></button>
-      <button className="split-card split-card-light" onClick={() => goTo('offers')}><span className="eyebrow">{t("LOCAL PERKS")}</span><h2>{t("Good places.")}<br /><i>{t("Better offers.")}</i></h2><p>{t("Discover what’s happening nearby this week.")}</p><span className="text-link">{t("See local offers ")}<ArrowRight size={15} /></span><span className="offer-stamp">{t("15%")}<small>{t("OFF")}</small></span></button>
+      {featureFlags.offers && <button className="split-card split-card-light" onClick={() => goTo('offers')}><span className="eyebrow">{t("LOCAL PERKS")}</span><h2>{t("Good places.")}<br /><i>{t("Better offers.")}</i></h2><p>{t("Discover what’s happening nearby this week.")}</p><span className="text-link">{t("See local offers ")}<ArrowRight size={15} /></span><span className="offer-stamp">{t("15%")}<small>{t("OFF")}</small></span></button>}
     </section>
 
     <CommunityGuide />
@@ -308,7 +313,7 @@ function BrowseView({ view, query, zone, verifiedOnly, sort, results, favorites,
   const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, category: collection.category, condition: collection.condition, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max) });
   const heading = view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing';
   const subheading = view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Providers with context, reviews and a way to reach them.' : view === 'businesses' ? 'Local businesses with hours, reviews and useful details.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Buy and sell with people in the neighbourhood.';
-  const tabs: { id: View; label: string }[] = [{ id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, { id: 'offers', label: 'Offers' }];
+  const tabs: { id: View; label: string }[] = [{ id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, ...(featureFlags.offers ? [{ id: 'offers' as View, label: 'Offers' }] : [])];
   return <div className="browse-view">
     <div className="page-intro"><div><span className="eyebrow">{t(view === 'saved' ? 'YOUR SPACE' : 'DISCOVER IN MADINATY')}</span><h1>{t(heading)}</h1><p>{t(subheading)}</p></div><button className="button button-accent" onClick={onPost}><Plus size={17} /> {t(" Post a listing")}</button></div>
     <div className="browse-tabs" role="tablist" aria-label={t("Discovery type")}>{tabs.map((tab) => <button key={tab.id} className={view === tab.id || (view === 'browse' && tab.id === 'browse') ? 'active' : ''} onClick={() => onTabChange(tab.id)} role="tab" aria-selected={view === tab.id}>{t(tab.label)}</button>)}{view === 'saved' && <span className="saved-tab-label"><Bookmark size={15} fill="currentColor" /> {t(" Saved only")}</span>}</div>
@@ -412,7 +417,6 @@ function PostModal({ onClose, onPublish, onPublishService }: { onClose: () => vo
       <button className="post-choice" onClick={() => setPostType('listing')}><span className="post-choice-icon"><Package size={23} /></span><span><b>{t('Sell an item')}</b><small>{t('Furniture, electronics and more')}</small></span><ArrowRight size={17} /></button>
       <button className="post-choice" onClick={() => setPostType('service')}><span className="post-choice-icon service-choice"><Wrench size={23} /></span><span><b>{t('Offer a service')}</b><small>{t('Tutoring, repairs and local help')}</small></span><ArrowRight size={17} /></button>
       <button className="post-choice disabled-choice" disabled><span className="post-choice-icon business-choice"><Store size={23} /></span><span><b>{t('Add a business')}</b><small>{t('Business profiles coming next')}</small></span><ArrowRight size={17} /></button>
-      <button className="post-choice disabled-choice" disabled><span className="post-choice-icon offer-choice"><Tag size={23} /></span><span><b>{t('Publish an offer')}</b><small>{t('Promotions coming next')}</small></span><ArrowRight size={17} /></button>
     </div> : postType === 'service' ? <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ServiceForm onPublish={onPublishService} /></> : <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ListingForm onPublish={onPublish} /></>}
   </ModalShell>;
 }

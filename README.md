@@ -33,6 +33,7 @@ npm run build
 - Verification submissions explicitly stay private and are shown as pending manual review.
 - Resident verification is optional and applies to resident sellers; external service providers (tutors, plumbers, carpenters, movers, etc.) are not asked to prove that they live in Madinaty. Their service details and contact information can be reviewed instead.
 - Paid placement is not active. Any future Featured/Sponsored inventory must be clearly labeled and controlled by feature flags.
+- Offers are currently disabled while the marketplace builds its initial customer and merchant base. Set `featureFlags.offers` to `true` in `src/featureFlags.ts` only after offer inventory, review, expiry, and attribution workflows are ready.
 - No production credentials, legal approvals, prices, verification rules or official zone dataset are included.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the status report and next implementation milestones, and [DEPLOYMENT.md](./DEPLOYMENT.md) for environment and third-party setup requirements.

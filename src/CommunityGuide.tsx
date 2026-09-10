@@ -31,6 +31,13 @@ export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; 
       <button onClick={() => goTo('businesses')}>{t('Businesses')} <ArrowRight size={14} /></button>
       <button onClick={onPost}>{t('Post a listing')} <ArrowRight size={14} /></button>
     </nav>
+    <section className="footer-info" aria-label={t('Info')}>
+      <h3>{t('Info')}</h3>
+      <details><summary>{t('About Madinaty Deals')}</summary><p>{t('A local place for Madinaty residents, businesses and service providers to be discovered.')}</p></details>
+      <details><summary>{t('Verification')}</summary><p>{t('Verification adds context to a profile; it does not guarantee a transaction or replace your own checks.')}</p></details>
+      <details><summary>{t('Posting rules')}</summary><p>{t('Post one real item or service at a time, choose the correct category and write clear, honest details.')}</p></details>
+      <details><summary>{t('Apartment rentals')}</summary><p>{t('Apartment rentals are for verified Madinaty residents only. Brokers and dealers are not allowed.')}</p></details>
+    </section>
     <section className="footer-help" aria-label={t('Help and safety')}>
       <h3>{t('Help and safety')}</h3>
       <details><summary>{t('Meeting safely')}</summary><p>{t('Choose a busy public place. Inspect the item before paying, and never share an OTP or send a deposit to an unknown seller.')}</p></details>

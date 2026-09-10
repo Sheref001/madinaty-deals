@@ -41,12 +41,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .guide-step span { position: absolute; inset-inline-end: -8px; top: -6px; background: var(--teal); color: white; border-radius: 50%; width: 23px; height: 23px; display: grid; place-items: center; font-size: 12px; }
 .guide-grid h3 { font-size: 16px; margin-block-end: 10px; }
 .guide-grid p, .community-footer p { font-size: 13px; color: var(--ink-soft); line-height: 1.8; }
-.community-footer { border-block-start: 1px solid var(--line); margin-block-start: 50px; padding-block-start: 28px; display: grid; grid-template-columns: 1fr .7fr 1.3fr; gap: 24px; }
+.community-footer { border-block-start: 1px solid var(--line); margin-block-start: 50px; padding-block-start: 28px; display: grid; grid-template-columns: 1fr .75fr .95fr 1.3fr; gap: 24px; }
 .community-footer h3 { font-size: 14px; margin-block-end: 12px; }
 .footer-intro b { font-size: 20px; }.footer-intro p { margin-block-start: 10px; }
 .community-footer nav button { display: flex; gap: 8px; align-items: center; border: 0; background: none; color: var(--teal); font-size: 13px; padding-block: 8px; padding-inline: 0; }
 .footer-help details { border-block-end: 1px solid var(--line); padding-block: 10px; font-size: 13px; }
 .footer-help summary { cursor: pointer; }.footer-help p { margin-block-start: 8px; }
+.footer-info details { border-block-end: 1px solid var(--line); padding-block: 10px; font-size: 13px; }
+.footer-info summary { cursor: pointer; color: var(--teal); }.footer-info p { margin-block-start: 8px; }
 .footer-note { grid-column: 1/-1; border-block-start: 1px solid var(--line); padding-block-start: 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .company-signature { color: var(--teal); font-weight: 700; letter-spacing: .01em; }
 .listing-steps { list-style: none; display: flex; gap: 12px; padding: 0; margin: 0; color: var(--ink-soft); font-size: 13px; }

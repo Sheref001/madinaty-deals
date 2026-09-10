@@ -19,6 +19,7 @@ import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import MarketplaceFilters from './MarketplaceFilters';
 import type { CollectionFilters } from './MarketplaceFilters';
+import { moderateText } from './contentModeration';
 const emptyFilters: CollectionFilters = { category: '', condition: '', min: '', max: '' };
 
 const iconMap: Record<string, LucideIcon> = {
@@ -140,6 +141,10 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   };
 
   const publishListing = (listing: Listing) => {
+    if (!moderateText([listing.title, listing.subtitle, listing.category]).allowed) {
+      setToast('This post contains content that is not allowed on Madinaty Deals');
+      return;
+    }
     if (listing.category === 'Apartment rentals') {
       if (!residentVerified) {
         setModal('verify');
@@ -162,6 +167,10 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   };
 
   const publishService = (service: Service) => {
+    if (!moderateText([service.title, service.subtitle, service.category]).allowed) {
+      setToast('This post contains content that is not allowed on Madinaty Deals');
+      return;
+    }
     setResults((current) => [service, ...current]);
     setModal(null);
     setView('services');

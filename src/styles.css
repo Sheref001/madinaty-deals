@@ -83,6 +83,12 @@ html[lang="ar"] .brand > span:last-child b, html[lang="ar"] .brand > span:last-c
 html[lang="ar"] .brand > span:last-child em { padding-inline-end: 0; }
 html[lang="ar"] .brand > span:last-child em::after { display: none; }
 html[lang="ar"] .brand-small { font-family: 'IBM Plex Sans Arabic', 'DM Sans', sans-serif; }
+html:not([lang="ar"]) .brand-arabic-word { display: none; }
+html[lang="ar"] .brand-latin-rest { display: none; }
+.brand-latin-rest { color: #4d2a78; font-family: 'DM Sans', sans-serif; font-style: italic; font-weight: 700; }
+.brand-arabic-word { color: #4d2a78; font-style: normal; }
+.brand-small > b { display: inline-flex; align-items: baseline; gap: 4px; }
+.brand-small > b em { color: #4d2a78; font-style: normal; }
 .brand-mark-compact { width: 40px; height: 40px; border-radius: 13px; }
 .dashboard-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dashboard-actions .button { min-height: 36px; font-size: 11px; }

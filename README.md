@@ -1,6 +1,6 @@
-# Madinaty Deals
+# Madinaty Deals · A Community Solutions product
 
-Madinaty Deals is a mobile-first hyperlocal marketplace and local discovery MVP for Madinaty, Egypt. It combines resident-to-resident listings, trusted services, businesses and time-limited offers without attempting to replace WhatsApp or Facebook.
+Madinaty Deals is the first product from Community Solutions: a mobile-first hyperlocal marketplace and local discovery MVP for Madinaty, Egypt. It combines resident-to-resident listings, trusted services, businesses and time-limited offers without attempting to replace WhatsApp or Facebook.
 
 ## Run locally
 

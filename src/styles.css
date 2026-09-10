@@ -47,7 +47,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .community-footer nav button { display: flex; gap: 8px; align-items: center; border: 0; background: none; color: var(--teal); font-size: 13px; padding-block: 8px; padding-inline: 0; }
 .footer-help details { border-block-end: 1px solid var(--line); padding-block: 10px; font-size: 13px; }
 .footer-help summary { cursor: pointer; }.footer-help p { margin-block-start: 8px; }
-.footer-note { grid-column: 1/-1; border-block-start: 1px solid var(--line); padding-block-start: 16px; }
+.footer-note { grid-column: 1/-1; border-block-start: 1px solid var(--line); padding-block-start: 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.company-signature { color: var(--teal); font-weight: 700; letter-spacing: .01em; }
 .listing-steps { list-style: none; display: flex; gap: 12px; padding: 0; margin: 0; color: var(--ink-soft); font-size: 13px; }
 .listing-steps li { border-block-end: 2px solid var(--line); padding-block-end: 8px; flex: 1; }
 .listing-steps [aria-current] { border-color: var(--teal); color: var(--teal); font-weight: bold; }

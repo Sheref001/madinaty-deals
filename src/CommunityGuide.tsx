@@ -37,6 +37,6 @@ export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; 
       <details><summary>{t('How do I report a problem?')}</summary><p>{t('Open a collection, find the item or provider, and use the flag button to report it for review.')}</p></details>
       <details><summary>{t('Is posting free?')}</summary><p>{t('Ordinary resident listings are free during the validation period.')}</p></details>
     </section>
-    <p className="footer-note">{t('Built for the Madinaty community.')} · {new Date().getFullYear()}</p>
+    <p className="footer-note">{t('Built for the Madinaty community.')} · {new Date().getFullYear()} <span className="company-signature">{t('A Community Solutions product')}</span></p>
   </footer>;
 }

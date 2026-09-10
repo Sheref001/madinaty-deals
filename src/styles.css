@@ -233,6 +233,17 @@ html[lang="ar"] .brand > span:last-child em { color: var(--orange); font-size: .
 html[lang="ar"] .brand > span:last-child em::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); inset-inline-end: 0; top: 50%; transform: translateY(-50%); }
 html[lang="ar"] .brand-small { font-weight: 800; }
 html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
+
+.post-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.post-choice { min-height: 116px; border: 1px solid var(--line); border-radius: 15px; background: var(--white); color: var(--ink); padding: 16px; display: flex; align-items: center; gap: 12px; text-align: start; transition: .2s ease; }
+.post-choice:hover:not(:disabled) { border-color: var(--teal); transform: translateY(-2px); box-shadow: var(--shadow); }
+.post-choice > span:nth-child(2) { flex: 1; display: grid; gap: 5px; }
+.post-choice b { font-size: 14px; }.post-choice small { color: var(--ink-soft); line-height: 1.45; font-size: 11px; }
+.post-choice-icon { width: 43px; height: 43px; border-radius: 13px; display: grid; place-items: center; flex: 0 0 auto; color: var(--teal); background: #e7f3ea; }
+.service-choice { color: #985322; background: #fff0df; }.business-choice { color: #68487d; background: #f1e8f7; }.offer-choice { color: #a36c12; background: #fff5ce; }
+.disabled-choice { opacity: .55; cursor: not-allowed; }.back-to-choices { border: 0; background: none; color: var(--teal); padding: 0; margin-block-end: 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+html[dir="rtl"] .back-to-choices svg { transform: rotate(180deg); }
+@media (max-width: 560px) { .post-choice-grid { grid-template-columns: 1fr; }.post-choice { min-height: 82px; } }
 html[lang="ar"] :is(h1,h2) { line-height: 1.45; }
 html[lang="ar"] :is(h1 i,h2 i) { font-family: inherit; font-style: normal; }
 html[lang="ar"] :is(.hero-copy p,.modal-intro,.result-subtitle,.page-intro p) { line-height: 1.8; }

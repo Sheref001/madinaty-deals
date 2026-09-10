@@ -30,6 +30,7 @@ describe('Arabic and English experience', () => {
   it('keeps canonical zone and category values in Arabic forms', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'أضف إعلانًا مجانيًا' }));
+    fireEvent.click(screen.getByRole('button', { name: /بيع منتج/ }));
     const category = screen.getByLabelText('القسم') as HTMLSelectElement;
     expect(category.value).toBe('Furniture & home');
     fireEvent.change(category, { target: { value: 'Electronics' } });

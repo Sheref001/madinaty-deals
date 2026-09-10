@@ -10,11 +10,12 @@ import type { LucideIcon } from 'lucide-react';
 import { allResults, categories, formatPrice, zones } from './data';
 import { track } from './analytics';
 import { filterResults, getViewResults, type BrowseFilters } from './domain';
-import type { Listing, SearchResult, View } from './types';
+import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
+import ServiceForm from './ServiceForm';
 import MarketplaceFilters from './MarketplaceFilters';
 import type { CollectionFilters } from './MarketplaceFilters';
 const emptyFilters: CollectionFilters = { category: '', condition: '', min: '', max: '' };
@@ -135,6 +136,14 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     setToast('Listing added for this visit');
   };
 
+  const publishService = (service: Service) => {
+    setResults((current) => [service, ...current]);
+    setModal(null);
+    setView('services');
+    track('service_created', { category: service.category });
+    setToast('Service added for this visit');
+  };
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -201,7 +210,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       </div>
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
-      {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} />}
+      {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <VerifyModal onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('verification_submitted'); setToast('Verification submitted for manual review'); }} />}
     </div>
@@ -362,8 +371,17 @@ function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
-function PostModal({ onClose, onPublish }: { onClose: () => void; onPublish: (listing: Listing) => void }) {
-  return <ModalShell title="Post a free listing" eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}><ListingForm onPublish={onPublish} /></ModalShell>;
+function PostModal({ onClose, onPublish, onPublishService }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void }) {
+  const { t } = useTranslation();
+  const [postType, setPostType] = useState<'choose' | 'listing' | 'service'>('choose');
+  return <ModalShell title={postType === 'choose' ? 'Post something' : postType === 'service' ? 'Offer a service' : 'Post a free listing'} eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}>
+    {postType === 'choose' ? <div className="post-choice-grid">
+      <button className="post-choice" onClick={() => setPostType('listing')}><span className="post-choice-icon"><Package size={23} /></span><span><b>{t('Sell an item')}</b><small>{t('Furniture, electronics and more')}</small></span><ArrowRight size={17} /></button>
+      <button className="post-choice" onClick={() => setPostType('service')}><span className="post-choice-icon service-choice"><Wrench size={23} /></span><span><b>{t('Offer a service')}</b><small>{t('Tutoring, repairs and local help')}</small></span><ArrowRight size={17} /></button>
+      <button className="post-choice disabled-choice" disabled><span className="post-choice-icon business-choice"><Store size={23} /></span><span><b>{t('Add a business')}</b><small>{t('Business profiles coming next')}</small></span><ArrowRight size={17} /></button>
+      <button className="post-choice disabled-choice" disabled><span className="post-choice-icon offer-choice"><Tag size={23} /></span><span><b>{t('Publish an offer')}</b><small>{t('Promotions coming next')}</small></span><ArrowRight size={17} /></button>
+    </div> : postType === 'service' ? <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ServiceForm onPublish={onPublishService} /></> : <><button className="back-to-choices" type="button" onClick={() => setPostType('choose')}><ArrowRight size={15} /> {t('Back to post types')}</button><ListingForm onPublish={onPublish} /></>}
+  </ModalShell>;
 }
 
 function ReportModal({ result, onClose, onSubmit }: { result: SearchResult; onClose: () => void; onSubmit: () => void }) {

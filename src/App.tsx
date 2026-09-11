@@ -4,7 +4,7 @@ import {
   Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowRight, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
   Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront, ShoppingBasket,
   Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp,
-  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw,
+  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { allResults, categories, formatPrice, zones } from './data';
@@ -30,6 +30,8 @@ const iconMap: Record<string, LucideIcon> = {
   'heart-pulse': HeartPulse,
   'car-front': CarFront,
   building: Building2,
+  sparkles: Sparkles,
+  bike: Bike,
   'shopping-basket': ShoppingBasket,
 };
 
@@ -296,7 +298,7 @@ function HomeView({ goTo, onPost, onSearch, results, favorites, onFavorite }: { 
 
     <section className="section-block category-section">
       <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />
-      <div className="category-grid">{categories.map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = category.icon === 'wrench' ? 'services' : ['utensils', 'heart-pulse'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onSearch(category.label); else goTo(nextView); }}><span className={`category-icon ${category.icon}`}><Icon size={21} /></span><span><b>{t(category.label)}</b><small>{t('Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
+      <div className="category-grid">{categories.map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onSearch(category.label); else goTo(nextView); }}><span className={`category-icon ${category.icon}`}><Icon size={21} /></span><span><b>{t(category.label)}</b><small>{t('Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
     </section>
 
     <section className="section-block featured-section">

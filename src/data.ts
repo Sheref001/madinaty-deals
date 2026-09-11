@@ -63,6 +63,14 @@ export const services: Service[] = [
     id: 'service-4', type: 'service', title: 'Paws & Paths', subtitle: 'Dog walking, sitting and home visits', category: 'Pet care', rating: 4.9, reviewCount: 16,
     serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'B11', createdAt: 'Verified provider', image: 'pet', accent: 'mint', verified: true,
   },
+  {
+    id: 'service-cleaning-demo', type: 'service', title: 'Madinaty Home Care · DEMO', subtitle: 'Housekeeping, deep cleaning & move-in cleaning', category: 'Housekeeping & cleaning', rating: 0, reviewCount: 0,
+    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'All zones', createdAt: 'Community provider', image: 'cleaning', accent: 'blue', verified: false,
+  },
+  {
+    id: 'service-delivery-demo', type: 'service', title: 'Madinaty Quick Ride · DEMO', subtitle: 'Motorcycle pickup and delivery within Madinaty', category: 'Local delivery riders', rating: 0, reviewCount: 0,
+    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'All zones', createdAt: 'Community provider', image: 'delivery', accent: 'orange', verified: false,
+  },
 ];
 
 export const businesses: Business[] = [

@@ -72,25 +72,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .brand-mark { width: 42px; height: 42px; flex-basis: 42px; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
 .brand:hover .brand-mark { transform: translateY(-1px) scale(1.03); box-shadow: none; }
 .brand-mark svg { overflow: visible; }
-.logo-m-fill { fill: #4d2a78; }
-.logo-dot { stroke: #f7f8f4; stroke-width: 1.5; }
-.logo-dot-one { fill: #f3b52b; }.logo-dot-two { fill: #f36f45; }.logo-dot-three { fill: #4e9bc8; }.logo-dot-four { fill: #71b66b; }
+.logo-tile { fill: #e51f2a; }
+.logo-m-fill { fill: #fffaf4; }
+.logo-connector { fill: none; stroke: #17283e; stroke-width: 2; stroke-linecap: round; }
+.logo-dot { fill: #17283e; stroke: #fffaf4; stroke-width: 1.5; }
 .brand > span:last-child { flex-direction: row; align-items: baseline; gap: 5px; line-height: 1; font-size: 19px; letter-spacing: -.045em; }
-.brand > span:last-child b { color: #4d2a78; font-weight: 800; }
-.brand > span:last-child em { color: #4d2a78; font-family: inherit; font-style: normal; font-weight: 600; }
-.brand-small { color: #4d2a78; }
-.brand-small b, .brand-small em { color: #4d2a78; }
+.brand > span:last-child b { color: #e51f2a; font-weight: 800; }
+.brand > span:last-child em { color: #17283e; font-family: inherit; font-style: normal; font-weight: 700; }
+.brand-small { color: #e51f2a; }
+.brand-small b, .brand-small em { color: #17283e; }
 html[lang="ar"] .brand > span:last-child { flex-direction: row; align-items: baseline; gap: 4px; font-size: 18px; letter-spacing: 0; }
-html[lang="ar"] .brand > span:last-child b, html[lang="ar"] .brand > span:last-child em { color: #4d2a78; }
+html[lang="ar"] .brand > span:last-child b { color: #e51f2a; }
+html[lang="ar"] .brand > span:last-child em { color: #17283e; }
 html[lang="ar"] .brand > span:last-child em { padding-inline-end: 0; }
 html[lang="ar"] .brand > span:last-child em::after { display: none; }
 html[lang="ar"] .brand-small { font-family: 'IBM Plex Sans Arabic', 'DM Sans', sans-serif; }
 html:not([lang="ar"]) .brand-arabic-word { display: none; }
 html[lang="ar"] .brand-latin-rest { display: none; }
-.brand-latin-rest { color: #4d2a78; font-family: 'DM Sans', sans-serif; font-style: italic; font-weight: 700; }
-.brand-arabic-word { color: #4d2a78; font-style: normal; }
+.brand-latin-rest { color: #e51f2a; font-family: 'DM Sans', sans-serif; font-style: italic; font-weight: 700; }
+.brand-arabic-word { color: #e51f2a; font-style: normal; }
 .brand-small > b { display: inline-flex; align-items: baseline; gap: 4px; }
-.brand-small > b em { color: #4d2a78; font-style: normal; }
+.brand-small > b em { color: #17283e; font-style: normal; }
 .brand-mark-compact { width: 40px; height: 40px; border-radius: 13px; }
 .dashboard-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dashboard-actions .button { min-height: 36px; font-size: 11px; }

@@ -256,11 +256,10 @@ function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: Vi
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
     <svg viewBox="0 0 64 64" role="presentation">
-      <circle className="logo-dot logo-dot-one" cx="16" cy="14" r="4" />
-      <circle className="logo-dot logo-dot-two" cx="27" cy="10" r="4" />
-      <circle className="logo-dot logo-dot-three" cx="39" cy="10" r="4" />
-      <circle className="logo-dot logo-dot-four" cx="50" cy="14" r="4" />
-      <path className="logo-m-fill" d="M13 46V23h7.4L32 36.5 43.6 23H51v23h-7V32.8L32 46 20 32.8V46z" />
+      <rect className="logo-tile" x="7" y="7" width="50" height="50" rx="15" />
+      <path className="logo-m-fill" d="M16 46V22h7.2L32 34.4 40.8 22H48v24h-7V33.7L32 45 23 33.7V46z" />
+      <path className="logo-connector" d="M18 18h28" />
+      <circle className="logo-dot" cx="32" cy="14" r="3" />
     </svg>
   </span>;
 }

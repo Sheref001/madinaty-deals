@@ -5,7 +5,7 @@ import { zones } from './data';
 import { useTranslation } from './i18n';
 import type { Service } from './types';
 
-const serviceCategories = ['Tutoring', 'Home services', 'Moving', 'Pet care', 'Other services'];
+const serviceCategories = ['Tutoring', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services'];
 
 export default function ServiceForm({ onPublish }: { onPublish: (service: Service) => void }) {
   const { t } = useTranslation();

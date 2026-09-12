@@ -206,7 +206,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={() => setModal('post')} onAdvertise={() => setToast('Elite ad request noted — we will contact you to confirm the day.')} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} />
+          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={() => setModal('post')} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} />
         ) : view === 'admin' ? (
           <AdminView onBack={() => goTo('home')} />
         ) : (

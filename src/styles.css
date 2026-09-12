@@ -313,7 +313,7 @@ html[lang="ar"] .brand-latin-word { display: none; }
 .brand-mark { width: auto; height: 46px; flex: 0 0 auto; display: inline-flex; position: relative; align-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; color: var(--ink); }
 .brand:hover .brand-mark { transform: none; box-shadow: none; }
 .brand-wordmark { display: inline-flex; align-items: baseline; white-space: nowrap; line-height: 1; }
-.brand-wordmark strong { position: relative; z-index: 1; color: #e51f2a; font-family: 'DM Sans', sans-serif; font-size: 31px; font-weight: 900; letter-spacing: -.08em; text-shadow: 0 0 0 rgba(229,31,42,0); animation: m-letter-glow 2.8s ease-in-out infinite; }
+.brand-wordmark strong { position: relative; z-index: 1; color: #e51f2a; font-family: 'DM Sans', sans-serif; font-size: 35px; font-weight: 900; letter-spacing: -.08em; -webkit-text-stroke: 1px rgba(255, 244, 226, .35); text-shadow: 0 0 0 rgba(229,31,42,0); animation: m-letter-glow 2.8s ease-in-out infinite; }
 .brand-wordmark > span { color: #e51f2a; font-family: cursive; font-size: 25px; font-weight: 600; letter-spacing: -.08em; }
 .brand-wordmark em { margin-inline-start: 7px; color: #17283e; font-family: cursive; font-size: 24px; font-style: normal; font-weight: 600; letter-spacing: -.08em; }
 .brand-wordmark-arabic { direction: rtl; }
@@ -326,16 +326,16 @@ html[lang="ar"] .brand-latin-word { display: none; }
 html:not([lang="ar"]) .brand-wordmark-arabic { display: none; }
 html[lang="ar"] .brand-wordmark-latin { display: none; }
 .brand-small .brand-mark { height: 40px; }
-.brand-small .brand-wordmark strong { font-size: 24px; }
+.brand-small .brand-wordmark strong { font-size: 27px; }
 .brand-small .brand-wordmark > span { font-size: 21px; }
 .brand-small .brand-wordmark em { font-size: 20px; margin-inline-start: 5px; }
 .brand-small .brand-price-tag { width: 18px; height: 24px; top: 24px; left: 14px; }
-@keyframes m-letter-glow { 0%, 100% { text-shadow: 0 0 0 rgba(229,31,42,0); } 50% { text-shadow: 0 0 9px rgba(229,31,42,.7), 0 0 17px rgba(243,181,43,.34); } }
+@keyframes m-letter-glow { 0%, 100% { text-shadow: 0 0 0 rgba(229,31,42,0); -webkit-text-stroke-color: rgba(255, 244, 226, .35); } 50% { text-shadow: 0 0 2px rgba(255, 244, 226, .95), 0 0 4px rgba(243,181,43,.8); -webkit-text-stroke-color: rgba(255, 244, 226, .95); } }
 @keyframes price-tag-sway { 0%, 100% { transform: rotate(5deg); } 50% { transform: rotate(10deg); } }
 @media (prefers-reduced-motion: reduce) { .brand-wordmark strong, .brand-price-tag { animation: none; } }
 @media (max-width: 760px) {
   .brand-mark { height: 38px; }
-  .brand-wordmark strong { font-size: 26px; }
+  .brand-wordmark strong { font-size: 29px; }
   .brand-wordmark > span { font-size: 20px; }
   .brand-wordmark em { margin-inline-start: 5px; font-size: 19px; }
   .brand-price-tag { width: 18px; height: 24px; top: 23px; left: 14px; }

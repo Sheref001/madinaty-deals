@@ -309,6 +309,36 @@ html[lang="ar"] .brand-latin-word { display: none; }
 }
 [dir="rtl"] .sidebar { right: 0; left: auto; }
 
+.revenue-desk { margin-top: 28px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--white); box-shadow: var(--shadow); }
+.revenue-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.revenue-heading h2 { margin: 5px 0 4px; font-size: 25px; }
+.revenue-heading p { margin: 0; color: var(--ink-soft); font-size: 12px; }
+.revenue-add-form { display: flex; gap: 8px; margin-bottom: 16px; padding: 12px; background: var(--paper); border-radius: 12px; }
+.revenue-add-form input { min-width: 0; flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; background: var(--white); color: var(--ink); }
+.revenue-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 16px; }
+.revenue-stats > div { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 12px; color: var(--teal); }
+.revenue-stats span { display: grid; gap: 3px; min-width: 0; }
+.revenue-stats b { color: var(--ink); font-size: 16px; white-space: nowrap; }
+.revenue-stats small { color: var(--ink-soft); font-size: 10px; }
+.revenue-note { display: flex; align-items: flex-start; gap: 9px; padding: 11px 13px; margin-bottom: 16px; border-radius: 10px; background: #fff7df; color: #80631e; font-size: 11px; line-height: 1.5; }
+.revenue-note svg { flex-shrink: 0; margin-top: 1px; }
+.revenue-table-wrap { overflow-x: auto; }
+.revenue-table { width: 100%; border-collapse: collapse; min-width: 820px; text-align: start; font-size: 11px; }
+.revenue-table th { padding: 9px 8px; border-bottom: 2px solid var(--line); color: var(--ink-soft); font-size: 10px; font-weight: 700; text-align: start; }
+.revenue-table td { padding: 13px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.revenue-table tr:last-child td { border-bottom: 0; }
+.revenue-table td:first-child { min-width: 180px; }
+.revenue-table td strong, .revenue-table td small { display: block; }
+.revenue-table td small { margin-top: 4px; color: var(--ink-soft); font-size: 9px; }
+.due-date { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.billing-pill { display: inline-flex; padding: 5px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+.billing-pill.active { color: #21643c; background: #e4f4e8; }.billing-pill.due { color: #8a6814; background: #fff1c5; }.billing-pill.overdue, .billing-pill.suspended { color: #a43e37; background: #ffe7e2; }
+.revenue-actions { display: flex; flex-wrap: wrap; gap: 5px; min-width: 210px; }
+.revenue-actions .small-action { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.danger-action { color: #a43e37; }
+html[lang="ar"] .revenue-table, html[lang="ar"] .revenue-heading, html[lang="ar"] .revenue-note { direction: rtl; }
+@media (max-width: 760px) { .revenue-desk { padding: 16px; }.revenue-heading { display: grid; }.revenue-add-form { display: grid; }.revenue-stats { grid-template-columns: repeat(2, 1fr); }.revenue-stats > div { padding: 10px; }.revenue-stats b { font-size: 13px; } }
+
 /* Typography-only wordmark: the M carries the tag; the rest flows in a script face. */
 .brand-mark { width: auto; height: 46px; flex: 0 0 auto; display: inline-flex; position: relative; align-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; color: var(--ink); }
 .brand:hover .brand-mark { transform: none; box-shadow: none; }

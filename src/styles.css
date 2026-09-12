@@ -320,10 +320,13 @@ html[lang="ar"] .brand-latin-word { display: none; }
 .elite-ad-card { display: flex; align-items: center; gap: 16px; padding: 13px; border: 1px solid rgba(23,40,62,.1); border-radius: 13px; background: rgba(255,255,255,.78); }
 .elite-ad-art { display: grid; place-items: center; align-content: center; flex: 0 0 78px; height: 78px; gap: 5px; border-radius: 10px; color: #fff; background: linear-gradient(145deg, #e51f2a, #17283e); }
 .elite-ad-art span { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.tutor-art { background: linear-gradient(145deg, #4d2a78, #17283e); }
 .elite-ad-copy { min-width: 0; flex: 1; }
 .elite-date { display: inline-flex; align-items: center; gap: 4px; color: #b26f20; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
 .elite-ad-copy h3 { margin: 6px 0 3px; color: #17283e; font-size: 17px; }
 .elite-ad-copy p { margin: 0; color: #776b58; font-size: 11px; line-height: 1.45; }
+.elite-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.elite-tags span { padding: 4px 7px; border-radius: 20px; color: #665735; background: #f5e8c8; font-size: 9px; font-weight: 700; }
 html[lang="ar"] .elite-ad-space { direction: rtl; }
 html[lang="ar"] .elite-ad-intro h2 { font-family: 'IBM Plex Sans Arabic', Tahoma, sans-serif; line-height: 1.3; }
 html[lang="ar"] .elite-rate { text-align: start; }

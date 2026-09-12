@@ -177,7 +177,6 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="mobile-menu" aria-label={t("Open navigation")} onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button>
         <button className="brand" onClick={() => goTo('home')} aria-label={t("Madinaty Deals home")}>
           <MadinatyLogo />
-          <span><b><span className="brand-latin-word">Madinaty</span><span className="brand-arabic-word">{t("Madinaty")}</span></b><em>{t("Deals")}</em></span>
         </button>
         <form className="top-search" onSubmit={handleSearch} role="search">
           <Search size={18} aria-hidden="true" />
@@ -198,7 +197,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
-          <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /><b><span className="brand-latin-word">Madinaty</span><span className="brand-arabic-word">{t("Madinaty")}</span><em>{t("Deals")}</em></b></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
+          <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
           <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} />
         </aside>
       </div>
@@ -257,18 +256,12 @@ function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: Vi
 
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
-    <svg viewBox="0 0 64 64" role="presentation">
-      <defs>
-        <filter id="m-logo-glow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="2.2" />
-        </filter>
-      </defs>
-      <rect className="logo-tile" x="5" y="5" width="52" height="52" rx="15" />
-      <path className="logo-m-glow" d="M13 47V19h8l11 14 11-14h8v28h-8V33L32 47 21 33v14z" />
-      <path className="logo-m-fill" d="M13 47V19h8l11 14 11-14h8v28h-8V33L32 47 21 33v14z" />
-      <path className="logo-tag-strap" d="M43 32c7 0 11 3 11 8" />
-      <path className="logo-tag" d="M47 37h12v13l-6 4-6-4z" />
-      <circle className="logo-tag-hole" cx="53" cy="41" r="1.6" />
+    <span className="brand-wordmark brand-wordmark-latin"><strong>M</strong><span>adinaty</span><em>Deals</em></span>
+    <span className="brand-wordmark brand-wordmark-arabic"><strong>م</strong><span>دينتي</span><em>ديلز</em></span>
+    <svg className="brand-price-tag" viewBox="0 0 28 34" role="presentation">
+      <path className="logo-tag-strap" d="M5 2c0 9 9 7 9 14" />
+      <path className="logo-tag" d="M8 13h17v14l-8.5 5L8 27z" />
+      <circle className="logo-tag-hole" cx="20.5" cy="17.5" r="2" />
     </svg>
   </span>;
 }

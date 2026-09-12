@@ -308,6 +308,35 @@ html[lang="ar"] .brand-latin-word { display: none; }
   html[lang="ar"] .brand > span:last-child { font-size: 15px; }
 }
 [dir="rtl"] .sidebar { right: 0; left: auto; }
+
+/* Typography-only wordmark: the M carries the tag; the rest flows in a script face. */
+.brand-mark { width: auto; height: 46px; flex: 0 0 auto; display: inline-flex; position: relative; align-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; color: var(--ink); }
+.brand:hover .brand-mark { transform: none; box-shadow: none; }
+.brand-wordmark { display: inline-flex; align-items: baseline; white-space: nowrap; line-height: 1; }
+.brand-wordmark strong { position: relative; z-index: 1; color: #e51f2a; font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -.08em; }
+.brand-wordmark > span { color: #e51f2a; font-family: cursive; font-size: 25px; font-weight: 600; letter-spacing: -.08em; }
+.brand-wordmark em { margin-inline-start: 7px; color: #17283e; font-family: cursive; font-size: 24px; font-style: normal; font-weight: 600; letter-spacing: -.08em; }
+.brand-wordmark-arabic { direction: rtl; }
+.brand-wordmark-arabic strong { font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 25px; letter-spacing: 0; }
+.brand-wordmark-arabic > span, .brand-wordmark-arabic em { font-family: 'Aref Ruqaa', cursive; font-size: 24px; letter-spacing: 0; }
+.brand-price-tag { position: absolute; z-index: 2; width: 21px; height: 27px; top: 27px; left: 17px; overflow: visible; transform: rotate(7deg); transform-origin: top center; }
+.logo-tag-strap { fill: none; stroke: #17283e; stroke-width: 1.7; stroke-linecap: round; }
+.logo-tag { fill: #f3b52b; stroke: #17283e; stroke-width: 1.1; stroke-linejoin: round; }
+.logo-tag-hole { fill: #17283e; }
+html:not([lang="ar"]) .brand-wordmark-arabic { display: none; }
+html[lang="ar"] .brand-wordmark-latin { display: none; }
+.brand-small .brand-mark { height: 40px; }
+.brand-small .brand-wordmark strong { font-size: 24px; }
+.brand-small .brand-wordmark > span { font-size: 21px; }
+.brand-small .brand-wordmark em { font-size: 20px; margin-inline-start: 5px; }
+.brand-small .brand-price-tag { width: 18px; height: 24px; top: 24px; left: 14px; }
+@media (max-width: 760px) {
+  .brand-mark { height: 38px; }
+  .brand-wordmark strong { font-size: 23px; }
+  .brand-wordmark > span { font-size: 20px; }
+  .brand-wordmark em { margin-inline-start: 5px; font-size: 19px; }
+  .brand-price-tag { width: 18px; height: 24px; top: 23px; left: 14px; }
+}
 [dir="rtl"] .drawer-panel { right: 0; left: auto; transform: translateX(100%); }
 [dir="rtl"] .mobile-drawer.is-open .drawer-panel { transform: none; }
 [dir="rtl"] :is(.select-wrap > svg:last-child,.form-row label::after) { right: auto; left: 9px; }

@@ -257,7 +257,7 @@ function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: Vi
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
     <span className="brand-wordmark brand-wordmark-latin"><strong>M</strong><span>adinaty</span><em>Deals</em></span>
-    <span className="brand-wordmark brand-wordmark-arabic"><strong>م</strong><span>دينتي</span><em>ديلز</em></span>
+    <span className="brand-wordmark brand-wordmark-arabic"><span className="brand-arabic-name">مدينتي</span><em>ديلز</em></span>
     <svg className="brand-price-tag" viewBox="0 0 28 34" role="presentation">
       <path className="logo-tag-strap" d="M5 2c0 9 9 7 9 14" />
       <path className="logo-tag" d="M8 13h17v14l-8.5 5L8 27z" />

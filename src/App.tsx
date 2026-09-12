@@ -20,6 +20,7 @@ import ServiceForm from './ServiceForm';
 import MarketplaceFilters from './MarketplaceFilters';
 import type { CollectionFilters } from './MarketplaceFilters';
 import RevenueDesk from './RevenueDesk';
+import EliteAdSpace from './EliteAdSpace';
 const emptyFilters: CollectionFilters = { category: '', condition: '', min: '', max: '' };
 
 const iconMap: Record<string, LucideIcon> = {
@@ -205,7 +206,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={() => setModal('post')} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} />
+          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={() => setModal('post')} onAdvertise={() => setToast('Elite ad request noted — we will contact you to confirm the day.')} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} />
         ) : view === 'admin' ? (
           <AdminView onBack={() => goTo('home')} />
         ) : (
@@ -273,7 +274,7 @@ function NavItem({ item, active, onClick, count }: { item: { id: View; label: st
   return <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={18} strokeWidth={active ? 2.3 : 1.8} /><span>{t(item.label)}</span>{count ? <small>{count}</small> : null}</button>;
 }
 
-function HomeView({ goTo, onPost, onSearch, results, favorites, onFavorite }: { goTo: (view: View) => void; onPost: () => void; onSearch: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
+function HomeView({ goTo, onPost, onAdvertise, onSearch, results, favorites, onFavorite }: { goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
   const { t } = useTranslation();
   const [homeSearch, setHomeSearch] = useState('');
   const handleSubmit = (event: FormEvent) => { event.preventDefault(); onSearch(homeSearch); };
@@ -296,6 +297,8 @@ function HomeView({ goTo, onPost, onSearch, results, favorites, onFavorite }: { 
       <div className="trust-strip-title"><span className="trust-icon"><ShieldCheck size={18} /></span><span><b>{t("Made for a more trusted Madinaty")}</b><small>{t("Every profile, listing and business has a little more context.")}</small></span></div>
       <div className="trust-points"><span><BadgeCheck size={16} /> {t(" Verified residents")}</span><span><Star size={16} /> {t(" Community reviews")}</span><span><Flag size={16} /> {t(" Human moderation")}</span></div>
     </section>
+
+    <EliteAdSpace onAdvertise={onAdvertise} />
 
     <section className="section-block category-section">
       <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />

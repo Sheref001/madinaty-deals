@@ -313,13 +313,13 @@ html[lang="ar"] .brand-latin-word { display: none; }
 .brand-mark { width: auto; height: 46px; flex: 0 0 auto; display: inline-flex; position: relative; align-items: center; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; color: var(--ink); }
 .brand:hover .brand-mark { transform: none; box-shadow: none; }
 .brand-wordmark { display: inline-flex; align-items: baseline; white-space: nowrap; line-height: 1; }
-.brand-wordmark strong { position: relative; z-index: 1; color: #e51f2a; font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -.08em; }
+.brand-wordmark strong { position: relative; z-index: 1; color: #e51f2a; font-family: 'DM Sans', sans-serif; font-size: 31px; font-weight: 900; letter-spacing: -.08em; text-shadow: 0 0 0 rgba(229,31,42,0); animation: m-letter-glow 2.8s ease-in-out infinite; }
 .brand-wordmark > span { color: #e51f2a; font-family: cursive; font-size: 25px; font-weight: 600; letter-spacing: -.08em; }
 .brand-wordmark em { margin-inline-start: 7px; color: #17283e; font-family: cursive; font-size: 24px; font-style: normal; font-weight: 600; letter-spacing: -.08em; }
 .brand-wordmark-arabic { direction: rtl; }
 .brand-wordmark-arabic strong { font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 25px; letter-spacing: 0; }
 .brand-wordmark-arabic > span, .brand-wordmark-arabic em { font-family: 'Aref Ruqaa', cursive; font-size: 24px; letter-spacing: 0; }
-.brand-price-tag { position: absolute; z-index: 2; width: 21px; height: 27px; top: 27px; left: 17px; overflow: visible; transform: rotate(7deg); transform-origin: top center; }
+.brand-price-tag { position: absolute; z-index: 2; width: 21px; height: 27px; top: 27px; left: 14px; overflow: visible; transform: rotate(7deg); transform-origin: 5px 2px; animation: price-tag-sway 2.8s ease-in-out infinite; }
 .logo-tag-strap { fill: none; stroke: #17283e; stroke-width: 1.7; stroke-linecap: round; }
 .logo-tag { fill: #f3b52b; stroke: #17283e; stroke-width: 1.1; stroke-linejoin: round; }
 .logo-tag-hole { fill: #17283e; }
@@ -330,9 +330,12 @@ html[lang="ar"] .brand-wordmark-latin { display: none; }
 .brand-small .brand-wordmark > span { font-size: 21px; }
 .brand-small .brand-wordmark em { font-size: 20px; margin-inline-start: 5px; }
 .brand-small .brand-price-tag { width: 18px; height: 24px; top: 24px; left: 14px; }
+@keyframes m-letter-glow { 0%, 100% { text-shadow: 0 0 0 rgba(229,31,42,0); } 50% { text-shadow: 0 0 9px rgba(229,31,42,.7), 0 0 17px rgba(243,181,43,.34); } }
+@keyframes price-tag-sway { 0%, 100% { transform: rotate(5deg); } 50% { transform: rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) { .brand-wordmark strong, .brand-price-tag { animation: none; } }
 @media (max-width: 760px) {
   .brand-mark { height: 38px; }
-  .brand-wordmark strong { font-size: 23px; }
+  .brand-wordmark strong { font-size: 26px; }
   .brand-wordmark > span { font-size: 20px; }
   .brand-wordmark em { margin-inline-start: 5px; font-size: 19px; }
   .brand-price-tag { width: 18px; height: 24px; top: 23px; left: 14px; }

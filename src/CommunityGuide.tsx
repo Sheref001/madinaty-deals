@@ -43,6 +43,7 @@ export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; 
       <details><summary>{t('Meeting safely')}</summary><p>{t('Choose a busy public place. Inspect the item before paying, and never share an OTP or send a deposit to an unknown seller.')}</p></details>
       <details><summary>{t('How do I report a problem?')}</summary><p>{t('Open a collection, find the item or provider, and use the flag button to report it for review.')}</p></details>
       <details><summary>{t('Is posting free?')}</summary><p>{t('Ordinary resident listings are free during the validation period.')}</p></details>
+      <p className="footer-legal-link"><a href="/terms-of-use.html">{t('Terms of Use')}</a></p>
     </section>
     <p className="footer-note">{t('Built for the Madinaty community.')} · {new Date().getFullYear()} <span className="company-signature">{t('A Connected Community Solutions Product')}</span></p>
   </footer>;

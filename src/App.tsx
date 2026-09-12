@@ -177,7 +177,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="mobile-menu" aria-label={t("Open navigation")} onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button>
         <button className="brand" onClick={() => goTo('home')} aria-label={t("Madinaty Deals home")}>
           <MadinatyLogo />
-          <span><b><i className="brand-latin-rest">adinaty</i><span className="brand-arabic-word">{t("Madinaty")}</span></b><em>{t("Deals")}</em></span>
+          <span><b><span className="brand-latin-word">Madinaty</span><span className="brand-arabic-word">{t("Madinaty")}</span></b><em>{t("Deals")}</em></span>
         </button>
         <form className="top-search" onSubmit={handleSearch} role="search">
           <Search size={18} aria-hidden="true" />
@@ -198,7 +198,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
-          <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /><b><i className="brand-latin-rest">adinaty</i><span className="brand-arabic-word">{t("Madinaty")}</span><em>{t("Deals")}</em></b></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
+          <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /><b><span className="brand-latin-word">Madinaty</span><span className="brand-arabic-word">{t("Madinaty")}</span><em>{t("Deals")}</em></b></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
           <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} />
         </aside>
       </div>
@@ -258,10 +258,17 @@ function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: Vi
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
     <svg viewBox="0 0 64 64" role="presentation">
-      <rect className="logo-tile" x="7" y="7" width="50" height="50" rx="15" />
-      <path className="logo-m-fill" d="M16 46V22h7.2L32 34.4 40.8 22H48v24h-7V33.7L32 45 23 33.7V46z" />
-      <path className="logo-connector" d="M18 18h28" />
-      <circle className="logo-dot" cx="32" cy="14" r="3" />
+      <defs>
+        <filter id="m-logo-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
+      </defs>
+      <rect className="logo-tile" x="5" y="5" width="52" height="52" rx="15" />
+      <path className="logo-m-glow" d="M13 47V19h8l11 14 11-14h8v28h-8V33L32 47 21 33v14z" />
+      <path className="logo-m-fill" d="M13 47V19h8l11 14 11-14h8v28h-8V33L32 47 21 33v14z" />
+      <path className="logo-tag-strap" d="M43 32c7 0 11 3 11 8" />
+      <path className="logo-tag" d="M47 37h12v13l-6 4-6-4z" />
+      <circle className="logo-tag-hole" cx="53" cy="41" r="1.6" />
     </svg>
   </span>;
 }

@@ -286,9 +286,22 @@ html[lang="ar"] :is(.hero-copy p,.modal-intro,.result-subtitle,.page-intro p) { 
 html[lang="ar"] :is(.eyebrow,.section-label,.nav-item,.result-topline,.seller-line,.small-action,.trust-points,.privacy-note) { font-size: 12px; }
 html[lang="ar"] :is(.brand > span:last-child,.brand em) { line-height: 1.25; }
 
-/* Memorable Madinaty badge: gardens, skyline, sun and the signature M. */
+/* One bilingual mark: a bold M, a hanging price tag, and a soft pulse. */
 .brand-mark { flex: 0 0 52px; }
 .brand-mark-compact { flex-basis: 40px; }
+.logo-tile { fill: #e51f2a; }
+.logo-m-fill { fill: #fffaf4; }
+.logo-m-glow { fill: #ff5360; filter: url(#m-logo-glow); opacity: .22; animation: m-logo-pulse 3.2s ease-in-out infinite; }
+.logo-tag-strap { fill: none; stroke: #17283e; stroke-width: 2; stroke-linecap: round; }
+.logo-tag { fill: #f3b52b; stroke: #17283e; stroke-width: 1.3; stroke-linejoin: round; }
+.logo-tag-hole { fill: #17283e; }
+.brand-latin-word { color: #e51f2a; font-family: 'DM Sans', sans-serif; font-style: normal; font-weight: 800; }
+.brand-arabic-word { color: #e51f2a; font-style: normal; }
+.brand > span:last-child em, .brand-small > b em { color: #17283e; font-family: 'Playfair Display', serif; font-style: italic; font-weight: 700; }
+html:not([lang="ar"]) .brand-arabic-word { display: none; }
+html[lang="ar"] .brand-latin-word { display: none; }
+@keyframes m-logo-pulse { 0%, 100% { opacity: .22; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .logo-m-glow { animation: none; opacity: .45; } }
 @media (max-width: 760px) {
   .brand-mark { flex-basis: 40px; width: 40px; height: 40px; border-radius: 13px; }
   .brand-mark-compact { flex-basis: 40px; }

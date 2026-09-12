@@ -34,6 +34,11 @@ function loadRecords(): RevenueRecord[] {
 }
 
 function money(value: number) { return `${value.toLocaleString('en-EG')} EGP`; }
+function addBillingMonth(dateValue: string) {
+  const date = new Date(`${dateValue || new Date().toISOString().slice(0, 10)}T12:00:00`);
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().slice(0, 10);
+}
 
 export default function RevenueDesk() {
   const { t } = useTranslation();
@@ -53,7 +58,7 @@ export default function RevenueDesk() {
     overdue: records.filter(record => record.status === 'overdue' || record.status === 'suspended').length,
   }), [records]);
 
-  const markPaid = (id: string) => persist(records.map(record => record.id === id ? { ...record, status: 'active', adStatus: 'live', lastPaid: new Date().toISOString().slice(0, 10), reminders: 0 } : record));
+  const markPaid = (id: string) => persist(records.map(record => record.id === id ? { ...record, status: 'active', adStatus: 'live', lastPaid: new Date().toISOString().slice(0, 10), nextDue: addBillingMonth(record.nextDue), reminders: 0 } : record));
   const sendReminder = (id: string) => persist(records.map(record => record.id === id ? { ...record, reminders: record.reminders + 1 } : record));
   const pauseAd = (id: string) => persist(records.map(record => record.id === id ? { ...record, adStatus: 'paused', status: record.status === 'active' ? 'suspended' : record.status } : record));
   const addRecord = () => {

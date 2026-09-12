@@ -1,6 +1,6 @@
 // English keys stay stable for the existing English interface and stored taxonomy.
 export const arabic: Record<string, string> = {
-  'A Connected Community Solutions Product':'A Connected Community Solutions Product',
+  'A Connected Community Solutions Product':'احدي منتجات Connected Community Solutions',
   'Demo listing: contact and transactions are not connected yet.':'إعلان تجريبي: التواصل والمعاملات لم يتم تفعيلهما بعد.',
   'Save listing':'حفظ الإعلان', 'Remove from saved':'إزالة من المحفوظات',
   'Buy, sell and discover in Madinaty':'بيع واشتري واكتشف كل جديد في مدينتي',

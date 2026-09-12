@@ -290,7 +290,6 @@ function HomeView({ goTo, onPost, onAdvertise, onSearch, results, favorites, onF
         </form>
         <div className="popular-searches"><span>{t("Popular:")}</span><button onClick={() => onSearch('AC maintenance')}>{t("AC maintenance")}</button><button onClick={() => onSearch('sofa')}>{t("Sofas")}</button><button onClick={() => onSearch('breakfast')}>{t("Breakfast")}</button></div>
       </div>
-      <EliteAdSpace compact onAdvertise={onAdvertise} />
 
     </section>
 

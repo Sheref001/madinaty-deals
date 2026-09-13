@@ -77,7 +77,7 @@ export const services: Service[] = [
 
 export const businesses: Business[] = [
   {
-    id: 'business-poultry-demo', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & local delivery', category: 'Groceries', rating: 4.9, reviewCount: 12,
+    id: 'business-poultry-demo', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & fast local delivery', category: 'Groceries', rating: 4.9, reviewCount: 12,
     hours: 'Daily · hours to be confirmed', phone: '', whatsapp: '', zone: 'Craft Zone', createdAt: 'Featured demo ad', image: 'poultry', accent: 'coral', verified: false, featured: true,
   },
   {

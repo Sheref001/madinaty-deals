@@ -51,6 +51,21 @@ The entrypoint applies checked-in migrations, optionally seeds, then starts the 
 
 Run `npm run maintenance:cleanup` daily using a scheduler with the same server environment. It deletes expired auth records and up to 100 unsubmitted uploads older than 24 hours per run. Repeat for larger backlogs. Submitted identity documents require a separately agreed retention/deletion policy; they are not deleted automatically.
 
+## Automatic deployment from GitHub
+
+The repository includes `.github/workflows/deploy.yml`. Every push to `main` runs typecheck, lint, build and tests. Only after those checks pass does GitHub connect to the Ubuntu server, pull `main`, rebuild the Compose app and wait for `/api/ready`.
+
+Create a dedicated deployment user on the server with access to the repository directory and permission to run Docker Compose. Add the public SSH key to that user’s `~/.ssh/authorized_keys`. In the GitHub repository, create a `production` environment and add these secrets:
+
+- `DEPLOY_HOST`: server hostname or IP.
+- `DEPLOY_PORT`: SSH port, usually `22`.
+- `DEPLOY_USER`: dedicated deployment username.
+- `DEPLOY_PATH`: absolute repository path, such as `/opt/madinaty-deals`.
+- `DEPLOY_SSH_KEY`: the private key for the deployment user, including its complete header and footer.
+- `DEPLOY_KNOWN_HOSTS`: the exact output of `ssh-keyscan -H <server-host>` collected from a trusted machine.
+
+Keep the production `.env` only on the server. The workflow never copies or prints it. Test the connection once from a trusted machine, then push a small change to `main` or run the workflow manually from GitHub Actions.
+
 ## Local development
 
 With the services configured, export server environment variables in your shell, then run:

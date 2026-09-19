@@ -9,6 +9,7 @@ export interface BrowseFilters {
   category?: string;
   advertiserType?: 'individual' | 'small_business';
   condition?: string;
+  furnishing?: string;
   minPrice?: number;
   maxPrice?: number;
 }
@@ -27,9 +28,10 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const audienceMatches = !filters.advertiserType || (result.advertiserType || (result.type === 'business' ? 'small_business' : 'individual')) === filters.advertiserType;
     const categoryMatches = !filters.category || result.category === filters.category;
     const conditionMatches = !filters.condition || (result.type === 'listing' && result.condition === filters.condition);
+    const furnishingMatches = !filters.furnishing || (result.type === 'listing' && result.furnishing === filters.furnishing);
     const hasPriceFilter = filters.minPrice !== undefined || filters.maxPrice !== undefined;
     const priceMatches = !hasPriceFilter || (result.type === 'listing' && result.price !== null && result.price >= (filters.minPrice ?? 0) && result.price <= (filters.maxPrice ?? Infinity));
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && priceMatches && matchesQuery(result, filters.query);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

@@ -17,7 +17,7 @@ async function request(handler, url, { method = 'GET', body = '', headers = {} }
   return result;
 }
 
-const auth = { protect: async () => ({ userId: 'user-1', publicUser: { name: 'Neighbour' } }) };
+const auth = { protect: async () => ({ userId: 'user-1', publicUser: { name: 'Neighbour', residentVerified: true } }) };
 const database = () => ({
   $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
   contentView: { create: vi.fn().mockResolvedValue({}), count: vi.fn().mockResolvedValue(1) },
@@ -70,6 +70,14 @@ describe('API responses', () => {
     expect(results.map(result => result.status).sort()).toEqual([201, 429]);
     expect(prisma.comment.create).toHaveBeenCalledTimes(1);
     expect(prisma.comment.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ body: 'مرحبا', language: 'ar', status: 'HIDDEN', userId: 'user-1' }) }));
+  });
+
+  it('rejects comments from residents without verification', async () => {
+    const prisma = database();
+    const unverifiedAuth = { protect: async () => ({ userId: 'user-2', publicUser: { name: 'Neighbour', residentVerified: false } }) };
+    const result = await request(createRequestHandler({ prisma, auth: unverifiedAuth }), '/api/content/listing/id/comments', { method: 'POST', body: JSON.stringify({ body: 'مرحبا', language: 'ar' }) });
+    expect(result.status).toBe(403);
+    expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
   it('does not bypass the client limit with new routes or forwarded IP headers', async () => {

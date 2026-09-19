@@ -64,13 +64,14 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     }
 
     if (action === 'comments' && request.method === 'GET') {
-      const comments = await prisma.comment.findMany({ where: { contentType, contentId, status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, displayName: true, body: true, language: true, createdAt: true } });
-      return send(response, 200, { comments });
+      const comments = await prisma.comment.findMany({ where: { contentType, contentId, status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, displayName: true, body: true, language: true, createdAt: true, user: { select: { profile: { select: { verificationState: true } } } } } });
+      return send(response, 200, { comments: comments.map(comment => ({ ...comment, verifiedResident: comment.user?.profile?.verificationState === 'VERIFIED', user: undefined })) });
     }
 
     if (action === 'comments' && request.method === 'POST') {
       if (!auth) throw new RequestError(503, 'Authentication is not configured');
       const current = await auth.protect(request);
+      if (!current.publicUser.residentVerified) throw new RequestError(403, 'Only verified residents can leave comments.');
       const visitorId = current.userId;
       await consumeLimit(prisma, 'comment', current.userId, 1, 30000);
       const body = await readJson(request);
@@ -86,7 +87,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
         commentLimit.release(visitorId);
         throw error;
       }
-      return send(response, 201, { comment });
+      return send(response, 201, { comment: { ...comment, verifiedResident: true } });
     }
     return send(response, 404, { error: 'Not found' });
   }

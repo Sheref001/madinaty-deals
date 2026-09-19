@@ -297,7 +297,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
+          <HomeView residentVerified={residentVerified} results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           isAdmin ? <AdminView onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (
@@ -308,6 +308,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
             verifiedOnly={verifiedOnly}
             sort={sort}
             results={activeResults}
+            residentVerified={residentVerified}
             favorites={favorites}
             onQueryChange={setQuery}
             onZoneChange={setZone}
@@ -369,7 +370,7 @@ function NavItem({ item, active, onClick, count }: { item: { id: View; label: st
   return <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={18} strokeWidth={active ? 2.3 : 1.8} /><span>{t(item.label)}</span>{count ? <small>{count}</small> : null}</button>;
 }
 
-function HomeView({ goTo, onPost, onAdvertise, onSearch, onCategorySearch, onServiceCategory, onBusinessCategory, results, favorites, onFavorite }: { goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; onCategorySearch: (value: string) => void; onServiceCategory: (value: string) => void; onBusinessCategory: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
+function HomeView({ residentVerified, goTo, onPost, onAdvertise, onSearch, onCategorySearch, onServiceCategory, onBusinessCategory, results, favorites, onFavorite }: { residentVerified: boolean; goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; onCategorySearch: (value: string) => void; onServiceCategory: (value: string) => void; onBusinessCategory: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
   const { t } = useTranslation();
   const [homeSearch, setHomeSearch] = useState('');
   const handleSubmit = (event: FormEvent) => { event.preventDefault(); onSearch(homeSearch); };
@@ -402,7 +403,7 @@ function HomeView({ goTo, onPost, onAdvertise, onSearch, onCategorySearch, onSer
 
     <section className="section-block featured-section">
       <SectionHeading eyebrow="FRESH FROM YOUR COMMUNITY" title="Fresh finds near you" action="View marketplace" onAction={() => goTo('browse')} />
-      <div className="card-grid home-listings">{results.filter(result => result.type === 'listing').slice(0, 8).map((result) => <ResultCard key={result.id} result={result} compact favorite={favorites.has(result.id)} onFavorite={onFavorite} />)}</div>
+      <div className="card-grid home-listings">{results.filter(result => result.type === 'listing').slice(0, 8).map((result) => <ResultCard key={result.id} result={result} compact favorite={favorites.has(result.id)} onFavorite={onFavorite} verifiedResident={residentVerified} />)}</div>
     </section>
 
     <section className={`split-section ${featureFlags.offers ? '' : 'single-split'}`}>
@@ -420,9 +421,9 @@ function SectionHeading({ eyebrow, title, action, onAction }: { eyebrow: string;
   return <div className="section-heading"><div><span className="eyebrow">{t(eyebrow)}</span><h2>{t(title)}</h2></div><button className="text-link" onClick={onAction}>{t(action)} <ArrowRight size={15} /></button></div>;
 }
 
-function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost, showBackHome, onBackHome }: {
+function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost, showBackHome, onBackHome, residentVerified }: {
   onClearFilters: () => void; selectedCategory: string; view: View; query: string; zone: string; verifiedOnly: boolean; sort: BrowseFilters['sort']; results: SearchResult[]; favorites: Set<string>;
-  onQueryChange: (value: string) => void; onZoneChange: (value: string) => void; onVerifiedChange: (value: boolean) => void; onSortChange: (value: BrowseFilters['sort']) => void; onTabChange: (view: View) => void; onFavorite: (result: SearchResult) => void; onContact: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport: (result: SearchResult) => void; onPost: () => void; showBackHome: boolean; onBackHome: () => void;
+  onQueryChange: (value: string) => void; onZoneChange: (value: string) => void; onVerifiedChange: (value: boolean) => void; onSortChange: (value: BrowseFilters['sort']) => void; onTabChange: (view: View) => void; onFavorite: (result: SearchResult) => void; onContact: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport: (result: SearchResult) => void; onPost: () => void; showBackHome: boolean; onBackHome: () => void; residentVerified: boolean;
 }) {
   const { t } = useTranslation();
   const [audience, setAudience] = useState<'individual' | 'small_business'>('individual');
@@ -443,12 +444,12 @@ function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verif
     <div className="browse-toolbar"><div className="inline-search"><Search size={17} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t("Search this collection")} aria-label={t("Search this collection")} /></div><div className="filter-actions"><label className="select-wrap"><MapPin size={15} /><select value={zone} onChange={(event) => onZoneChange(event.target.value)} aria-label={t("Filter by zone")}>{zones.map((option) => <option key={option} value={option}>{t(option)}</option>)}</select><ChevronDown size={14} /></label><label className={`verified-toggle ${verifiedOnly ? 'checked' : ''}`}><input type="checkbox" checked={verifiedOnly} onChange={(event) => onVerifiedChange(event.target.checked)} /><BadgeCheck size={15} /> {t(" Verified only")}</label><label className="select-wrap sort-select"><SlidersHorizontal size={15} /><select value={sort} onChange={(event) => onSortChange(event.target.value as BrowseFilters['sort'])} aria-label={t("Sort results")}><option value="recommended">{t("Recommended")}</option><option value="newest">{t("Newest first")}</option><option value="price-low">{t("Price: low to high")}</option><option value="price-high">{t("Price: high to low")}</option></select><ChevronDown size={14} /></label></div></div>
     <div className="results-meta"><span><b>{displayed.length}</b> {t(displayed.length === 1 ? 'result' : 'results')} <span className="meta-dot" /> {t(zone)}</span><div className="results-controls"><button className="filter-button" aria-expanded={filtersOpen} aria-controls="collection-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={15} />{t('Refine results')}</button><div className="layout-switch" aria-label={t('Results layout')}><button aria-label={t('List view')} aria-pressed={layout === 'list'} onClick={() => setLayout('list')}><ListFilter size={16} /></button><button aria-label={t('Grid view')} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')}><Grid2X2 size={16} /></button></div></div></div>
     <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={clearCollectionFilters} value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view)} showFurnishing={selectedCategory === 'Apartment rentals'} conditionCategory={selectedCategory} /></div><div className="results-column">
-    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={clearCollectionFilters} />}
+    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} verifiedResident={residentVerified} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={clearCollectionFilters} />}
     </div></div>
   </div>;
 }
 
-function ResultCard({ result, compact = false, favorite = false, onFavorite, onContact, onReport }: { result: SearchResult; compact?: boolean; favorite?: boolean; onFavorite?: (result: SearchResult) => void; onContact?: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport?: (result: SearchResult) => void }) {
+function ResultCard({ result, compact = false, favorite = false, verifiedResident = false, onFavorite, onContact, onReport }: { result: SearchResult; compact?: boolean; favorite?: boolean; verifiedResident?: boolean; onFavorite?: (result: SearchResult) => void; onContact?: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport?: (result: SearchResult) => void }) {
   const { t, language } = useTranslation();
   const [detailsOpen, setDetailsOpen] = useState(() => new URLSearchParams(window.location.search).get('ad') === result.id);
   const [shareFeedback, setShareFeedback] = useState('');
@@ -530,12 +531,12 @@ function ResultCard({ result, compact = false, favorite = false, onFavorite, onC
       {shareFeedback && <small className="share-feedback" role="status">{shareFeedback}</small>}
       <aside className="ad-safety"><ShieldCheck size={18} /><div><h4>{t('Stay safe')}</h4><p>{t(getSafetyMessage(result))}</p></div></aside>
       <p className="modal-intro">{t('Demo content: contact and transactions are not connected yet.')}</p>
-      <CommentBox contentType={result.type} contentId={result.id} language={language} />
+      <CommentBox contentType={result.type} contentId={result.id} language={language} verifiedResident={verifiedResident} />
     </div></ModalShell>}
   </article>;
 }
 
-function CommentBox({ contentType, contentId, language }: { contentType: string; contentId: string; language: Language }) {
+function CommentBox({ contentType, contentId, language, verifiedResident }: { contentType: string; contentId: string; language: Language; verifiedResident: boolean }) {
   const { t } = useTranslation();
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -554,7 +555,7 @@ function CommentBox({ contentType, contentId, language }: { contentType: string;
       setError(requestError instanceof Error ? requestError.message : 'Comment could not be posted.');
     }
   };
-  return <section className="comment-box" aria-label={t('Comments')}><div className="comment-heading"><MessageCircle size={16} /><b>{t('Community comments')}</b></div>{comments.map(item => <div className="public-comment" key={item.id}><b>{item.displayName}</b><p>{item.body}</p></div>)}<textarea value={comment} onChange={event => { setComment(event.target.value); setSubmitted(false); }} placeholder={t('Leave a helpful comment')} rows={3} maxLength={500} /><div className="comment-actions"><small>{t('Be respectful and share useful local context.')}</small><button className="button button-outline" disabled={!comment.trim()} onClick={submit}>{t('Post comment')}</button></div>{submitted && <p className="comment-success">{t('Your comment is awaiting review')}</p>}{error && <p className="comment-error">{t(error)}</p>}</section>;
+  return <section className="comment-box" aria-label={t('Comments')}><div className="comment-heading"><MessageCircle size={16} /><b>{t('Community comments')}</b></div>{comments.map(item => <div className="public-comment" key={item.id}><b>{item.displayName} {item.verifiedResident && <BadgeCheck size={13} aria-label={t('Verified resident')} />}</b><p>{item.body}</p></div>)}{verifiedResident ? <><textarea value={comment} onChange={event => { setComment(event.target.value); setSubmitted(false); }} placeholder={t('Leave a helpful comment')} rows={3} maxLength={500} /><div className="comment-actions"><small>{t('Be respectful and share useful local context.')}</small><button className="button button-outline" disabled={!comment.trim()} onClick={submit}>{t('Post comment')}</button></div></> : <p className="comment-gate">{t('Only verified residents can leave comments.')}</p>}{submitted && <p className="comment-success">{t('Your comment is awaiting review')}</p>}{error && <p className="comment-error">{t(error)}</p>}</section>;
 }
 
 function ResultArt({ result }: { result: SearchResult }) {

@@ -296,6 +296,7 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .public-comment p { margin: 4px 0 0; font-size: 12px; line-height: 1.45; }
 .comment-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .comment-actions small { color: var(--muted); font-size: 10px; }
+.comment-gate { margin: 10px 0 0; padding: 10px 12px; border: 1px solid #d8e5d6; border-radius: 9px; background: #f4f8f1; color: var(--ink-soft); font-size: 11px; line-height: 1.5; }
 .comment-actions .button { padding: 8px 12px; font-size: 11px; }
 .comment-success { color: #3e795e; font-size: 11px; margin: 9px 0 0; }
 .comment-error { color: #a74e4e; font-size: 11px; margin: 9px 0 0; }

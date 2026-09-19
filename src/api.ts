@@ -1,6 +1,6 @@
 const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
-export interface PublicComment { id: string; displayName: string; body: string; language: string; createdAt: string; }
+export interface PublicComment { id: string; displayName: string; body: string; language: string; createdAt: string; verifiedResident?: boolean; }
 
 const visitorId = () => {
   try {

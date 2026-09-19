@@ -20,7 +20,7 @@ export const categories = [
   { label: 'Kids & family', icon: 'baby', count: 74, photo: 'https://images.unsplash.com/photo-1696563541384-bf48ecbaac45?auto=format&fit=crop&w=1200&q=88' },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Cars & motorcycles', icon: 'car-front', count: 36, photo: 'https://plus.unsplash.com/premium_photo-1661369981367-914fd4081355?auto=format&fit=crop&w=1200&q=88' },
-  { label: 'Apartment rentals', icon: 'building', count: 12, photo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Madinaty%20Group%20112.jpg?width=1400' },
+  { label: 'Apartment rentals', icon: 'building', count: 12, photo: '/images/madinaty-rentals.webp' },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Home services', icon: 'wrench', count: 52, photo: 'https://images.unsplash.com/photo-1717281234297-3def5ae3eee1?auto=format&fit=crop&w=1200&q=88' },
   // Photo: Unsplash contributor, from the user-provided reference photo.

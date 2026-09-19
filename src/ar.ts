@@ -23,6 +23,7 @@ export const arabic: Record<string, string> = {
   'Share this ad': 'مشاركة هذا الإعلان', 'WhatsApp': 'واتساب', 'Messenger': 'ماسنجر', 'Facebook': 'فيسبوك', 'Telegram': 'تيليجرام', 'Copy link': 'نسخ الرابط', 'More sharing options': 'خيارات مشاركة إضافية', 'Share link opened': 'تم فتح رابط المشاركة',
   'Tutoring centres': 'مراكز الدروس', 'Tutoring subcategory': 'نوع مقدم الدروس', 'Choose a tutoring subcategory.': 'اختر نوع مقدم الدروس.',
   'Education stage': 'المرحلة التعليمية', 'All education stages': 'كل المراحل التعليمية', 'Before university': 'قبل الجامعة', 'University': 'الجامعة', 'Subject': 'المادة', 'Subjects': 'المواد', 'All subjects': 'كل المواد', 'Quran': 'القرآن الكريم', 'Mathematics': 'الرياضيات', 'English': 'اللغة الإنجليزية', 'Arabic': 'اللغة العربية', 'Physics': 'الفيزياء', 'Chemistry': 'الكيمياء', 'Biology': 'الأحياء', 'French': 'اللغة الفرنسية', 'German': 'اللغة الألمانية', 'Computer science': 'علوم الحاسب',
+  'Switch to night mode': 'التبديل إلى الوضع الليلي', 'Switch to day mode': 'التبديل إلى الوضع النهاري',
   'Small businesses': 'مشروعات صغيرة',
   'Free ads': 'إعلانات مجانية',
   'Agreed fees': 'رسوم بالاتفاق',

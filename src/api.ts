@@ -25,13 +25,12 @@ export const postComment = (type: string, id: string, body: string, language: st
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 let csrfToken: string | null = null;
-export const getAuthConfig = () => request('/auth/config') as Promise<{ turnstileSiteKey: string }>;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');
   csrfToken = result.csrfToken;
   return result.user;
 }
-export const requestCode = (identifier: string, channel: 'phone' | 'email', name: string, turnstileToken: string) => request('/auth/request-code', { method: 'POST', body: JSON.stringify({ [channel]: identifier, channel, name, turnstileToken }) }) as Promise<{ challengeId: string }>;
+export const requestCode = (identifier: string, channel: 'phone' | 'email', name: string) => request('/auth/request-code', { method: 'POST', body: JSON.stringify({ [channel]: identifier, channel, name }) }) as Promise<{ challengeId: string }>;
 export async function verifyCode(challengeId: string, code: string): Promise<Account> {
   const result = await request('/auth/verify-code', { method: 'POST', body: JSON.stringify({ challengeId, code }) });
   csrfToken = result.csrfToken;

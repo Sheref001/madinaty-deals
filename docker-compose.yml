@@ -31,8 +31,6 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:?Set SMTP_FROM in the server .env file}
-      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
-      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       UPLOAD_DIRECTORY: /app/data/uploads
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       RUN_SEED: ${RUN_SEED:-false}

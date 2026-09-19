@@ -1,6 +1,6 @@
 # Deployment
 
-The Node application serves the built frontend and `/api` from one origin. It requires PostgreSQL, SMTP, Cloudflare Turnstile and a Docker-managed local upload volume. Use Node 22.13+ (22.x) or a supported Node 24+ release; the container uses Node 22.
+The Node application serves the built frontend and `/api` from one origin. It requires PostgreSQL, SMTP and a Docker-managed local upload volume. Use Node 22.13+ (22.x) or a supported Node 24+ release; the container uses Node 22.
 
 ## Isolated integration stack
 
@@ -44,7 +44,6 @@ Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `
 - `POSTGRES_PASSWORD`: a long URL-safe random password; Compose interpolates it into the database URL. `DATABASE_URL` is needed for non-Compose commands.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and provider credentials. Production SMTP requires TLS; port 465 uses implicit TLS. Use `hello@madinatydeals.com` as the verified sender once the domain is configured with your mail provider.
 - Account registration and sign-in use one-time codes sent through the configured SMTP service. Phone/SMS sign-in is not enabled.
-- `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`: configure the deployed hostname in Cloudflare. The server checks successful validation, hostname and the `login` action. Only `APP_ENV=local` permits running without CAPTCHA for isolated tests.
 - Uploaded photos and verification documents are stored in the `madinaty-uploads` Docker volume on the Ubuntu server. Back up this volume with the database; it is private and is served only through authenticated API routes.
 - `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults.
 

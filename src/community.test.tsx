@@ -6,7 +6,7 @@ import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
 import { getSession, submitPost } from './api';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }), getAuthConfig: vi.fn().mockResolvedValue({ turnstileSiteKey: '' }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
 beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); });
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });

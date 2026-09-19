@@ -1,4 +1,3 @@
-/* global fetch, URL, URLSearchParams, AbortSignal */
 import { createHash, createHmac, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import { RequestError, readJson } from './request.js';
@@ -23,7 +22,7 @@ export async function consumeLimit(prisma, namespace, identifier, limit, windowM
   if (rows[0].count > limit) throw new RequestError(429, 'Too many attempts. Please try again later.');
 }
 
-export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
+export function createAuth({ prisma, config, mailer }) {
   const hmac = value => createHmac('sha256', config.secret).update(value).digest('hex');
   const csrf = token => hmac(`csrf:${token}`);
   const cookie = (token, maxAge = 604800) => `${config.cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${config.local ? '' : '; Secure'}`;
@@ -49,16 +48,8 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
     if (!same(request.headers['x-csrf-token'], current.csrfToken)) throw new RequestError(403, 'Invalid security token. Reload and try again.');
     return current;
   }
-  async function turnstile(token) {
-    if (config.local && !config.turnstileSecret) return;
-    if (typeof token !== 'string' || !token || token.length > 2048) throw new RequestError(400, 'Please complete the human verification');
-    const response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: new URLSearchParams({ secret: config.turnstileSecret, response: token }), signal: AbortSignal.timeout(10000) });
-    const result = await response.json();
-    if (!response.ok || !result.success || result.hostname !== new URL(config.origin).hostname || result.action !== 'login') throw new RequestError(400, 'Human verification failed. Please try again.');
-  }
   async function handle(request, response, parts, send) {
     const route = parts.slice(1).join('/');
-    if (route === 'auth/config' && request.method === 'GET') return send(response, 200, { turnstileSiteKey: config.turnstileSiteKey });
     if (route === 'auth/session' && request.method === 'GET') {
       const current = await session(request, false);
       return send(response, 200, { user: current?.publicUser || null, csrfToken: current?.csrfToken || null });
@@ -82,7 +73,6 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
       const destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
       await consumeLimit(prisma, 'login-ip', peer, 20, 3600000);
-      await turnstile(body.turnstileToken);
       await consumeLimit(prisma, `login-${requestedChannel}-minute`, destination, 1, 60000);
       await consumeLimit(prisma, `login-${requestedChannel}-hour`, destination, 5, 3600000);
       const id = randomUUID();

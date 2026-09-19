@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAuth, normalizePhone } from './auth.js';
 import { loadConfig } from './config.js';
 
-const config = { local: false, origin: 'https://madinatydeals.com', cookieName: '__Host-madinaty_session', secret: 'test-secret-longer-than-thirty-two-characters', turnstileSecret: 'test', from: 'noreply@example.test' };
+const config = { local: false, origin: 'https://madinatydeals.com', cookieName: '__Host-madinaty_session', secret: 'test-secret-longer-than-thirty-two-characters', from: 'noreply@example.test' };
 const account = { id: 'user-1', email: 'test@example.test', emailVerifiedAt: new Date(), role: 'RESIDENT', status: 'ACTIVE', profile: { displayName: 'Neighbour' } };
 const request = (body, headers = {}) => Object.assign(Readable.from([JSON.stringify(body)]), { method: 'POST', headers: { origin: config.origin, ...headers }, socket: { remoteAddress: '127.0.0.1' } });
 function fixture() {
@@ -28,15 +28,14 @@ function fixture() {
   };
   prisma.$transaction = async callback => callback(prisma);
   const mailer = { sendMail: vi.fn().mockResolvedValue({}) };
-  const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, hostname: 'madinatydeals.com', action: 'login' }) });
-  const auth = createAuth({ prisma, config, mailer, fetchImpl });
+  const auth = createAuth({ prisma, config, mailer });
   const send = vi.fn();
   const call = (route, body, headers) => auth.handle(request(body, headers), {}, ['api', 'auth', route], send);
   const start = async () => {
-    await call('request-code', { email: 'test@example.test', name: 'Neighbour', turnstileToken: 'token' });
+    await call('request-code', { email: 'test@example.test', name: 'Neighbour' });
     return { challengeId: challenge.id, code: mailer.sendMail.mock.calls[0][0].text.match(/\b\d{6}\b/)[0] };
   };
-  return { auth, prisma, mailer, fetchImpl, send, call, start, challenge: () => challenge };
+  return { auth, prisma, mailer, send, call, start, challenge: () => challenge };
 }
 
 describe('authentication boundaries', () => {
@@ -52,12 +51,6 @@ describe('authentication boundaries', () => {
   it('rejects cross-origin login before sending email', async () => {
     const f = fixture();
     await expect(f.call('request-code', {}, { origin: 'https://other.example' })).rejects.toMatchObject({ status: 403 });
-    expect(f.mailer.sendMail).not.toHaveBeenCalled();
-  });
-  it('requires a valid server-verified CAPTCHA with the expected hostname and action', async () => {
-    const f = fixture();
-    f.fetchImpl.mockResolvedValue({ ok: true, json: async () => ({ success: true, hostname: 'attacker.example', action: 'login' }) });
-    await expect(f.start()).rejects.toMatchObject({ status: 400 });
     expect(f.mailer.sendMail).not.toHaveBeenCalled();
   });
   it('hashes codes and sessions, consumes codes once, and issues a secure cookie', async () => {

@@ -8,11 +8,9 @@ export function loadConfig(env = process.env) {
   for (const key of ['SMTP_HOST', 'SMTP_FROM']) {
     if (!env[key]) throw new Error(`${key} is required`);
   }
-  if (!local && (!env.TURNSTILE_SECRET_KEY || !env.TURNSTILE_SITE_KEY)) throw new Error('Turnstile keys are required outside local testing');
   return {
     local, origin: origin.origin, secret: env.AUTH_SECRET,
     cookieName: local ? 'madinaty_session' : '__Host-madinaty_session',
-    turnstileSecret: env.TURNSTILE_SECRET_KEY, turnstileSiteKey: env.TURNSTILE_SITE_KEY || '',
     smtp: { host: env.SMTP_HOST, port: Number(env.SMTP_PORT || 587), secure: env.SMTP_PORT === '465', requireTLS: !local, auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } : undefined, connectionTimeout: 10000, socketTimeout: 15000 },
     from: env.SMTP_FROM,
     uploadDirectory: env.UPLOAD_DIRECTORY || '/app/data/uploads',

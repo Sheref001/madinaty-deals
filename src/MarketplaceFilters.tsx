@@ -1,9 +1,9 @@
 import { useTranslation } from './i18n';
 import type { SearchResult } from './types';
 import { listingConditionOptions } from './types';
-import { educationLevels, groceryActivities, tutoringSubjects } from './types';
+import { educationLevels, groceryActivities, homeServiceTypes, housekeepingTypes, tutoringSubjects } from './types';
 
-export interface CollectionFilters { category: string; condition: string; furnishing: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string }
+export interface CollectionFilters { category: string; condition: string; furnishing: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string; homeServiceType: string; housekeepingType: string }
 
 export default function MarketplaceFilters({ value, onChange, onClear, results, showPrice, showFurnishing, conditionCategory }: { value: CollectionFilters; onClear: () => void; onChange: (value: CollectionFilters) => void; results: SearchResult[]; showPrice: boolean; showFurnishing?: boolean; conditionCategory?: string }) {
   const { t } = useTranslation();
@@ -15,6 +15,8 @@ export default function MarketplaceFilters({ value, onChange, onClear, results, 
     {showFurnishing && <label>{t('Furnishing')}<select value={value.furnishing} onChange={event => change('furnishing', event.target.value)}><option value="">{t('Furnished or unfurnished')}</option><option value="Furnished">{t('Furnished')}</option><option value="Unfurnished">{t('Unfurnished')}</option></select></label>}
     {conditionCategory === 'Tutoring & education' && <><label>{t('Education stage')}<select value={value.educationLevel} onChange={event => change('educationLevel', event.target.value)}><option value="">{t('All education stages')}</option>{educationLevels.map(level => <option value={level} key={level}>{t(level)}</option>)}</select></label><label>{t('Subject')}<select value={value.subject} onChange={event => change('subject', event.target.value)}><option value="">{t('All subjects')}</option>{tutoringSubjects.map(subject => <option value={subject} key={subject}>{t(subject)}</option>)}</select></label></>}
     {conditionCategory === 'Groceries' && <label>{t('Business type')}<select value={value.groceryActivity} onChange={event => change('groceryActivity', event.target.value)}><option value="">{t('All grocery activities')}</option>{groceryActivities.map(activity => <option value={activity} key={activity}>{t(activity)}</option>)}</select></label>}
+    {conditionCategory === 'Home services' && <label>{t('Service type')}<select value={value.homeServiceType} onChange={event => change('homeServiceType', event.target.value)}><option value="">{t('All home services')}</option>{homeServiceTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
+    {conditionCategory === 'Housekeeping & cleaning' && <label>{t('Cleaning type')}<select value={value.housekeepingType} onChange={event => change('housekeepingType', event.target.value)}><option value="">{t('All cleaning services')}</option>{housekeepingTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
     {showPrice && <>
       <fieldset><legend>{t('Price (EGP)')}</legend><div className="price-inputs"><label>{t('Minimum price')}<input type="number" min="0" step="0.01" value={value.min} onChange={event => change('min', event.target.value)} /></label><label>{t('Maximum price')}<input type="number" min="0" step="0.01" value={value.max} onChange={event => change('max', event.target.value)} /></label></div></fieldset>
       {value.min && value.max && Number(value.min) > Number(value.max) && <p role="alert">{t('Maximum price must be at least the minimum.')}</p>}

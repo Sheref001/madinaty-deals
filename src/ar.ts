@@ -24,6 +24,8 @@ export const arabic: Record<string, string> = {
   'Tutoring centres': 'مراكز الدروس', 'Tutoring subcategory': 'نوع مقدم الدروس', 'Choose a tutoring subcategory.': 'اختر نوع مقدم الدروس.',
   'Education stage': 'المرحلة التعليمية', 'All education stages': 'كل المراحل التعليمية', 'Before university': 'قبل الجامعة', 'University': 'الجامعة', 'Subject': 'المادة', 'Subjects': 'المواد', 'All subjects': 'كل المواد', 'Quran': 'القرآن الكريم', 'Mathematics': 'الرياضيات', 'English': 'اللغة الإنجليزية', 'Arabic': 'اللغة العربية', 'Physics': 'الفيزياء', 'Chemistry': 'الكيمياء', 'Biology': 'الأحياء', 'French': 'اللغة الفرنسية', 'German': 'اللغة الألمانية', 'Computer science': 'علوم الحاسب',
   'Business type': 'نوع النشاط', 'All grocery activities': 'كل أنشطة البقالة', 'Grocery store': 'بقالة', 'Butcher': 'جزارة', 'Poultry': 'فراخ ودواجن', 'Bakery': 'مخبز', 'Fishmonger': 'أسماك', 'Fruits & vegetables': 'خضار وفاكهة', 'Dairy & cheese': 'ألبان وأجبان',
+  'Service type': 'نوع الخدمة', 'All home services': 'كل خدمات المنزل', 'Electrician': 'كهربائي', 'Plumber': 'سباك', 'AC technician': 'فني تكييف', 'Painter': 'نقاش', 'Carpenter': 'نجار', 'General maintenance': 'صيانة عامة',
+  'Cleaning type': 'نوع التنظيف', 'All cleaning services': 'كل خدمات التنظيف', 'General cleaning': 'تنظيف عام', 'Deep cleaning': 'تنظيف عميق', 'Move-in/move-out cleaning': 'تنظيف قبل أو بعد الانتقال', 'Upholstery & carpet cleaning': 'تنظيف المفروشات والسجاد',
   'Small businesses': 'مشروعات صغيرة',
   'Free ads': 'إعلانات مجانية',
   'Agreed fees': 'رسوم بالاتفاق',

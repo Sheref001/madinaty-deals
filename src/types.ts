@@ -21,6 +21,10 @@ export const educationLevels = ['Before university', 'University'] as const;
 export type EducationLevel = typeof educationLevels[number];
 export const tutoringSubjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
 export type TutoringSubject = typeof tutoringSubjects[number];
+export const homeServiceTypes = ['Electrician', 'Plumber', 'AC technician', 'Painter', 'Carpenter', 'General maintenance'] as const;
+export type HomeServiceType = typeof homeServiceTypes[number];
+export const housekeepingTypes = ['General cleaning', 'Deep cleaning', 'Move-in/move-out cleaning', 'Upholstery & carpet cleaning'] as const;
+export type HousekeepingType = typeof housekeepingTypes[number];
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -63,6 +67,8 @@ export interface Service extends BaseResult {
   response: string;
   educationLevel?: EducationLevel;
   subjects?: TutoringSubject[];
+  homeServiceType?: HomeServiceType;
+  housekeepingType?: HousekeepingType;
 }
 
 export interface Business extends BaseResult {

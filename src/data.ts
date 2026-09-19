@@ -62,7 +62,7 @@ export const listings: Listing[] = [
 export const services: Service[] = [
   {
     id: 'service-1', publicAdId: 'MD-3Y6HWDLU45', type: 'service', title: 'Cool Point AC Services', subtitle: 'Installation, maintenance & repair', category: 'Home services', rating: 4.9, reviewCount: 84,
-    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'All zones', createdAt: 'Verified provider', image: 'ac', accent: 'blue', verified: true,
+    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', homeServiceType: 'AC technician', zone: 'All zones', createdAt: 'Verified provider', image: 'ac', accent: 'blue', verified: true,
   },
   {
     id: 'service-2', publicAdId: 'MD-3U9CHSMVJ5', type: 'service', title: 'Madinaty Move', subtitle: 'Careful moving for apartments & villas', category: 'Moving', rating: 4.8, reviewCount: 37,
@@ -86,7 +86,7 @@ export const services: Service[] = [
   },
   {
     id: 'service-cleaning-demo', publicAdId: 'MD-NHXCV537G3', type: 'service', title: 'Madinaty Home Care · DEMO', subtitle: 'Housekeeping, deep cleaning & move-in cleaning', category: 'Housekeeping & cleaning', rating: 0, reviewCount: 0,
-    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'All zones', createdAt: 'Community provider', image: 'cleaning', accent: 'blue', verified: false,
+    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', housekeepingType: 'General cleaning', zone: 'All zones', createdAt: 'Community provider', image: 'cleaning', accent: 'blue', verified: false,
   },
   {
     id: 'service-delivery-noor-demo', publicAdId: 'MD-4AFAKH484Q', type: 'service', title: 'Noor (نور) · Delivery Rider · DEMO', subtitle: 'Motorcycle pickup and delivery within Madinaty', category: 'Local delivery riders', rating: 5, reviewCount: 0,

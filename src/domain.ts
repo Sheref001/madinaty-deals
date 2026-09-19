@@ -15,6 +15,8 @@ export interface BrowseFilters {
   educationLevel?: string;
   subject?: string;
   groceryActivity?: string;
+  homeServiceType?: string;
+  housekeepingType?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -37,7 +39,9 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const educationLevelMatches = !filters.educationLevel || (result.type === 'service' && result.educationLevel === filters.educationLevel);
     const subjectMatches = !filters.subject || (result.type === 'service' && result.subjects?.includes(filters.subject as never));
     const groceryActivityMatches = !filters.groceryActivity || (result.type === 'business' && result.groceryActivity === filters.groceryActivity);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && matchesQuery(result, filters.query);
+    const homeServiceTypeMatches = !filters.homeServiceType || (result.type === 'service' && result.homeServiceType === filters.homeServiceType);
+    const housekeepingTypeMatches = !filters.housekeepingType || (result.type === 'service' && result.housekeepingType === filters.housekeepingType);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

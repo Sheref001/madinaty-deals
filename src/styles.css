@@ -400,6 +400,7 @@ html[lang="ar"] .brand-latin-word { display: none; }
 .elite-rate { display: grid; margin-inline-start: auto; text-align: end; white-space: nowrap; }
 .elite-rate strong { color: #b26f20; font-family: 'Playfair Display', serif; font-size: 20px; }
 .elite-rate small { color: #887657; font-size: 10px; }
+.elite-rate a { color: #0d5b58; font-size: 10px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .elite-ad-card { display: flex; align-items: center; gap: 16px; padding: 13px; border: 1px solid rgba(23,40,62,.1); border-radius: 13px; background: rgba(255,255,255,.78); }
 .elite-ad-art { display: grid; place-items: center; align-content: center; flex: 0 0 78px; height: 78px; gap: 5px; border-radius: 10px; color: #fff; background: linear-gradient(145deg, #e51f2a, #17283e); }
 .elite-ad-art span { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }

@@ -952,3 +952,6 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 
 .push-preferences label { display: flex; align-items: center; gap: 7px; }
 @media (max-width: 760px) { .push-notifications { inset-inline-start: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); } .push-prompt { padding: 20px; } }
+
+/* Keep the learning scene visible above the caption on the tutoring card. */
+.category-card > .category-icon.graduation-cap img { object-position: 50% 68%; }

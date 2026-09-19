@@ -15,6 +15,10 @@ export function listingConditionOptions(category?: string): ListingCondition[] {
     : generalListingConditions;
 }
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
+export const educationLevels = ['Before university', 'University'] as const;
+export type EducationLevel = typeof educationLevels[number];
+export const tutoringSubjects = ['Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
+export type TutoringSubject = typeof tutoringSubjects[number];
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -55,6 +59,8 @@ export interface Service extends BaseResult {
   phone: string;
   whatsapp?: string;
   response: string;
+  educationLevel?: EducationLevel;
+  subjects?: TutoringSubject[];
 }
 
 export interface Business extends BaseResult {

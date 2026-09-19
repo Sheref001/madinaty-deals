@@ -12,6 +12,8 @@ export interface BrowseFilters {
   furnishing?: string;
   minPrice?: number;
   maxPrice?: number;
+  educationLevel?: string;
+  subject?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -31,7 +33,9 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const furnishingMatches = !filters.furnishing || (result.type === 'listing' && result.furnishing === filters.furnishing);
     const hasPriceFilter = filters.minPrice !== undefined || filters.maxPrice !== undefined;
     const priceMatches = !hasPriceFilter || (result.type === 'listing' && result.price !== null && result.price >= (filters.minPrice ?? 0) && result.price <= (filters.maxPrice ?? Infinity));
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && matchesQuery(result, filters.query);
+    const educationLevelMatches = !filters.educationLevel || (result.type === 'service' && result.educationLevel === filters.educationLevel);
+    const subjectMatches = !filters.subject || (result.type === 'service' && result.subjects?.includes(filters.subject as never));
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

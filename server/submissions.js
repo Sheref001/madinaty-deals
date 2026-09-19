@@ -56,6 +56,15 @@ export function createSubmissions({ prisma, auth }) {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
       Object.assign(clean, { whatsapp: payload.whatsapp });
+      if (clean.category === 'Tutoring & education') {
+        const educationLevel = payload.educationLevel || 'Before university';
+        const submittedSubjects = payload.subjects || ['Mathematics'];
+        if (!['Before university', 'University'].includes(educationLevel)) throw new RequestError(400, 'Choose an education stage');
+        const subjects = ['Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'];
+        if (!Array.isArray(submittedSubjects) || submittedSubjects.length < 1 || submittedSubjects.length > subjects.length || !submittedSubjects.every(subject => subjects.includes(subject))) throw new RequestError(400, 'Choose at least one subject');
+        clean.educationLevel = educationLevel;
+        clean.subjects = [...new Set(submittedSubjects)];
+      }
     }
     if (['Tutoring', 'Tutoring & education', 'Health & fitness', 'Electronics'].includes(clean.category)) {
       if (!['individual', 'small_business'].includes(payload.advertiserType)) throw new RequestError(400, 'Choose an advertiser type');

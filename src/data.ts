@@ -70,15 +70,15 @@ export const services: Service[] = [
   },
   {
     id: 'service-3', publicAdId: 'MD-VM8MQ8ZSWK', advertiserType: 'small_business', type: 'service', title: 'Kite Learning Studio', subtitle: 'Math & English tutoring for ages 7–16', category: 'Tutoring & education', rating: 4.7, reviewCount: 21,
-    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'B10', createdAt: 'Verified provider', image: 'tutor', accent: 'lilac', verified: true,
+    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', educationLevel: 'Before university', subjects: ['Mathematics', 'English'], zone: 'B10', createdAt: 'Verified provider', image: 'tutor', accent: 'lilac', verified: true,
   },
   {
     id: 'service-tutor-demo', publicAdId: 'MD-TJ4WXHZAPK', type: 'service', title: 'Sheref · Math Tutor · DEMO', subtitle: 'Experienced math tutor for International and Thanaweya Amma schools', category: 'Tutoring & education', rating: 5, reviewCount: 0,
-    serviceArea: 'Madinaty-wide', phone: '+201226666391', whatsapp: '+201226666391', response: 'Usually replies quickly', zone: 'B10', createdAt: 'Demo profile', image: 'tutor', accent: 'lilac', verified: false,
+    serviceArea: 'Madinaty-wide', phone: '+201226666391', whatsapp: '+201226666391', response: 'Usually replies quickly', educationLevel: 'Before university', subjects: ['Mathematics'], zone: 'B10', createdAt: 'Demo profile', image: 'tutor', accent: 'lilac', verified: false,
   },
   {
     id: 'service-english-tutor-demo', publicAdId: 'MD-2BQMAD9ZDR', type: 'service', title: 'Nehal · English Tutor · DEMO', subtitle: 'Experienced English tutor for school students and exam preparation', category: 'Tutoring & education', rating: 5, reviewCount: 0,
-    serviceArea: 'Madinaty-wide', phone: '+13433639621', whatsapp: '+13433639621', response: 'Usually replies quickly', zone: 'B10', createdAt: 'Demo profile', image: 'tutor', accent: 'lilac', verified: false,
+    serviceArea: 'Madinaty-wide', phone: '+13433639621', whatsapp: '+13433639621', response: 'Usually replies quickly', educationLevel: 'Before university', subjects: ['English'], zone: 'B10', createdAt: 'Demo profile', image: 'tutor', accent: 'lilac', verified: false,
   },
   {
     id: 'service-4', publicAdId: 'MD-EWEAA2Z4Y2', type: 'service', title: 'Paws & Paths', subtitle: 'Dog walking, sitting and home visits', category: 'Pet care', rating: 4.9, reviewCount: 16,

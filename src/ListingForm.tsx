@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
-import type { Listing, ListingCondition, RentalFurnishing } from './types';
+import { listingConditionOptions, type Listing, type ListingCondition, type RentalFurnishing } from './types';
 import MediaUpload from './MediaUpload';
 import { submitPost } from './api';
 import PostingAudience from './PostingAudience';
@@ -26,6 +26,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const isApartmentRental = category === 'Apartment rentals';
+  const conditionOptions = listingConditionOptions(category);
   const valid = title.trim().length >= 5 && description.trim().length >= 10 && Number.isFinite(Number(price)) && Number(price) > 0;
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -51,11 +52,11 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <p className="modal-intro">{t('Tell neighbours what makes your item useful. Mention any wear or defects so they know what to expect.')}</p>
       {isApartmentRental && <div className="rental-policy-note"><ShieldCheck size={17} /><span><b>{t('Resident-only apartment rentals')}</b><small>{residentVerified ? t('Verified residents may post one apartment rental per calendar month.') : t('You must verify that you live in Madinaty before posting an apartment rental. Brokers and dealers are not allowed.')}</small>{residentVerified && <small>{t(`${Math.max(0, 1 - rentalPostsThisMonth)} rental post remaining this month`)}</small>}</span></div>}
       <label>{t('What are you selling?')}<input autoFocus dir="auto" value={title} onChange={event => setTitle(event.target.value)} placeholder={t('e.g. Solid oak coffee table')} minLength={5} maxLength={120} required /></label>
-      <div className="form-row"><label>{t('Category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'building', 'shopping-basket'].includes(item.icon)).map(item => <option value={item.label} key={item.label}>{t(item.label)}</option>)}</select></label>
+      <div className="form-row"><label>{t('Category')}<select value={category} onChange={event => { const nextCategory = event.target.value; setCategory(nextCategory); setCondition(listingConditionOptions(nextCategory)[0]); }}>{categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'building', 'shopping-basket'].includes(item.icon)).map(item => <option value={item.label} key={item.label}>{t(item.label)}</option>)}</select></label>
       <label>{t('Price (EGP)')}<input type="number" min="0.01" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0" required /></label></div>
       <label>{t('Description')}<textarea dir="auto" rows={4} minLength={10} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('Size, age, included accessories and any signs of use')} required /></label>
       <MediaUpload files={photos} onChange={setPhotos} />
-      <div className="form-row"><label>{t('Condition')}<select value={condition} onChange={event => setCondition(event.target.value as ListingCondition)}>{(['Like new', 'Good', 'Fair'] as const).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+      <div className="form-row"><label>{t('Condition')}<select value={conditionOptions.includes(condition) ? condition : conditionOptions[0]} onChange={event => setCondition(event.target.value as ListingCondition)}>{conditionOptions.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
       <label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div>
       {isApartmentRental && <label>{t('Furnishing')}<select value={furnishing} onChange={event => setFurnishing(event.target.value as RentalFurnishing)}><option value="Furnished">{t('Furnished')}</option><option value="Unfurnished">{t('Unfurnished')}</option></select></label>}
     </>}

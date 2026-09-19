@@ -43,7 +43,7 @@ export const listings: Listing[] = [
   },
   {
     id: 'listing-2', publicAdId: 'MD-BWAK8PSJRB', type: 'listing', title: 'LG 55” 4K Smart TV', subtitle: 'Perfect working condition · original remote', category: 'Electronics', price: null,
-    condition: 'Like new', seller: 'Omar A.', sellerVerified: true, zone: 'B2', createdAt: '5 hours ago', image: 'tv', accent: 'navy', status: 'active',
+    condition: 'Fully working - used', seller: 'Omar A.', sellerVerified: true, zone: 'B2', createdAt: '5 hours ago', image: 'tv', accent: 'navy', status: 'active',
   },
   {
     id: 'listing-3', publicAdId: 'MD-S3ZDZY9SXV', type: 'listing', title: 'Stokke Tripp Trapp chair', subtitle: 'Natural wood · includes baby set', category: 'Kids & family', price: 9800,

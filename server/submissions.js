@@ -46,7 +46,7 @@ export function createSubmissions({ prisma, auth }) {
     const clean = Object.fromEntries(['title', 'subtitle', 'category', 'zone'].map(key => [key, payload[key].trim()]));
     if (body.kind === 'listing') {
       if (!['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
-      if (typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0 || payload.price > 100000000 || !['Like new', 'Good', 'Fair'].includes(payload.condition)) throw new RequestError(400, 'Invalid price or condition');
+      if (typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0 || payload.price > 100000000 || !['New', 'Like new', 'Good', 'Fair', 'Fully working - used', 'Needs repair', 'Good used condition', 'Worn', 'Excellent', 'Newly finished', 'Well maintained', 'Needs renovation'].includes(payload.condition)) throw new RequestError(400, 'Invalid price or condition');
       Object.assign(clean, { price: payload.price, condition: payload.condition });
       if (clean.category === 'Apartment rentals') {
         if (!['Furnished', 'Unfurnished'].includes(payload.furnishing)) throw new RequestError(400, 'Choose furnished or unfurnished');

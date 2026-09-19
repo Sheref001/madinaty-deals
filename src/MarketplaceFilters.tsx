@@ -1,5 +1,6 @@
 import { useTranslation } from './i18n';
 import type { SearchResult } from './types';
+import { listingConditionOptions } from './types';
 
 export interface CollectionFilters { category: string; condition: string; furnishing: string; min: string; max: string }
 
@@ -14,7 +15,7 @@ export default function MarketplaceFilters({ value, onChange, onClear, results, 
     {showPrice && <>
       <fieldset><legend>{t('Price (EGP)')}</legend><div className="price-inputs"><label>{t('Minimum price')}<input type="number" min="0" step="0.01" value={value.min} onChange={event => change('min', event.target.value)} /></label><label>{t('Maximum price')}<input type="number" min="0" step="0.01" value={value.max} onChange={event => change('max', event.target.value)} /></label></div></fieldset>
       {value.min && value.max && Number(value.min) > Number(value.max) && <p role="alert">{t('Maximum price must be at least the minimum.')}</p>}
-      <label>{t('Condition')}<select value={value.condition} onChange={event => change('condition', event.target.value)}><option value="">{t('Any condition')}</option>{['Like new','Good','Fair'].map(condition => <option key={condition} value={condition}>{t(condition)}</option>)}</select></label>
+      <label>{t('Condition')}<select value={value.condition} onChange={event => change('condition', event.target.value)}><option value="">{t('Any condition')}</option>{listingConditionOptions(value.category).map(condition => <option key={condition} value={condition}>{t(condition)}</option>)}</select></label>
     </>}
     <button className="button button-outline" onClick={onClear}>{t('Clear filters')}</button>
   </aside>;

@@ -1,6 +1,19 @@
 export type View = 'home' | 'browse' | 'services' | 'businesses' | 'offers' | 'saved' | 'admin' | 'search';
 export type ResultType = 'listing' | 'service' | 'business' | 'offer';
-export type ListingCondition = 'Like new' | 'Good' | 'Fair';
+export const listingConditionSets = {
+  'Furniture & home': ['New', 'Like new', 'Good', 'Fair'] as const,
+  Electronics: ['New', 'Like new', 'Fully working - used', 'Needs repair'] as const,
+  'Kids & family': ['New', 'Like new', 'Good used condition', 'Worn'] as const,
+  'Cars & motorcycles': ['New', 'Excellent', 'Good', 'Needs repair'] as const,
+  'Apartment rentals': ['Newly finished', 'Well maintained', 'Needs renovation'] as const,
+} as const;
+export type ListingCondition = typeof listingConditionSets[keyof typeof listingConditionSets][number];
+const allListingConditions = [...new Set(Object.values(listingConditionSets).flat())] as ListingCondition[];
+export function listingConditionOptions(category?: string): ListingCondition[] {
+  return category && category in listingConditionSets
+    ? [...listingConditionSets[category as keyof typeof listingConditionSets]]
+    : allListingConditions;
+}
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
 
 export type AdvertiserType = 'individual' | 'small_business';

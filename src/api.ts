@@ -24,6 +24,7 @@ export const getComments = (type: string, id: string) => request(`/content/${enc
 export const postComment = (type: string, id: string, body: string, language: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ body, language }) }) as Promise<{ comment: PublicComment }>;
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
+export interface AdminUser extends Account { status: string; createdAt: string; }
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');
@@ -52,3 +53,6 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
   for (const file of files) uploadIds.push((await uploadFile(file, 'photo')).id);
   return request('/submissions', { method: 'POST', body: JSON.stringify({ kind, payload, uploadIds }) });
 }
+export const getAdminUsers = () => request('/admin/users') as Promise<{ users: AdminUser[] }>;
+export const updateAdminUserRole = (id: string, role: string) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'POST', body: JSON.stringify({ role }) }) as Promise<{ user: AdminUser }>;
+export const updateAdminUserStatus = (id: string, status: string) => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ user: AdminUser }>;

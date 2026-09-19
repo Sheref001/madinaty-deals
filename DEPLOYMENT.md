@@ -45,7 +45,7 @@ Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and provider credentials. Production SMTP requires TLS; port 465 uses implicit TLS. Use `hello@madinatydeals.com` as the verified sender once the domain is configured with your mail provider.
 - Account registration and sign-in use one-time codes sent through the configured SMTP service. Phone/SMS sign-in is not enabled.
 - Uploaded photos and verification documents are stored in the `madinaty-uploads` Docker volume on the Ubuntu server. Back up this volume with the database; it is private and is served only through authenticated API routes.
-- `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults.
+- `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults. The admin dashboard can later assign `MODERATOR`, `SERVICE_PROVIDER`, `BUSINESS_OWNER`, `RESIDENT` or `ADMIN` roles and suspend accounts. Changes are recorded in the audit log; the last active administrator cannot be removed.
 
 The entrypoint applies checked-in migrations, optionally seeds, then starts the application as a non-root user on a read-only filesystem. `/api/health` is process liveness; `/api/ready` checks PostgreSQL. Neither proves SMTP or Turnstile readiness.
 
@@ -70,7 +70,7 @@ The recommended production setup is same-origin. Separate origins require an exa
 
 ## Scope
 
-Authentication and uploads are server-backed. Listing/service submissions and comments enter review states; they are not automatically published. Reviewer API routes list and decide resident verifications, with server role checks and audit records. A full moderation dashboard and a workflow to publish submitted marketplace content remain separate work.
+Authentication, uploads and administrator user controls are server-backed. Listing/service submissions and comments enter review states; they are not automatically published. Reviewer API routes list and decide resident verifications, with server role checks and audit records. Publication workflow and deeper analytics remain separate work.
 
 The frontend still displays illustrative marketplace inventory. Payments are disabled. Before public release, test with your actual SMTP/storage/Turnstile providers, configure TLS and backups, and confirm document retention with the responsible team.
 

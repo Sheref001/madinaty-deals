@@ -17,6 +17,7 @@ export function loadConfig(env = process.env) {
     turnstileSecret: env.TURNSTILE_SECRET_KEY, turnstileSiteKey: env.TURNSTILE_SITE_KEY || '',
     smtp: { host: env.SMTP_HOST, port: Number(env.SMTP_PORT || 587), secure: env.SMTP_PORT === '465', requireTLS: !local, auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } : undefined, connectionTimeout: 10000, socketTimeout: 15000 },
     from: env.SMTP_FROM,
+    sms: { accountSid: env.TWILIO_ACCOUNT_SID || '', authToken: env.TWILIO_AUTH_TOKEN || '', from: env.TWILIO_FROM || '' },
     storage: { region: env.AWS_REGION, endpoint: env.OBJECT_STORAGE_ENDPOINT || undefined, forcePathStyle: Boolean(env.OBJECT_STORAGE_ENDPOINT) },
     bucket: env.OBJECT_STORAGE_BUCKET,
     clamav: { host: env.CLAMAV_HOST, port: Number(env.CLAMAV_PORT || 3310) },

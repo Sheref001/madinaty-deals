@@ -44,7 +44,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the status report and next implemen
 
 The Node/Prisma API supports email-code authentication, cookie sessions, private scanned uploads, resident verification review, listing/service submissions, view counts and moderated comments. Run `npm run server:dev` alongside Vite after configuring PostgreSQL and applying migrations. Docker Compose configuration is included; see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-Sign-in and submissions require the configured backend services: PostgreSQL, SMTP, private S3-compatible storage and ClamAV, plus Turnstile outside local testing. Uploaded photos and verification documents remain private. Listing/service submissions enter a review queue; a workflow to publish them and a full moderation dashboard remain to be built. The frontend still browses sample inventory. API unit tests use database doubles; the included local integration script requires the Docker test stack and has not yet been run here.
+Sign-in and submissions require the configured backend services: PostgreSQL, SMTP, private S3-compatible storage and ClamAV, plus Turnstile outside local testing. Registration defaults to a phone number and one-time SMS code; email OTP remains an optional alternative. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM` for phone sign-in. Uploaded photos and verification documents remain private. Listing/service submissions enter a review queue; a workflow to publish them and a full moderation dashboard remain to be built. The frontend still browses sample inventory. API unit tests use database doubles; the included local integration script requires the Docker test stack and has not yet been run here.
 
 ## Updates and offers notifications
 

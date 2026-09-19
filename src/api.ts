@@ -23,7 +23,7 @@ export const recordView = (type: string, id: string) => request(`/content/${enco
 export const getComments = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`) as Promise<{ comments: PublicComment[] }>;
 export const postComment = (type: string, id: string, body: string, language: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ body, language }) }) as Promise<{ comment: PublicComment }>;
 
-export interface Account { id: string; email: string; name: string; role: string; residentVerified: boolean; }
+export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 let csrfToken: string | null = null;
 export const getAuthConfig = () => request('/auth/config') as Promise<{ turnstileSiteKey: string }>;
 export async function getSession(): Promise<Account | null> {
@@ -31,7 +31,7 @@ export async function getSession(): Promise<Account | null> {
   csrfToken = result.csrfToken;
   return result.user;
 }
-export const requestCode = (email: string, name: string, turnstileToken: string) => request('/auth/request-code', { method: 'POST', body: JSON.stringify({ email, name, turnstileToken }) }) as Promise<{ challengeId: string }>;
+export const requestCode = (identifier: string, channel: 'phone' | 'email', name: string, turnstileToken: string) => request('/auth/request-code', { method: 'POST', body: JSON.stringify({ [channel]: identifier, channel, name, turnstileToken }) }) as Promise<{ challengeId: string }>;
 export async function verifyCode(challengeId: string, code: string): Promise<Account> {
   const result = await request('/auth/verify-code', { method: 'POST', body: JSON.stringify({ challengeId, code }) });
   csrfToken = result.csrfToken;

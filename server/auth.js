@@ -5,7 +5,13 @@ import { RequestError, readJson } from './request.js';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
-const publicUser = user => ({ id: user.id, email: user.email, role: user.role, name: user.profile?.displayName || 'Neighbour', residentVerified: user.profile?.verificationState === 'VERIFIED' });
+const publicUser = user => ({ id: user.id, email: user.email, phone: user.phone, role: user.role, name: user.profile?.displayName || 'Neighbour', residentVerified: user.profile?.verificationState === 'VERIFIED' });
+export function normalizePhone(value) {
+  const raw = typeof value === 'string' ? value.trim().replace(/[\s().-]/g, '') : '';
+  const candidate = raw.startsWith('00') ? `+${raw.slice(2)}` : raw.startsWith('01') ? `+20${raw.slice(1)}` : raw;
+  if (!/^\+[1-9]\d{7,14}$/.test(candidate)) throw new RequestError(400, 'Enter a valid phone number');
+  return candidate;
+}
 export const isReviewer = user => ['ADMIN', 'MODERATOR'].includes(user.role);
 
 // Atomic PostgreSQL counters are shared by every application instance.
@@ -31,7 +37,7 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
       throw new RequestError(401, 'Please sign in to continue');
     }
     const record = await prisma.session.findUnique({ where: { tokenHash: digest(token) }, include: { user: { include: { profile: true } } } });
-    if (!record || record.expiresAt <= new Date() || record.user.status !== 'ACTIVE' || !record.user.emailVerifiedAt) {
+    if (!record || record.expiresAt <= new Date() || record.user.status !== 'ACTIVE' || (!record.user.emailVerifiedAt && !record.user.phoneVerifiedAt)) {
       if (!required) return null;
       throw new RequestError(401, 'Please sign in to continue');
     }
@@ -70,21 +76,33 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
     const body = await readJson(request);
     const peer = request.clientIp || request.socket.remoteAddress || 'unknown';
     if (route === 'auth/request-code') {
-      const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
       const name = typeof body.name === 'string' ? body.name.trim() : '';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || name.length < 2 || name.length > 80) throw new RequestError(400, 'Enter a valid name and email address');
+      if (name.length < 2 || name.length > 80) throw new RequestError(400, 'Enter a valid name');
+      const requestedChannel = body.channel === 'email' || (!body.channel && !body.phone && body.email) ? 'email' : 'phone';
+      let destination;
+      if (requestedChannel === 'email') {
+        destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
+      } else destination = normalizePhone(body.phone);
       await consumeLimit(prisma, 'login-ip', peer, 20, 3600000);
       await turnstile(body.turnstileToken);
-      await consumeLimit(prisma, 'login-email-minute', email, 1, 60000);
-      await consumeLimit(prisma, 'login-email-hour', email, 5, 3600000);
+      await consumeLimit(prisma, `login-${requestedChannel}-minute`, destination, 1, 60000);
+      await consumeLimit(prisma, `login-${requestedChannel}-hour`, destination, 5, 3600000);
       const id = randomUUID();
       const code = String(randomInt(0, 1000000)).padStart(6, '0');
-      await prisma.otpChallenge.create({ data: { id, destination: email, channel: 'email', displayName: name, codeHash: hmac(`${id}:${code}`), expiresAt: new Date(Date.now() + 600000) } });
+      await prisma.otpChallenge.create({ data: { id, destination, channel: requestedChannel, displayName: name, codeHash: hmac(`${id}:${code}`), expiresAt: new Date(Date.now() + 600000) } });
       try {
-        await mailer.sendMail({ from: config.from, to: email, subject: 'Madinaty Deals sign-in code', text: `Your Madinaty Deals sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email.` });
+        if (requestedChannel === 'email') await mailer.sendMail({ from: config.from, to: destination, subject: 'Madinaty Deals sign-in code', text: `Your Madinaty Deals sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email.` });
+        else {
+          if (!config.sms?.accountSid || !config.sms?.authToken || !config.sms?.from) throw new Error('SMS is not configured');
+          const credentials = Buffer.from(`${config.sms.accountSid}:${config.sms.authToken}`).toString('base64');
+          const form = new URLSearchParams({ To: destination, From: config.sms.from, Body: `Madinaty Deals sign-in code: ${code}. It expires in 10 minutes.` });
+          const smsResponse = await fetchImpl(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.sms.accountSid)}/Messages.json`, { method: 'POST', headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(10000) });
+          if (!smsResponse.ok) throw new Error('SMS delivery failed');
+        }
       } catch {
         await prisma.otpChallenge.delete({ where: { id } });
-        throw new RequestError(503, 'Email delivery is unavailable. Please try again later.');
+        throw new RequestError(503, 'Code delivery is unavailable. Please try again later.');
       }
       return send(response, 202, { challengeId: id });
     }
@@ -100,9 +118,11 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
       const user = await prisma.$transaction(async tx => {
         const used = await tx.otpChallenge.updateMany({ where: { id: challenge.id, consumedAt: null, expiresAt: { gt: new Date() } }, data: { consumedAt: new Date() } });
         if (!used.count) throw new RequestError(400, 'Invalid or expired code');
-        const account = await tx.user.upsert({ where: { email: challenge.destination }, update: {}, create: { email: challenge.destination, emailVerifiedAt: new Date(), profile: { create: { displayName: challenge.displayName } } }, include: { profile: true } });
+        const account = challenge.channel === 'phone'
+          ? await tx.user.upsert({ where: { phone: challenge.destination }, update: {}, create: { phone: challenge.destination, phoneVerifiedAt: new Date(), profile: { create: { displayName: challenge.displayName } } }, include: { profile: true } })
+          : await tx.user.upsert({ where: { email: challenge.destination }, update: {}, create: { email: challenge.destination, emailVerifiedAt: new Date(), profile: { create: { displayName: challenge.displayName } } }, include: { profile: true } });
         if (account.status !== 'ACTIVE') throw new RequestError(400, 'Invalid or expired code');
-        await tx.user.update({ where: { id: account.id }, data: { emailVerifiedAt: account.emailVerifiedAt || new Date() } });
+        await tx.user.update({ where: { id: account.id }, data: challenge.channel === 'phone' ? { phoneVerifiedAt: account.phoneVerifiedAt || new Date() } : { emailVerifiedAt: account.emailVerifiedAt || new Date() } });
         await tx.session.create({ data: { userId: account.id, tokenHash: digest(token), expiresAt: new Date(Date.now() + 604800000) } });
         await tx.auditLog.create({ data: { actorId: account.id, action: 'auth.login', targetType: 'User', targetId: account.id } });
         return account;

@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { createAuth } from './auth.js';
+import { createAuth, normalizePhone } from './auth.js';
 import { loadConfig } from './config.js';
 
 const config = { local: false, origin: 'https://madinatydeals.com', cookieName: '__Host-madinaty_session', secret: 'test-secret-longer-than-thirty-two-characters', turnstileSecret: 'test', from: 'noreply@example.test' };
@@ -40,6 +40,11 @@ function fixture() {
 }
 
 describe('authentication boundaries', () => {
+  it('normalizes Egyptian and international phone numbers to E.164', () => {
+    expect(normalizePhone('010 1234 5678')).toBe('+201012345678');
+    expect(normalizePhone('+1 (202) 555-0123')).toBe('+12025550123');
+    expect(() => normalizePhone('12345')).toThrow('valid phone number');
+  });
   it('fails closed when production configuration is incomplete or uses HTTP', () => {
     expect(() => loadConfig({})).toThrow('HTTPS');
     expect(() => loadConfig({ APP_ORIGIN: config.origin })).toThrow('AUTH_SECRET');

@@ -7,7 +7,8 @@ declare global { interface Window { turnstile?: Turnstile; } }
 
 export default function AuthForm({ onSignedIn }: { onSignedIn: (account: Account) => void }) {
   const { t } = useTranslation();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [channel, setChannel] = useState<'phone' | 'email'>('phone');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [challengeId, setChallengeId] = useState('');
@@ -47,7 +48,7 @@ export default function AuthForm({ onSignedIn }: { onSignedIn: (account: Account
     try {
       if (challengeId) onSignedIn(await verifyCode(challengeId, code));
       else {
-        const result = await requestCode(email, name, token);
+        const result = await requestCode(identifier, channel, name, token);
         setChallengeId(result.challengeId);
       }
     } catch (cause) {
@@ -55,11 +56,11 @@ export default function AuthForm({ onSignedIn }: { onSignedIn: (account: Account
       if (widgetId.current && !challengeId) { window.turnstile?.reset(widgetId.current); setReady(false); setToken(''); }
     } finally { setBusy(false); }
   }}>
-    <p>{t(challengeId ? 'Check your email for a six-digit code. It expires in 10 minutes.' : 'Sign in or create an account with a code sent to your email.')}</p>
-    {!challengeId ? <><label>{t('Your name')}<input required minLength={2} maxLength={80} value={name} onChange={event => setName(event.target.value)} autoComplete="name" /></label><label>{t('Email address')}<input required type="email" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" /></label></> : <label>{t('Verification code')}<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} value={code} onChange={event => setCode(event.target.value)} /></label>}
+    <p>{t(challengeId ? (channel === 'phone' ? 'Check your phone for a six-digit code. It expires in 10 minutes.' : 'Check your email for a six-digit code. It expires in 10 minutes.') : 'Sign in or create an account with a code sent to your phone. Email is optional.')}</p>
+    {!challengeId ? <><label>{t('Your name')}<input required minLength={2} maxLength={80} value={name} onChange={event => setName(event.target.value)} autoComplete="name" /></label><div className="auth-methods" role="group" aria-label={t('Sign-in method')}><button type="button" className={channel === 'phone' ? 'selected' : ''} onClick={() => { setChannel('phone'); setIdentifier(''); }}>{t('Phone number')}</button><button type="button" className={channel === 'email' ? 'selected' : ''} onClick={() => { setChannel('email'); setIdentifier(''); }}>{t('Email address')} ({t('Optional')})</button></div><label>{t(channel === 'phone' ? 'Phone number' : 'Email address')}<input required type={channel === 'phone' ? 'tel' : 'email'} inputMode={channel === 'phone' ? 'tel' : 'email'} maxLength={channel === 'phone' ? 20 : 254} value={identifier} onChange={event => setIdentifier(event.target.value)} autoComplete={channel === 'phone' ? 'tel' : 'email'} placeholder={channel === 'phone' ? '+20 1X XXX XXXX' : undefined} /></label></> : <label>{t('Verification code')}<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} value={code} onChange={event => setCode(event.target.value)} /></label>}
     <div ref={widget} hidden={Boolean(challengeId)} />
     {error && <p className="form-error" role="alert">{t(error)}</p>}
     <button className="button button-accent" disabled={busy || (!challengeId && !ready)} type="submit">{t(busy ? 'Please wait…' : challengeId ? 'Sign in' : 'Send sign-in code')}</button>
-    {challengeId && <button className="text-link" type="button" disabled={busy} onClick={() => { setChallengeId(''); setCode(''); if (widgetId.current) { window.turnstile?.reset(widgetId.current); setReady(false); } }}>{t('Use another email or request a new code')}</button>}
+    {challengeId && <button className="text-link" type="button" disabled={busy} onClick={() => { setChallengeId(''); setCode(''); if (widgetId.current) { window.turnstile?.reset(widgetId.current); setReady(false); } }}>{t('Use another phone or email')}</button>}
   </form>;
 }

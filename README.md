@@ -28,7 +28,7 @@ npm run build
 - Navigation, forms, messages and sample content support both languages; Arabic uses a right-to-left layout. Search matches Arabic and English sample content. User-entered text stays in its original language.
 - Translation copy lives in `src/ar.ts`; form values and stored category/zone identifiers remain independent of display language.
 
-- Tutoring & education and Electronics each have Individuals and Small businesses subcategories. Individual ads in those categories are free. Health & fitness (including gyms) is business-only, with agreed fees and no individual-ad option. Small businesses request posting, business authentication or both at a manually agreed fee. The API saves the selection for review with fees awaiting agreement; payment collection and business authentication approval are not yet implemented.
+- Tutoring & education has Individuals and Tutoring centres subcategories. Tutoring-centre submissions create an account and enter the owner approval queue; publication remains subject to manual fee confirmation. Electronics retains Individuals and Small businesses subcategories. Health & fitness (including gyms) is business-only.
 - Contact actions are represented as instrumented WhatsApp/phone/quote actions; no phone number is exposed in public card markup.
 - Verification submissions explicitly stay private and are shown as pending manual review.
 - Resident verification is optional and applies to resident sellers; external service providers (tutors, plumbers, carpenters, movers, etc.) are not asked to prove that they live in Madinaty. Their service details and contact information can be reviewed instead.

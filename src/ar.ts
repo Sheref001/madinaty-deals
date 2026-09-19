@@ -20,6 +20,7 @@ export const arabic: Record<string, string> = {
   'Choose individuals or small businesses in this category.': 'اختر الأفراد أو المشروعات الصغيرة في هذا القسم.',
   'Health & fitness posts require an agreed business fee': 'إعلانات الصحة واللياقة تتطلب رسومًا تجارية بالاتفاق',
   'Individuals': 'أفراد',
+  'Tutoring centres': 'مراكز الدروس', 'Tutoring subcategory': 'نوع مقدم الدروس', 'Choose a tutoring subcategory.': 'اختر نوع مقدم الدروس.',
   'Small businesses': 'مشروعات صغيرة',
   'Free ads': 'إعلانات مجانية',
   'Agreed fees': 'رسوم بالاتفاق',

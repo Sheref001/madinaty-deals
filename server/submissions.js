@@ -62,10 +62,11 @@ export function createSubmissions({ prisma, auth }) {
       if (clean.category === 'Health & fitness' && payload.advertiserType !== 'small_business') throw new RequestError(400, 'Health & fitness posts require an agreed business fee');
       clean.advertiserType = payload.advertiserType;
       if (payload.advertiserType === 'small_business') {
-        if (!['posting', 'authentication', 'both'].includes(payload.businessRequest)) throw new RequestError(400, 'Choose a business request');
-        clean.businessRequest = payload.businessRequest;
+        const tutoringCentre = ['Tutoring', 'Tutoring & education'].includes(clean.category);
+        if (!tutoringCentre && !['posting', 'authentication', 'both'].includes(payload.businessRequest)) throw new RequestError(400, 'Choose a business request');
+        clean.businessRequest = tutoringCentre ? 'posting' : payload.businessRequest;
         clean.feeStatus = 'AWAITING_AGREEMENT';
-        if (payload.businessRequest !== 'posting') clean.businessAuthenticationStatus = 'PENDING_REVIEW';
+        if (!tutoringCentre && payload.businessRequest !== 'posting') clean.businessAuthenticationStatus = 'PENDING_REVIEW';
       }
     }
     const ids = body.uploadIds || [];

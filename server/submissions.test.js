@@ -22,7 +22,7 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   const call = (body, path = 'api/submissions', method = 'POST') => handler.handle(Object.assign(Readable.from([JSON.stringify(body)]), { method, headers: {} }), {}, path.split('/'), send);
   return { prisma, auth, send, call };
 }
-const rental = { kind: 'listing', payload: { ...payload, category: 'Apartment rentals' } };
+const rental = { kind: 'listing', payload: { ...payload, category: 'Apartment rentals', furnishing: 'Unfurnished' } };
 const review = `api/admin/verifications/${verificationId}/review`;
 afterEach(() => vi.useRealTimers());
 

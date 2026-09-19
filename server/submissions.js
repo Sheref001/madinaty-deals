@@ -48,6 +48,10 @@ export function createSubmissions({ prisma, auth }) {
       if (!['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0 || payload.price > 100000000 || !['Like new', 'Good', 'Fair'].includes(payload.condition)) throw new RequestError(400, 'Invalid price or condition');
       Object.assign(clean, { price: payload.price, condition: payload.condition });
+      if (clean.category === 'Apartment rentals') {
+        if (!['Furnished', 'Unfurnished'].includes(payload.furnishing)) throw new RequestError(400, 'Choose furnished or unfurnished');
+        clean.furnishing = payload.furnishing;
+      }
     } else {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');

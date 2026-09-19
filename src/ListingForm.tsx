@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
-import type { Listing, ListingCondition } from './types';
+import type { Listing, ListingCondition, RentalFurnishing } from './types';
 import MediaUpload from './MediaUpload';
 import { submitPost } from './api';
 import PostingAudience from './PostingAudience';
@@ -18,6 +18,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
   const [price, setPrice] = useState('');
   const [zone, setZone] = useState(zones[1]);
   const [condition, setCondition] = useState<ListingCondition>('Good');
+  const [furnishing, setFurnishing] = useState<RentalFurnishing>('Unfurnished');
   const [advertiserType, setAdvertiserType] = useState<AdvertiserType>('individual');
   const [businessRequest, setBusinessRequest] = useState<BusinessRequest>('posting');
   const [preview, setPreview] = useState(false);
@@ -30,7 +31,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
     event.preventDefault();
     if (!valid || busy) return;
     if (!preview) { setPreview(true); return; }
-    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
+    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
     setBusy(true); setError('');
     try { await submitPost('listing', payload, photos); onPublish(payload); }
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
@@ -44,7 +45,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <span className="eyebrow">{t('Listing preview')}</span>
       <h3 dir="auto">{title}</h3><p dir="auto">{description}</p>
       <strong>{t(formatPrice(Number(price)))}</strong>
-      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd><dt>{t('Condition')}</dt><dd>{t(condition)}</dd><dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
+      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd>{isApartmentRental && <><dt>{t('Furnishing')}</dt><dd>{t(furnishing)}</dd></>}<dt>{t('Condition')}</dt><dd>{t(condition)}</dd><dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
       <p className="privacy-note"><ShieldCheck size={16} />{t('Apartment details stay private')}</p>
     </section> : <>
       <p className="modal-intro">{t('Tell neighbours what makes your item useful. Mention any wear or defects so they know what to expect.')}</p>
@@ -56,6 +57,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <MediaUpload files={photos} onChange={setPhotos} />
       <div className="form-row"><label>{t('Condition')}<select value={condition} onChange={event => setCondition(event.target.value as ListingCondition)}>{(['Like new', 'Good', 'Fair'] as const).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
       <label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div>
+      {isApartmentRental && <label>{t('Furnishing')}<select value={furnishing} onChange={event => setFurnishing(event.target.value as RentalFurnishing)}><option value="Furnished">{t('Furnished')}</option><option value="Unfurnished">{t('Unfurnished')}</option></select></label>}
     </>}
     <div className="modal-foot">
       {preview ? <button className="button button-outline" type="button" onClick={() => setPreview(false)}>{t('Edit details')}</button> : <span className="privacy-note"><ShieldCheck size={15} />{t('Apartment details stay private')}</span>}

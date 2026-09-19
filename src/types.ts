@@ -1,6 +1,7 @@
 export type View = 'home' | 'browse' | 'services' | 'businesses' | 'offers' | 'saved' | 'admin' | 'search';
 export type ResultType = 'listing' | 'service' | 'business' | 'offer';
 export type ListingCondition = 'Like new' | 'Good' | 'Fair';
+export type RentalFurnishing = 'Furnished' | 'Unfurnished';
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -26,6 +27,7 @@ export interface Listing extends BaseResult {
   category: string;
   price: number | null;
   condition: ListingCondition;
+  furnishing?: RentalFurnishing;
   seller: string;
   sellerVerified?: boolean;
   status: 'active' | 'reserved' | 'sold';

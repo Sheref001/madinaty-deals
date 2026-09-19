@@ -27,6 +27,18 @@ Stop the stack with the same Compose arguments followed by `down`. Add `-v` only
 
 Copy `.env.example` to a private `.env` and supply these values:
 
+Run this on the Linux server from the cloned repository directory. Do not commit the resulting `.env` file:
+
+```bash
+cp .env.example .env
+openssl rand -hex 32  # use this for AUTH_SECRET
+openssl rand -hex 32  # use a different value for POSTGRES_PASSWORD
+docker compose --env-file .env config >/dev/null
+docker compose --env-file .env up -d --build --wait
+```
+
+Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `config` command is a safe preflight check: it resolves Compose variables without starting containers. It will identify any remaining missing setting before deployment.
+
 - `APP_ORIGIN`: exact HTTPS origin. Use a TLS reverse proxy; the container port binds to loopback on the host.
 - `AUTH_SECRET`: at least 32 random characters. Generate with `openssl rand -hex 32`. Store it securely; changing it invalidates outstanding codes and CSRF tokens.
 - `POSTGRES_PASSWORD`: a long URL-safe random password; Compose interpolates it into the database URL. `DATABASE_URL` is needed for non-Compose commands.
@@ -34,13 +46,9 @@ Copy `.env.example` to a private `.env` and supply these values:
 - Phone sign-in uses SMS delivery through the Twilio Messages API. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM` to enable the required phone-only registration path. Keep these values private; without them phone code requests fail safely.
 - `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`: configure the deployed hostname in Cloudflare. The server checks successful validation, hostname and the `login` action. Only `APP_ENV=local` permits running without CAPTCHA for isolated tests.
 - `OBJECT_STORAGE_BUCKET`, `AWS_REGION`, optional HTTPS `OBJECT_STORAGE_ENDPOINT`, and credentials or a workload role with access to that private bucket. Keep public access blocked. Production writes request AES256 server-side encryption; confirm support with your storage provider. Allow only `PutObject`, `GetObject` and `DeleteObject` for the app's `photo/` and `verification/` prefixes.
-- `CLAMAV_HOST` and optional `CLAMAV_PORT`: private network address of ClamAV with current signatures. Uploads fail closed when scanning is unavailable. Do not expose ClamAV publicly.
+- `CLAMAV_HOST` and optional `CLAMAV_PORT`: private network address of ClamAV with current signatures. The production Compose file does not install ClamAV; point this at the ClamAV service or VM reachable from the app container. Uploads fail closed when scanning is unavailable. Do not expose ClamAV publicly.
 - `TRUSTED_PROXY_IPS`: optional comma-separated exact socket peer addresses. Set only for proxies you control; they must overwrite forwarded headers. The server walks the forwarded chain from the trusted side. With no setting, forwarded headers are ignored.
 - `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults.
-
-```bash
-docker compose up -d --build --wait
-```
 
 The entrypoint applies checked-in migrations, optionally seeds, then starts the application as a non-root user on a read-only filesystem. `/api/health` is process liveness; `/api/ready` checks PostgreSQL. Neither proves SMTP, storage or scanner readiness; the integration test covers those services.
 

@@ -76,13 +76,15 @@ it.each(['Electronics'])('shows both subcategories for %s even with no matching 
 });
 
 
-it('shows gym businesses directly without a free-individual banner', () => {
+it('shows gym providers with fee-gated individual and business options', () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Health & fitnessExplore' }));
   expect(screen.getByRole('heading', { name: 'Health & fitness' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Studio 8 Pilates' })).toBeTruthy();
-  expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
+  expect(screen.getByRole('region', { name: 'Subcategories' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Individuals' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Small businesses' })).toBeTruthy();
   expect(screen.queryByText('Individual ads are free.')).toBeNull();
-  expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
+  expect(screen.getByText('Choose individuals or small businesses in this category.')).toBeTruthy();
 });

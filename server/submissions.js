@@ -74,8 +74,8 @@ export function createSubmissions({ prisma, auth }) {
     }
     if (['Tutoring', 'Tutoring & education', 'Health & fitness', 'Electronics'].includes(clean.category)) {
       if (!['individual', 'small_business'].includes(payload.advertiserType)) throw new RequestError(400, 'Choose an advertiser type');
-      if (clean.category === 'Health & fitness' && payload.advertiserType !== 'small_business') throw new RequestError(400, 'Health & fitness posts require an agreed business fee');
       clean.advertiserType = payload.advertiserType;
+      if (clean.category === 'Health & fitness') clean.feeStatus = 'AWAITING_AGREEMENT';
       if (payload.advertiserType === 'small_business') {
         const tutoringCentre = ['Tutoring', 'Tutoring & education'].includes(clean.category);
         if (!tutoringCentre && !['posting', 'authentication', 'both'].includes(payload.businessRequest)) throw new RequestError(400, 'Choose a business request');

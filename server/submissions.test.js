@@ -140,11 +140,11 @@ describe('individual and small business submissions', () => {
 });
 
 
-it('rejects free individual gym posts and retains the business fee requirement', async () => {
+it('requires fee agreement for individual and business gym posts', async () => {
   const f = fixture();
   const gym = { ...payload, category: 'Health & fitness', whatsapp: '+201001234567', advertiserType: 'individual' };
-  await expect(f.call({ kind: 'service', payload: gym })).rejects.toMatchObject({ status: 400 });
-  expect(f.prisma.submission.create).not.toHaveBeenCalled();
-  await f.call({ kind: 'service', payload: { ...gym, advertiserType: 'small_business', businessRequest: 'posting' } });
+  await f.call({ kind: 'service', payload: gym });
   expect(f.prisma.submission.create.mock.calls[0][0].data.payload.feeStatus).toBe('AWAITING_AGREEMENT');
+  await f.call({ kind: 'service', payload: { ...gym, advertiserType: 'small_business', businessRequest: 'posting' } });
+  expect(f.prisma.submission.create.mock.calls[1][0].data.payload.feeStatus).toBe('AWAITING_AGREEMENT');
 });

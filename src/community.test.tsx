@@ -76,8 +76,9 @@ it('preserves a small business authentication request through preview and submis
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
   fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Health & fitness' } });
-  expect(screen.queryByLabelText('Advertiser type')).toBeNull();
+  expect(screen.getByLabelText('Advertiser type')).toBeTruthy();
   expect(screen.queryByText('Individual ads are free.')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Advertiser type'), { target: { value: 'small_business' } });
   fireEvent.change(screen.getByLabelText('Business request'), { target: { value: 'both' } });
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Neighbourhood fitness studio' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Group fitness classes and personal training.' } });

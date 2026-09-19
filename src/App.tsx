@@ -4,7 +4,7 @@ import {
   Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowLeft, ArrowRight, ArrowUp, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
   Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront, ShoppingBasket,
   Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp, GraduationCap, Share2,
-  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike, UserRound, Moon, Sun,
+  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike, UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { allResults, categories, formatPrice, zones } from './data';
@@ -62,11 +62,6 @@ const searchScopeLabels = ['All categories', 'Buy & sell', 'Services', 'Business
 
 function App() {
   const [language, setLanguage] = useState<Language>(initialLanguage);
-  const [nightMode, setNightMode] = useState(() => { try { return localStorage.getItem('madinaty-night-mode') === 'true'; } catch { return false; } });
-  useEffect(() => {
-    document.documentElement.dataset.theme = nightMode ? 'night' : 'day';
-    try { localStorage.setItem('madinaty-night-mode', String(nightMode)); } catch { /* Preference still works for this visit. */ }
-  }, [nightMode]);
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -82,10 +77,10 @@ function App() {
     document.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://madinatydeals.com/?lang=' + language);
     try { localStorage.setItem(languageKey, language); } catch { /* Preference still works for this visit. */ }
   }, [language]);
-  return <LanguageContext.Provider value={language}><AppContent onLanguageChange={setLanguage} nightMode={nightMode} onToggleNightMode={() => setNightMode(value => !value)} /></LanguageContext.Provider>;
+  return <LanguageContext.Provider value={language}><AppContent onLanguageChange={setLanguage} /></LanguageContext.Provider>;
 }
 
-function AppContent({ onLanguageChange, nightMode, onToggleNightMode }: { onLanguageChange: (language: Language) => void; nightMode: boolean; onToggleNightMode: () => void }) {
+function AppContent({ onLanguageChange }: { onLanguageChange: (language: Language) => void }) {
   const { t, language } = useTranslation();
   const [view, setView] = useState<View>(() => { const sharedId = new URLSearchParams(window.location.search).get('ad'); const sharedResult = allResults.find(result => result.id === sharedId); return sharedResult?.type === 'service' ? 'services' : sharedResult?.type === 'business' ? 'businesses' : sharedResult?.type === 'offer' ? 'offers' : sharedResult ? 'browse' : 'home'; });
   const scrollToCategories = useRef(false);
@@ -286,7 +281,6 @@ function AppContent({ onLanguageChange, nightMode, onToggleNightMode }: { onLang
           <button className="header-saved" aria-label={t('Saved')} onClick={() => goTo('saved')}><Heart size={19} /><span>{t('Saved')}</span></button>
           <button className="button button-accent header-post" onClick={openPost}><Plus size={18} />{t('Post ad')}</button>
           <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : 'Sign in or create account')}</span></button>{registered && <button className="text-link" onClick={async () => { try { await signOut(); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
-          <button className="theme-toggle" type="button" onClick={onToggleNightMode} aria-label={t(nightMode ? 'Switch to day mode' : 'Switch to night mode')} title={t(nightMode ? 'Switch to day mode' : 'Switch to night mode')}>{nightMode ? <Sun size={17} /> : <Moon size={17} />}</button>
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>

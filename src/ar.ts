@@ -24,7 +24,6 @@ export const arabic: Record<string, string> = {
   'Tutoring centres': 'مراكز الدروس', 'Tutoring subcategory': 'نوع مقدم الدروس', 'Choose a tutoring subcategory.': 'اختر نوع مقدم الدروس.',
   'Education stage': 'المرحلة التعليمية', 'All education stages': 'كل المراحل التعليمية', 'Before university': 'قبل الجامعة', 'University': 'الجامعة', 'Subject': 'المادة', 'Subjects': 'المواد', 'All subjects': 'كل المواد', 'Quran': 'القرآن الكريم', 'Mathematics': 'الرياضيات', 'English': 'اللغة الإنجليزية', 'Arabic': 'اللغة العربية', 'Physics': 'الفيزياء', 'Chemistry': 'الكيمياء', 'Biology': 'الأحياء', 'French': 'اللغة الفرنسية', 'German': 'اللغة الألمانية', 'Computer science': 'علوم الحاسب',
   'Business type': 'نوع النشاط', 'All grocery activities': 'كل أنشطة البقالة', 'Grocery store': 'بقالة', 'Butcher': 'جزارة', 'Poultry': 'فراخ ودواجن', 'Bakery': 'مخبز', 'Fishmonger': 'أسماك', 'Fruits & vegetables': 'خضار وفاكهة', 'Dairy & cheese': 'ألبان وأجبان',
-  'Switch to night mode': 'التبديل إلى الوضع الليلي', 'Switch to day mode': 'التبديل إلى الوضع النهاري',
   'Small businesses': 'مشروعات صغيرة',
   'Free ads': 'إعلانات مجانية',
   'Agreed fees': 'رسوم بالاتفاق',

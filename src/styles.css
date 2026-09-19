@@ -22,23 +22,6 @@
   text-rendering: optimizeLegibility;
 }
 
-:root[data-theme='night'] {
-  --ink: #e6f0eb;
-  --ink-soft: #b6cbc3;
-  --muted: #8fa9a1;
-  --paper: #172625;
-  --paper-deep: #223633;
-  --line: #36504b;
-  --white: #213331;
-  --teal: #8fcfbe;
-  --teal-dark: #102321;
-  --mint: #416a5b;
-  --lime: #d4eb82;
-  --orange: #f3a16e;
-  --yellow: #d8bb60;
-  --shadow: 0 16px 46px rgba(0, 0, 0, .28);
-}
-
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); }
 button, input, select, textarea { font: inherit; }
@@ -46,10 +29,6 @@ button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(13, 91, 88, .32); outline-offset: 2px; }
 
 .app-shell { min-height: 100vh; }
-.theme-toggle { width: 40px; min-height: 40px; display: inline-grid; place-items: center; flex-shrink: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--teal); }
-.theme-toggle:hover { background: var(--paper-deep); }
-:root[data-theme='night'] .topbar, :root[data-theme='night'] .sidebar, :root[data-theme='night'] .drawer-panel, :root[data-theme='night'] .mobile-bottom-nav { background: var(--paper); }
-:root[data-theme='night'] .button-outline, :root[data-theme='night'] .button-warm { color: var(--ink); }
 .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-block-start: 22px; }
 .button-warm { background: #f4d46a; color: #132d2d; border-color: #d4b146; }
 .button-warm:hover { background: #ebc34a; }
@@ -969,76 +948,5 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 .push-preferences legend { padding-inline: 5px; font-weight: 700; }
 .push-preferences small { color: #697363; }
 
-/* Keep low-glare mode readable where older component styles use fixed light colors. */
-:root[data-theme='night'] { color-scheme: dark; }
-:root[data-theme='night'] .guide-grid li,
-:root[data-theme='night'] .trust-strip,
-:root[data-theme='night'] .category-card,
-:root[data-theme='night'] .result-card,
-:root[data-theme='night'] .admin-panel,
-:root[data-theme='night'] .post-choice,
-:root[data-theme='night'] .share-menu,
-:root[data-theme='night'] .push-prompt,
-:root[data-theme='night'] .push-toggle { background: var(--white); color: var(--ink); border-color: var(--line); }
-:root[data-theme='night'] .top-search,
-:root[data-theme='night'] .inline-search,
-:root[data-theme='night'] .select-wrap,
-:root[data-theme='night'] .verified-toggle,
-:root[data-theme='night'] .modal-form input,
-:root[data-theme='night'] .modal-form select,
-:root[data-theme='night'] .modal-form textarea { background: var(--white); color: var(--ink); border-color: var(--line); }
-:root[data-theme='night'] .top-search input,
-:root[data-theme='night'] .inline-search input,
-:root[data-theme='night'] .select-wrap select { color: var(--ink); }
-:root[data-theme='night'] .top-search input::placeholder,
-:root[data-theme='night'] .inline-search input::placeholder { color: var(--muted); }
-:root[data-theme='night'] .nav-item { color: var(--ink-soft); }
-:root[data-theme='night'] .nav-item.active { background: var(--white); color: var(--teal); }
-:root[data-theme='night'] .photo-location { background: var(--white); color: var(--ink); }
-:root[data-theme='night'] .ad-safety,
-:root[data-theme='night'] .verification-privacy,
-:root[data-theme='night'] .rental-policy-note,
-:root[data-theme='night'] .dashboard-note,
-:root[data-theme='night'] .admin-note { background: #2d3027; border-color: #625b3f; color: #e5d9a9; }
-:root[data-theme='night'] .ad-safety h4,
-:root[data-theme='night'] .ad-safety p { color: #e5d9a9; }
-:root[data-theme='night'] .category-audiences,
-:root[data-theme='night'] .posting-audience { background: var(--paper-deep); border-color: var(--line); }
-:root[data-theme='night'] .audience-option { background: var(--white); color: var(--ink); border-color: var(--line); }
-:root[data-theme='night'] .audience-option.active { background: #345244; border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
-:root[data-theme='night'] .service-policy-note,
-:root[data-theme='night'] .registration-reason,
-:root[data-theme='night'] .drawer-register { background: #254137; border-color: #4c7564; }
-:root[data-theme='night'] .elite-ad-intro h2,
-:root[data-theme='night'] .elite-ad-copy h3,
-:root[data-theme='night'] .brand > span:last-child em,
-:root[data-theme='night'] .brand-small b,
-:root[data-theme='night'] .brand-small em { color: var(--ink); }
-:root[data-theme='night'] .push-prompt p,
-:root[data-theme='night'] .push-preferences small { color: var(--ink-soft); }
 .push-preferences label { display: flex; align-items: center; gap: 7px; }
 @media (max-width: 760px) { .push-notifications { inset-inline-start: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); } .push-prompt { padding: 20px; } }
-
-/* Keep the primary Arabic message and category labels readable in low-glare mode.
-   These rules intentionally come last because the category cards have several
-   presentation variants that set their caption colors and backgrounds. */
-:root[data-theme='night'] .hero-copy h1 {
-  color: var(--ink) !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .3);
-}
-:root[data-theme='night'] .category-card > span:nth-child(2) {
-  background: rgba(23, 38, 37, .94) !important;
-  border-color: rgba(143, 207, 190, .52) !important;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, .28);
-}
-:root[data-theme='night'] .category-card b {
-  color: var(--ink) !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .3);
-}
-:root[data-theme='night'] .category-card small {
-  color: #b9d1c8 !important;
-}
-:root[data-theme='night'] .category-card > svg {
-  color: #a7d5c5 !important;
-  background: rgba(23, 38, 37, .92);
-}

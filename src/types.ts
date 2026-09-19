@@ -71,6 +71,7 @@ export interface Service extends BaseResult {
   subjects?: TutoringSubject[];
   homeServiceType?: HomeServiceType;
   housekeepingType?: HousekeepingType;
+  offer?: { discount: string; validUntil: string };
 }
 
 export interface Business extends BaseResult {

@@ -357,6 +357,8 @@ html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
 .post-choice-icon { width: 43px; height: 43px; border-radius: 13px; display: grid; place-items: center; flex: 0 0 auto; color: var(--teal); background: #e7f3ea; }
 .single-split { grid-template-columns: 1fr; }
 .service-policy-note { padding: 11px 12px; display: flex; gap: 9px; align-items: flex-start; border: 1px solid #cfe4d2; border-radius: 10px; background: #edf7ed; color: var(--teal); }.service-policy-note > span { display: grid; gap: 3px; }.service-policy-note b { font-size: 11px; }.service-policy-note small { color: var(--ink-soft); font-size: 10px; line-height: 1.5; }
+.offer-fields { display: grid; gap: 9px; margin: 12px 0; padding: 12px; border: 1px solid #cfe4d2; border-radius: 10px; background: #f7faf3; }
+.offer-fields legend { padding-inline: 5px; font-weight: 700; font-size: 12px; }
 .rental-policy-note { padding: 12px; display: flex; gap: 9px; align-items: flex-start; border: 1px solid #ead4a4; border-radius: 10px; background: #fff8e6; color: #8c681d; margin-block-end: 13px; }.rental-policy-note > span { display: grid; gap: 4px; }.rental-policy-note b { font-size: 11px; }.rental-policy-note small { color: #7c6b48; font-size: 10px; line-height: 1.5; }
 .content-policy-note { display: none; }
 .service-choice { color: #985322; background: #fff0df; }.business-choice { color: #68487d; background: #f1e8f7; }.offer-choice { color: #a36c12; background: #fff5ce; }

@@ -65,6 +65,12 @@ export function createSubmissions({ prisma, auth }) {
         clean.educationLevel = educationLevel;
         clean.subjects = [...new Set(submittedSubjects)];
       }
+      if (['Tutoring & education', 'Health & fitness'].includes(clean.category) && payload.offer !== undefined) {
+        if (!payload.offer || typeof payload.offer !== 'object' || Array.isArray(payload.offer)) throw new RequestError(400, 'Invalid offer');
+        if (typeof payload.offer.discount !== 'string' || payload.offer.discount.trim().length < 2 || payload.offer.discount.length > 120) throw new RequestError(400, 'Enter valid offer details');
+        if (typeof payload.offer.validUntil !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.offer.validUntil)) throw new RequestError(400, 'Choose an offer expiry date');
+        clean.offer = { discount: payload.offer.discount.trim(), validUntil: payload.offer.validUntil };
+      }
     }
     if (['Tutoring', 'Tutoring & education', 'Health & fitness', 'Electronics'].includes(clean.category)) {
       if (!['individual', 'small_business'].includes(payload.advertiserType)) throw new RequestError(400, 'Choose an advertiser type');

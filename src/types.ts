@@ -8,11 +8,11 @@ export const listingConditionSets = {
   'Apartment rentals': ['Newly finished', 'Well maintained', 'Needs renovation'] as const,
 } as const;
 export type ListingCondition = typeof listingConditionSets[keyof typeof listingConditionSets][number];
-const allListingConditions = [...new Set(Object.values(listingConditionSets).flat())] as ListingCondition[];
+const generalListingConditions: ListingCondition[] = ['New', 'Like new', 'Good', 'Fair'];
 export function listingConditionOptions(category?: string): ListingCondition[] {
   return category && category in listingConditionSets
     ? [...listingConditionSets[category as keyof typeof listingConditionSets]]
-    : allListingConditions;
+    : generalListingConditions;
 }
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
 

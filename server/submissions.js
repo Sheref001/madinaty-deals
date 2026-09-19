@@ -60,7 +60,7 @@ export function createSubmissions({ prisma, auth }) {
         const educationLevel = payload.educationLevel || 'Before university';
         const submittedSubjects = payload.subjects || ['Mathematics'];
         if (!['Before university', 'University'].includes(educationLevel)) throw new RequestError(400, 'Choose an education stage');
-        const subjects = ['Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'];
+        const subjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'];
         if (!Array.isArray(submittedSubjects) || submittedSubjects.length < 1 || submittedSubjects.length > subjects.length || !submittedSubjects.every(subject => subjects.includes(subject))) throw new RequestError(400, 'Choose at least one subject');
         clean.educationLevel = educationLevel;
         clean.subjects = [...new Set(submittedSubjects)];

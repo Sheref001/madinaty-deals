@@ -17,7 +17,7 @@ export function listingConditionOptions(category?: string): ListingCondition[] {
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
 export const educationLevels = ['Before university', 'University'] as const;
 export type EducationLevel = typeof educationLevels[number];
-export const tutoringSubjects = ['Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
+export const tutoringSubjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
 export type TutoringSubject = typeof tutoringSubjects[number];
 
 export type AdvertiserType = 'individual' | 'small_business';

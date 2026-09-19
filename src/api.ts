@@ -55,5 +55,5 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
 }
 
 export const getPushConfig = () => request('/push/config') as Promise<{ enabled: boolean; publicKey: string | null }>;
-export const savePushSubscription = (subscription: PushSubscriptionJSON, language: string) => request('/push/subscriptions', { method: 'POST', body: JSON.stringify({ subscription, language, consent: true }) });
+export const savePushSubscription = (subscription: PushSubscriptionJSON, language: string, categories: string[] = [], zones: string[] = []) => request('/push/subscriptions', { method: 'POST', body: JSON.stringify({ subscription, language, categories, zones, consent: true }) });
 export const removePushSubscription = (subscription: PushSubscriptionJSON) => request('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ subscription }) });

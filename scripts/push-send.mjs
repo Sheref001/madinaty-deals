@@ -16,7 +16,7 @@ if (!file || args.some(arg => arg.startsWith('--') && arg !== '--send') || args.
     const config = loadPushConfig();
     if (!config || !process.env.APP_ORIGIN) throw new Error('Configure VAPID keys, VAPID_SUBJECT and APP_ORIGIN first');
     const campaign = validateCampaign(JSON.parse(await readFile(file, 'utf8')), process.env.APP_ORIGIN);
-    console.log(JSON.stringify({ id: campaign.id, language: campaign.language, ...campaign.payload }, null, 2));
+    console.log(JSON.stringify({ id: campaign.id, advertiserName: campaign.advertiserName, offerTitle: campaign.offerTitle, category: campaign.category, zone: campaign.zone, startsAt: campaign.startsAt, endsAt: campaign.endsAt, feeCents: campaign.feeCents, language: campaign.language, ...campaign.payload }, null, 2));
     const counts = await deliverCampaign({ prisma, config, campaign, sendNotification: webpush.sendNotification.bind(webpush), send: args.includes('--send') });
     console.log(JSON.stringify(counts, null, 2));
     console.log(counts.dryRun ? 'Preview only. No notifications sent. Add --send only after reviewing the content and audience.' : 'Accepted means accepted by the push service, not guaranteed delivery.');

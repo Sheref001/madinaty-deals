@@ -4,6 +4,7 @@ import { useTranslation } from './i18n';
 import { getPushConfig, savePushSubscription, removePushSubscription } from './api';
 
 const snoozeKey = 'madinaty-notifications-dismissed-until';
+const preferenceCategories = ['Tutoring & education', 'Health & fitness', 'Electronics', 'Home services', 'Restaurants'];
 const unavailable = 'Notifications are currently unavailable. Please try again later.';
 const supported = () => window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 const appleMobile = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -17,6 +18,7 @@ export default function PushNotifications() {
   const [preparing, setPreparing] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const prepared = useRef<{ registration: ServiceWorkerRegistration; publicKey: string } | null>(null);
   const needsInstall = appleMobile() && !standalone();
   const canPush = supported() && !needsInstall;
@@ -62,7 +64,7 @@ export default function PushNotifications() {
         subscription = null;
       }
       if (!subscription) { subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes }); created = subscription; }
-      await savePushSubscription(subscription.toJSON(), language);
+      await savePushSubscription(subscription.toJSON(), language, categories, []);
       try { localStorage.setItem('madinaty-push-subscribed', 'true'); } catch { /* Backend consent is authoritative. */ }
       setSubscribed(true);
     } catch {
@@ -95,6 +97,7 @@ export default function PushNotifications() {
       <p>{t('Notifications can be turned off anytime from browser settings.')}</p>
       {needsInstall ? <p>{t('On iPhone or iPad, use Share → Add to Home Screen, then open Madinaty Deals from its icon to enable notifications.')}</p> : <>
         {error && <p role="alert" className="form-error">{t(error)}</p>}
+        <fieldset className="push-preferences"><legend>{t('Offer categories (optional)')}</legend><small>{t('Leave all unchecked for all categories.')}</small>{preferenceCategories.map(category => <label key={category}><input type="checkbox" checked={categories.includes(category)} onChange={event => setCategories(current => event.target.checked ? [...current, category] : current.filter(item => item !== category))} /> {t(category)}</label>)}</fieldset>
         {subscribed && <p role="status">{t('You are subscribed to Madinaty Deals updates and offers.')}</p>}
         <div className="push-actions"><button type="button" className="button button-outline" onClick={dismiss}>{t('Not now')}</button><button type="button" className="button button-accent" disabled={busy || preparing} onClick={subscribed ? unsubscribe : subscribe}>{t(busy || preparing ? 'Please wait…' : subscribed ? 'Turn off notifications' : 'Allow notifications')}</button></div>
       </>}

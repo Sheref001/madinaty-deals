@@ -37,7 +37,7 @@ it('requests browser permission only after the visitor explicitly allows notific
   await open(); expect(requestPermission).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Allow notifications' }));
   await screen.findByRole('status');
-  expect(savePushSubscription).toHaveBeenCalledWith(subscription.toJSON(), 'en');
+  expect(savePushSubscription).toHaveBeenCalledWith(subscription.toJSON(), 'en', [], []);
   expect(requestPermission).toHaveBeenCalledOnce();
 });
 it('snoozes the prompt when the visitor chooses not now', async () => {

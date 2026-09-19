@@ -9,7 +9,7 @@ const curve = createECDH('prime256v1'); curve.generateKeys();
 const config = { publicKey: curve.getPublicKey().toString('base64url'), privateKey: curve.getPrivateKey().toString('base64url'), subject: 'mailto:owner@example.test' };
 const subscription = { endpoint: 'https://fcm.googleapis.com/wp/test-device', keys: { p256dh: config.publicKey, auth: Buffer.alloc(16, 1).toString('base64url') } };
 const origin = 'https://madinatydeals.com';
-const draft = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'New local offers', body: 'Discover this week’s offers.', language: 'en', url: '/?lang=en' };
+const draft = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'New local offers', body: 'Discover this week’s offers.', advertiserName: 'Studio 8', offerTitle: 'New local offers', offerDetails: 'Discover this week’s offers.', category: 'Health & fitness', zone: 'All zones', startsAt: '2026-01-01T00:00:00Z', endsAt: '2026-01-15T00:00:00Z', feeCents: 50000, language: 'en', url: '/?lang=en' };
 function fixture(pushConfig = config) {
   const prisma = { $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]), pushSubscription: { upsert: vi.fn(), deleteMany: vi.fn() } };
   const handler = createPush({ prisma, config: pushConfig, origin });
@@ -57,6 +57,11 @@ describe('push subscription consent and validation', () => {
     await expect(f.call({ subscription, consent: true, language: 'en' })).rejects.toMatchObject({ status: 429 });
     expect(f.prisma.pushSubscription.upsert).not.toHaveBeenCalled();
   });
+  it('requires offer details, dates and a fee before a campaign can be created', () => {
+    expect(() => validateCampaign({ ...draft, offerDetails: '', feeCents: -1 }, origin)).toThrow();
+    expect(() => validateCampaign({ ...draft, endsAt: '2025-01-01T00:00:00Z' }, origin)).toThrow();
+    expect(validateCampaign(draft, origin)).toMatchObject({ advertiserName: 'Studio 8', category: 'Health & fitness', feeCents: 50000 });
+  });
 });
 
 describe('notification sending', () => {
@@ -64,8 +69,8 @@ describe('notification sending', () => {
     const campaign = validateCampaign(draft, origin);
     const prisma = {
       pushSubscription: { count: vi.fn().mockResolvedValue(1), findMany: vi.fn().mockResolvedValueOnce([{ id: 'device', endpoint: subscription.endpoint, ...subscription.keys }]).mockResolvedValue([]), deleteMany: vi.fn() },
-      pushCampaign: { upsert: vi.fn().mockResolvedValue({ payloadHash: campaign.hash }) },
-      pushDelivery: { create: vi.fn(), update: vi.fn() },
+      pushCampaign: { findUnique: vi.fn().mockResolvedValue({ payloadHash: campaign.hash, reviewStatus: 'APPROVED', paymentStatus: 'PAID', startsAt: new Date('2026-01-01'), endsAt: new Date('2027-01-01') }) },
+      pushDelivery: { create: vi.fn(), update: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     };
     const sendNotification = vi.fn().mockResolvedValue({ statusCode: 201 });
     return { prisma, campaign, config, sendNotification };
@@ -74,7 +79,7 @@ describe('notification sending', () => {
     const f = senderFixture(); const result = await deliverCampaign(f);
     expect(result).toMatchObject({ recipients: 1, dryRun: true, accepted: 0 });
     expect(f.sendNotification).not.toHaveBeenCalled();
-    expect(f.prisma.pushCampaign.upsert).not.toHaveBeenCalled();
+    expect(f.prisma.pushCampaign.findUnique).not.toHaveBeenCalled();
   });
   it('sends only to the selected language and current key with a bounded TTL', async () => {
     const f = senderFixture(); const result = await deliverCampaign({ ...f, send: true });
@@ -88,8 +93,8 @@ describe('notification sending', () => {
     expect(f.sendNotification).not.toHaveBeenCalled();
   });
   it('rejects reusing a campaign ID with different content', async () => {
-    const f = senderFixture(); f.prisma.pushCampaign.upsert.mockResolvedValue({ payloadHash: 'old-content' });
-    await expect(deliverCampaign({ ...f, send: true })).rejects.toThrow('different content');
+    const f = senderFixture(); f.prisma.pushCampaign.findUnique.mockResolvedValue({ payloadHash: 'old-content', reviewStatus: 'APPROVED', paymentStatus: 'PAID', startsAt: new Date('2026-01-01'), endsAt: new Date('2027-01-01') });
+    await expect(deliverCampaign({ ...f, send: true })).rejects.toThrow('approved content');
     expect(f.sendNotification).not.toHaveBeenCalled();
   });
   it.each([404, 410])('removes expired subscriptions on %s', async statusCode => {
@@ -105,4 +110,25 @@ describe('notification sending', () => {
   it.each(['https://other.test/', '//other.test/', 'javascript:alert(1)'])('rejects campaign links outside the website: %s', url => {
     expect(() => validateCampaign({ ...draft, url }, origin)).toThrow();
   });
+});
+
+it('lets reviewers create campaigns but reserves fee confirmation for admins', async () => {
+  const body = JSON.stringify(draft);
+  const prisma = {
+    $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
+    pushCampaign: {
+      create: vi.fn().mockResolvedValue({ id: draft.id, reviewStatus: 'PENDING', paymentStatus: 'PENDING' }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+  };
+  const auth = { protect: vi.fn().mockResolvedValue({ user: { role: 'MODERATOR' } }) };
+  const handler = createPush({ prisma, auth, origin, config });
+  const send = vi.fn();
+  const request = Object.assign(Readable.from([body]), { method: 'POST', headers: { origin }, socket: { remoteAddress: '127.0.0.1' } });
+  await handler.handle(request, {}, ['api', 'admin', 'notification-campaigns'], send);
+  expect(prisma.pushCampaign.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reviewStatus: 'PENDING', paymentStatus: 'PENDING', feeCents: 50000 }) }));
+  auth.protect.mockResolvedValue({ user: { role: 'MODERATOR' } });
+  const paymentRequest = Object.assign(Readable.from(['{"status":"PAID"}']), { method: 'POST', headers: { origin }, socket: { remoteAddress: '127.0.0.1' } });
+  await expect(handler.handle(paymentRequest, {}, ['api', 'admin', 'notification-campaigns', draft.id, 'payment'], send)).rejects.toMatchObject({ status: 403 });
 });

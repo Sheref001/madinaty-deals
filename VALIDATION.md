@@ -35,6 +35,13 @@
 
 This validates local behavior and API boundaries; it does not establish production readiness.
 
+## Promotional notification campaigns
+
+- Added campaign fields for advertiser, concrete offer details, category/zone audience, language, start/end window, agreed fee, review state, payment state and delivery outcomes.
+- Added reviewer campaign creation/listing and review endpoints. Payment confirmation is restricted to admins and is currently manual; no gateway is claimed.
+- Sending is blocked unless the campaign is approved, marked paid and inside its validity window. Subscribers can select optional category preferences; empty preferences mean all categories. Delivery skips category/zone mismatches and caps promotional deliveries at two per category per seven days.
+- Delivery metrics expose accepted, failed, expired and skipped counts. Full tests, Prisma validation, type checking, ESLint, build and whitespace checks remain required after deployment configuration changes.
+
 ## Category subcategories
 
 - Added Individuals and Small businesses discovery sections for Tutoring & education and Electronics, with Arabic and English copy. Health & fitness is now business-only: its audience banner is removed, forms use the agreed-fee business flow, and the API rejects individual submissions.

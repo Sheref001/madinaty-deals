@@ -688,12 +688,28 @@ model PushSubscription {
   language             String
   consentVersion       String
   consentedAt          DateTime @default(now())
+  categories           String[] @default([])
+  zones                String[] @default([])
   @@index([language])
 }
 
 model PushCampaign {
   id          String   @id @db.Uuid
   payloadHash String
+  advertiserName String
+  offerTitle  String
+  offerDetails String
+  category    String
+  zone        String
+  language    String
+  startsAt    DateTime
+  endsAt      DateTime
+  feeCents    Int
+  reviewStatus String @default("PENDING")
+  paymentStatus String @default("PENDING")
+  reviewReason String?
+  reviewedAt DateTime?
+  paidAt DateTime?
   createdAt   DateTime @default(now())
   deliveries  PushDelivery[]
 }

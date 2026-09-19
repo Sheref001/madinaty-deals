@@ -6,8 +6,11 @@ export async function deliverCampaign({ prisma, config, campaign, sendNotificati
   const recipients = await prisma.pushSubscription.count({ where });
   const counts = { recipients, accepted: 0, expired: 0, failed: 0, skipped: 0, dryRun: !send };
   if (!send) return counts;
-  const stored = await prisma.pushCampaign.upsert({ where: { id: campaign.id }, create: { id: campaign.id, payloadHash: campaign.hash }, update: {} });
-  if (stored.payloadHash !== campaign.hash) throw new Error('Campaign ID already belongs to different content; use a new ID');
+  const stored = await prisma.pushCampaign.findUnique({ where: { id: campaign.id } });
+  if (!stored || stored.payloadHash !== campaign.hash) throw new Error('Campaign must exist and match its approved content');
+  if (stored.reviewStatus !== 'APPROVED' || stored.paymentStatus !== 'PAID') throw new Error('Campaign must be approved and paid before sending');
+  const now = new Date();
+  if (now < stored.startsAt || now >= stored.endsAt) throw new Error('Campaign is outside its scheduled delivery window');
   let cursor;
   const cutoff = new Date();
   for (;;) {
@@ -20,6 +23,9 @@ export async function deliverCampaign({ prisma, config, campaign, sendNotificati
         const key = { campaignId: campaign.id, subscriptionId: subscription.id };
         try { await prisma.pushDelivery.create({ data: key }); }
         catch (error) { if (error.code === 'P2002') { counts.skipped++; return; } throw error; }
+        if (campaign.category && subscription.categories?.length && !subscription.categories.includes(campaign.category)) { counts.skipped++; return; }
+        if (campaign.zone && campaign.zone !== 'All zones' && subscription.zones?.length && !subscription.zones.includes(campaign.zone)) { counts.skipped++; return; }
+        if (await prisma.pushDelivery.count({ where: { subscriptionId: subscription.id, createdAt: { gte: new Date(Date.now() - 7 * 86400000) }, campaign: { category: campaign.category } } }) >= 2) { counts.skipped++; return; }
         let status;
         try {
           const clean = validateSubscription({ subscription: { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } } });

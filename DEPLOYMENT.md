@@ -83,6 +83,14 @@ Create a private JSON campaign file with a new UUID for each distinct message:
 ```json
 {
   "id": "3fbf4c50-9a58-425e-b5f2-fdf44f6e52cf",
+  "advertiserName": "Studio 8 Pilates",
+  "offerTitle": "New member class offer",
+  "offerDetails": "15% off a first reformer session. Show this notification at reception.",
+  "category": "Health & fitness",
+  "zone": "All zones",
+  "startsAt": "2026-10-01T00:00:00.000Z",
+  "endsAt": "2026-10-15T23:59:59.000Z",
+  "feeCents": 50000,
   "title": "Madinaty Deals",
   "body": "Replace this with the update or offer you want to send.",
   "language": "ar",
@@ -90,7 +98,7 @@ Create a private JSON campaign file with a new UUID for each distinct message:
 }
 ```
 
-`language` selects subscribed browsers with that language (`ar`, `en`, or `all`). The message is sent exactly as written, not automatically translated. Links must stay on the configured `APP_ORIGIN`.
+`language` selects subscribed browsers with that language (`ar`, `en`, or `all`). The message is sent exactly as written, not automatically translated. Links must stay on the configured `APP_ORIGIN`. The campaign category and zone define the audience; subscribers who choose category preferences receive only matching campaigns, while subscribers with no category selection remain eligible for all categories. A subscriber receives at most two promotional campaigns per category in seven days.
 
 With `DATABASE_URL`, `APP_ORIGIN` and the VAPID variables exported in the shell:
 
@@ -102,9 +110,9 @@ npm run notifications:send -- /path/to/campaign.json
 npm run notifications:send -- /path/to/campaign.json --send
 ```
 
-The sending command is operator-only; there is no public broadcast endpoint or dashboard composer. Access requires the server environment/database credentials. Do not execute a campaign simply to test the installation. Notifications go only to saved subscriptions with recorded consent and the current VAPID public key.
+The sending command is operator-only; there is no public broadcast endpoint or dashboard composer. Access requires the server environment/database credentials. A reviewer creates a campaign through `POST /api/admin/notification-campaigns`, then reviews it through `POST /api/admin/notification-campaigns/:id/review`. An admin confirms the manually agreed fee through `POST /api/admin/notification-campaigns/:id/payment` with `{ "status": "PAID" }`. A campaign cannot send until its review status is `APPROVED`, payment status is `PAID`, and the current time is inside its start/end window. Do not execute a campaign simply to test the installation. Notifications go only to saved subscriptions with recorded consent and the current VAPID public key.
 
-Deliveries are recorded before sending, so rerunning a campaign skips previously attempted devices. A crash or transient error can leave a device without a notification; automatic retry is deliberately avoided because delivery may have succeeded before the error. Reusing a campaign ID with different content is rejected. Each successful count means the push service accepted the message, not that a person saw it. Messages expire after one hour at the push service. Endpoints returning 404/410 are removed. Revoking permission in browser settings stops delivery; the server learns of expiry on a subsequent attempt.
+Deliveries are recorded before sending, so rerunning a campaign skips previously attempted devices. Campaign records expose delivery counts for `ACCEPTED`, `FAILED`, `EXPIRED` and `SKIPPED` outcomes through `GET /api/admin/notification-campaigns`. A crash or transient error can leave a device without a notification; automatic retry is deliberately avoided because delivery may have succeeded before the error. Reusing a campaign ID with different content is rejected. Each successful count means the push service accepted the message, not that a person saw it. Messages expire after one hour at the push service. Endpoints returning 404/410 are removed. Revoking permission in browser settings stops delivery; the server learns of expiry on a subsequent attempt.
 
 The browser may rotate or expire a subscription; visitors can re-enable it with the Notifications button. Rotating the VAPID key pair requires fresh consent/subscription enrollment; old-key subscriptions are excluded from broadcasts. Subscription keys/endpoints are private capabilities: do not expose them in logs or admin exports. Campaign delivery history keeps only subscription UUIDs, status and timestamps after a subscription is removed.
 

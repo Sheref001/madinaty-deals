@@ -53,9 +53,9 @@ Run `npm run maintenance:cleanup` daily using a scheduler with the same server e
 
 ## Automatic deployment from GitHub
 
-The repository includes `.github/workflows/deploy.yml`. Every push to `main` runs typecheck, lint, build and tests. Only after those checks pass does GitHub connect to the Ubuntu server, pull `main`, rebuild the Compose app and wait for `/api/ready`.
+The repository includes `.github/workflows/deploy.yml`. Every push to `main` runs typecheck, lint, build and tests. Only after those checks pass does GitHub connect to the Ubuntu server, copy the tested source, rebuild the Compose app and wait for `/api/ready`. The workflow preserves the server-only `.env` and Docker volumes.
 
-Create a dedicated deployment user on the server with access to the repository directory and permission to run Docker Compose. Add the public SSH key to that user’s `~/.ssh/authorized_keys`. In the GitHub repository, create a `production` environment and add these secrets:
+Create a dedicated deployment user on the server with write access to the repository directory and permission to run Docker Compose. Do not use `root` for GitHub Actions. Add the public SSH key to that user’s `~/.ssh/authorized_keys`. The workflow copies the tested source directly, so the server does not need a separate GitHub pull key. In the GitHub repository, create a `production` environment and add these secrets:
 
 - `DEPLOY_HOST`: server hostname or IP.
 - `DEPLOY_PORT`: SSH port, usually `22`.

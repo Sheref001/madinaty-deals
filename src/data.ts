@@ -29,7 +29,7 @@ export const categories = [
   { label: 'Local delivery riders', icon: 'bike', count: 1, photo: 'https://images.unsplash.com/photo-1659493000588-c3f35d630905?auto=format&fit=crop&w=1200&q=88' },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Tutoring & education', icon: 'graduation-cap', count: 24, photo: 'https://plus.unsplash.com/premium_photo-1681248156475-be7454b5d54b?auto=format&fit=crop&w=1200&q=88' },
-  { label: 'Food & coffee', icon: 'utensils', count: 41, photo: 'https://images.unsplash.com/photo-1701688596783-231b3764ef67?auto=format&fit=crop&w=1200&q=88' },
+  { label: 'Deals & promotions', icon: 'tag', count: 3, photo: '/images/madinaty-offers.webp' },
   // Demo image requested from Food Business Middle East & Africa; confirm permission before production use.
   { label: 'Groceries', icon: 'shopping-basket', count: 18, photo: 'https://www.foodbusinessmea.com/wp-content/uploads/2022/12/Food-Tank2.jpg' },
   // Photo: Unsplash contributor, from the user-provided reference photo.

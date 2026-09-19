@@ -47,6 +47,7 @@ const iconMap: Record<string, LucideIcon> = {
   bike: Bike,
   'shopping-basket': ShoppingBasket,
   'graduation-cap': GraduationCap,
+  tag: Tag,
 };
 
 const navItems: { id: View; label: string; icon: LucideIcon }[] = [
@@ -297,7 +298,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView residentVerified={residentVerified} results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
+          <HomeView residentVerified={residentVerified} results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           isAdmin ? <AdminView onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (

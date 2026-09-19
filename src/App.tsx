@@ -186,10 +186,10 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const openCategory = (nextView: View, category: string) => {
     window.history.pushState({ madinatyDealsCategory: true }, '');
     setCategoryNavigation(true);
-    const split = splitCategories.includes(category) || businessOnlyCategories.includes(category);
-    setSelectedCategory(split ? category : '');
-    setView(split ? 'search' : nextView);
-    setQuery(split ? '' : category);
+    const structuredCategory = splitCategories.includes(category) || businessOnlyCategories.includes(category) || category === 'Apartment rentals';
+    setSelectedCategory(structuredCategory ? category : '');
+    setView(structuredCategory ? 'search' : nextView);
+    setQuery(structuredCategory ? '' : category);
     setMobileNavOpen(false);
   };
 

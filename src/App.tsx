@@ -451,6 +451,7 @@ function ResultCard({ result, compact = false, favorite = false, onFavorite, onC
   const { t, language } = useTranslation();
   const [detailsOpen, setDetailsOpen] = useState(() => new URLSearchParams(window.location.search).get('ad') === result.id);
   const [shareFeedback, setShareFeedback] = useState('');
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const closeDetails = () => {
     setDetailsOpen(false);
     const url = new URL(window.location.href);
@@ -465,6 +466,41 @@ function ResultCard({ result, compact = false, favorite = false, onFavorite, onC
   const isBusiness = result.type === 'business';
   const isOffer = result.type === 'offer';
   const isPoultryDemo = result.id === 'business-poultry-demo';
+  const shareUrl = getAdLink(result);
+  const shareText = `${t('See this ad on Madinaty Deals')} — ${t(result.title)}`;
+  const supportsNativeShare = 'share' in navigator;
+  const copyShareLink = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback(t('Link copied'));
+      } else {
+        window.prompt(t('Copy this link'), shareUrl);
+        setShareFeedback(t('Link ready to share'));
+      }
+    } catch { setShareFeedback(t('Share cancelled')); }
+    setShareMenuOpen(false);
+  };
+  const shareTo = (platform: 'whatsapp' | 'messenger' | 'facebook' | 'telegram') => {
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedText = encodeURIComponent(`${shareText} ${shareUrl}`);
+    const links = {
+      whatsapp: `https://wa.me/?text=${encodedText}`,
+      messenger: `https://m.me/?link=${encodedUrl}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(shareText)}`,
+    };
+    window.open(links[platform], '_blank', 'noopener,noreferrer');
+    setShareFeedback(t('Share link opened'));
+    setShareMenuOpen(false);
+  };
+  const shareWithDevice = async () => {
+    try {
+      if (supportsNativeShare) await navigator.share({ title: t(result.title), text: shareText, url: shareUrl });
+      else await copyShareLink();
+    } catch { setShareFeedback(t('Share cancelled')); }
+    setShareMenuOpen(false);
+  };
   useEffect(() => {
     if (!detailsOpen) return;
     recordView(result.type, result.id).then(({ viewCount }) => setLiveViewCount(viewCount)).catch(() => { /* The static demo count remains visible until the API is configured. */ });
@@ -489,7 +525,7 @@ function ResultCard({ result, compact = false, favorite = false, onFavorite, onC
       <section className="ad-section"><h4>{t('Description')}</h4><p dir="auto">{t(result.subtitle)}</p>{isListing && <p><b>{t('Condition')}:</b> {t(result.condition)}{result.furnishing && <> · <b>{t('Furnishing')}:</b> {t(result.furnishing)}</>}</p>}</section>
       {isListing && <section className="ad-section"><h4>{t('Transaction options')}</h4><div className="transaction-options"><span><CircleCheck size={15} /> {t('Cash accepted')}</span><span><CircleCheck size={15} /> {t('Arrange pickup or delivery')}</span><span><CircleCheck size={15} /> {t('Confirm final price before payment')}</span></div></section>}
       <section className="seller-panel"><div className="seller-avatar">{(isListing ? result.seller : isOffer ? result.business : result.title).charAt(0)}</div><div><span className="eyebrow">{t('Listed by')}</span><h4>{t(isListing ? result.seller : isOffer ? result.business : isBusiness ? 'Local business' : 'Trusted provider')}</h4><p>{t(result.verified || ('sellerVerified' in result && result.sellerVerified) ? 'Verified profile' : 'Community profile')}</p></div><button className="button button-accent" onClick={() => onContact?.(result, isService || isBusiness ? 'whatsapp' : 'quote')}><MessageCircle size={16} />{t(isService || isBusiness ? 'Contact on WhatsApp' : 'Send message')}</button></section>
-      <div className="ad-actions"><button className="button button-outline" onClick={() => onFavorite?.(result)}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{t(favorite ? 'Remove from saved' : 'Save listing')}</button><button className="share-action" onClick={async () => { const url = getAdLink(result); try { if (navigator.share) await navigator.share({ title: t(result.title), text: t('See this ad on Madinaty Deals'), url }); else if (navigator.clipboard) { await navigator.clipboard.writeText(url); setShareFeedback(t('Link copied')); } else { window.prompt(t('Copy this link'), url); setShareFeedback(t('Link ready to share')); } } catch { setShareFeedback(t('Share cancelled')); } }}><Share2 size={14} /> {t('Share')}</button><button className="report-action" onClick={() => onReport?.(result)}><Flag size={14} /> {t('Report listing')}</button></div>
+      <div className="ad-actions"><button className="button button-outline" onClick={() => onFavorite?.(result)}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{t(favorite ? 'Remove from saved' : 'Save listing')}</button><div className="share-wrap"><button className="share-action" aria-expanded={shareMenuOpen} aria-haspopup="menu" onClick={() => setShareMenuOpen(value => !value)}><Share2 size={14} /> {t('Share')}</button>{shareMenuOpen && <div className="share-menu" role="menu" aria-label={t('Share this ad')}><button role="menuitem" onClick={() => shareTo('whatsapp')}><span className="share-menu-icon whatsapp">W</span>{t('WhatsApp')}</button><button role="menuitem" onClick={() => shareTo('messenger')}><span className="share-menu-icon messenger"><MessageCircle size={15} /></span>{t('Messenger')}</button><button role="menuitem" onClick={() => shareTo('facebook')}><span className="share-menu-icon facebook">f</span>{t('Facebook')}</button><button role="menuitem" onClick={() => shareTo('telegram')}><span className="share-menu-icon telegram">➤</span>{t('Telegram')}</button><button role="menuitem" onClick={copyShareLink}><span className="share-menu-icon copy">↗</span>{t('Copy link')}</button>{supportsNativeShare && <button role="menuitem" onClick={shareWithDevice}><span className="share-menu-icon device"><Share2 size={15} /></span>{t('More sharing options')}</button>}</div>}</div><button className="report-action" onClick={() => onReport?.(result)}><Flag size={14} /> {t('Report listing')}</button></div>
       {shareFeedback && <small className="share-feedback" role="status">{shareFeedback}</small>}
       <aside className="ad-safety"><ShieldCheck size={18} /><div><h4>{t('Stay safe')}</h4><p>{t(getSafetyMessage(result))}</p></div></aside>
       <p className="modal-intro">{t('Demo content: contact and transactions are not connected yet.')}</p>

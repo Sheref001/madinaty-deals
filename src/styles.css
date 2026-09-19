@@ -249,6 +249,12 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .share-action { border: 0; background: none; color: var(--teal); display: inline-flex; align-items: center; gap: 5px; padding: 8px 0; font-size: 10px; font-weight: 700; }
 .share-action:hover { color: var(--orange); }
 .share-feedback { color: var(--teal); font-size: 10px; text-align: center; }
+.share-wrap { position: relative; }
+.share-menu { position: absolute; z-index: 5; inset-inline-end: 0; bottom: calc(100% + 7px); min-width: 190px; padding: 6px; display: grid; gap: 2px; background: var(--white); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px rgba(31,69,64,.14); }
+.share-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 8px; padding: 8px 9px; background: transparent; color: var(--ink); text-align: start; font: inherit; font-size: 11px; cursor: pointer; }
+.share-menu button:hover { background: var(--paper-deep); color: var(--teal); }
+.share-menu-icon { width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: var(--white); font-size: 12px; font-weight: 800; }
+.share-menu-icon.whatsapp { background: #25d366; }.share-menu-icon.messenger { background: #168aff; }.share-menu-icon.facebook { background: #1877f2; font-family: Arial, sans-serif; font-size: 17px; }.share-menu-icon.telegram { background: #229ed9; font-size: 13px; }.share-menu-icon.copy, .share-menu-icon.device { background: var(--teal); }
 .scroll-top-button { position: fixed; z-index: 12; right: 24px; bottom: 24px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.8); border-radius: 50%; background: var(--teal); color: var(--white); box-shadow: 0 10px 24px rgba(8, 46, 40, .22); cursor: pointer; animation: scroll-top-in .2s ease both; }
 .scroll-top-button:hover { background: var(--orange); transform: translateY(-2px); }
 @keyframes scroll-top-in { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }

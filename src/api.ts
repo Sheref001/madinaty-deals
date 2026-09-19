@@ -53,7 +53,3 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
   for (const file of files) uploadIds.push((await uploadFile(file, 'photo')).id);
   return request('/submissions', { method: 'POST', body: JSON.stringify({ kind, payload, uploadIds }) });
 }
-
-export const getPushConfig = () => request('/push/config') as Promise<{ enabled: boolean; publicKey: string | null }>;
-export const savePushSubscription = (subscription: PushSubscriptionJSON, language: string, categories: string[] = [], zones: string[] = []) => request('/push/subscriptions', { method: 'POST', body: JSON.stringify({ subscription, language, categories, zones, consent: true }) });
-export const removePushSubscription = (subscription: PushSubscriptionJSON) => request('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ subscription }) });

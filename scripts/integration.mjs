@@ -75,4 +75,4 @@ assert.equal((await api('/content/listing/integration/comments')).body.comments.
 await api('/auth/logout', { method: 'POST', session: owner });
 assert.equal((await api('/auth/session', { session: owner })).body.user, null);
 await api('/uploads/' + evidence.id, { session: owner, expected: 401 });
-console.log('PASS: PostgreSQL readiness, SMTP OTP, replay/CSRF/role boundaries, private S3 uploads, antivirus, moderation, rental quota and logout.');
+console.log('PASS: PostgreSQL readiness, SMTP OTP, replay/CSRF/role boundaries, local private uploads, moderation, rental quota and logout.');

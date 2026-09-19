@@ -23,6 +23,7 @@ COPY --from=build /app/scripts ./scripts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /app
+RUN mkdir -p /app/data/uploads && chown -R appuser:appgroup /app/data
 USER appuser
 
 EXPOSE 3000

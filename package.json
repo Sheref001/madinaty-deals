@@ -17,11 +17,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "test:integration": "node scripts/integration.mjs",
-    "maintenance:cleanup": "node scripts/cleanup.mjs",
-    "notifications:send": "node scripts/push-send.mjs"
+    "maintenance:cleanup": "node scripts/cleanup.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1135.0",
     "@prisma/client": "^6.16.0",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
@@ -32,8 +30,7 @@
     "sharp": "^0.35.4",
     "tsx": "^4.23.13",
     "typescript": "latest",
-    "vite": "latest",
-    "web-push": "^3.6.7"
+    "vite": "latest"
   },
   "devDependencies": {
     "@eslint/js": "latest",

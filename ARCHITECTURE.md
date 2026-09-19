@@ -39,7 +39,7 @@ The app uses Vite + React + TypeScript. The current local data layer is intentio
 ## Deliberate TODOs
 
 - Configure SMTP, Turnstile and production secrets. Email codes, sessions, CSRF protection and PostgreSQL-backed action limits are implemented.
-- Configure private S3-compatible storage and ClamAV. Upload processing and retrieval permissions are implemented; validate the real services before release.
+- Configure private local upload storage. Upload processing and retrieval permissions are implemented; validate the real services before release.
 - `TODO: verify and seed official/common Madinaty zone labels` — the current labels are illustrative configuration.
 - `TODO: obtain Egyptian legal advice before production` — verification, marketing, payments and business obligations need review.
 - `TODO: configure a consent-aware analytics provider` — local development logs only.

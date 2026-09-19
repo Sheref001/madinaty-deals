@@ -1,10 +1,10 @@
 /* global console, process */
 import { PrismaClient } from '@prisma/client';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { loadConfig } from '../server/config.js';
+import { createLocalStorage } from '../server/local-storage.js';
 const config = loadConfig();
 const prisma = new PrismaClient();
-const storage = new S3Client(config.storage);
+const storage = createLocalStorage(config.uploadDirectory);
 try {
   const now = new Date();
   const cutoff = new Date(Date.now() - 86400000);
@@ -20,7 +20,7 @@ try {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${candidate.userId}))`;
       const current = await tx.upload.findUnique({ where: { id: candidate.id } });
       if (!current || current.submissionId || current.verificationId) return;
-      await storage.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: current.objectKey }));
+      await storage.remove(current.objectKey);
       await tx.upload.delete({ where: { id: current.id } });
       removed++;
     }, { timeout: 30000 });
@@ -29,4 +29,4 @@ try {
 } catch (error) {
   console.error('Cleanup failed', error.code || error.name);
   process.exitCode = 1;
-} finally { await prisma.$disconnect(); storage.destroy(); }
+} finally { await prisma.$disconnect(); }

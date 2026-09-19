@@ -78,12 +78,9 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
     if (route === 'auth/request-code') {
       const name = typeof body.name === 'string' ? body.name.trim() : '';
       if (name.length < 2 || name.length > 80) throw new RequestError(400, 'Enter a valid name');
-      const requestedChannel = body.channel === 'email' || (!body.channel && !body.phone && body.email) ? 'email' : 'phone';
-      let destination;
-      if (requestedChannel === 'email') {
-        destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
-      } else destination = normalizePhone(body.phone);
+      const requestedChannel = 'email';
+      const destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
       await consumeLimit(prisma, 'login-ip', peer, 20, 3600000);
       await turnstile(body.turnstileToken);
       await consumeLimit(prisma, `login-${requestedChannel}-minute`, destination, 1, 60000);
@@ -93,13 +90,6 @@ export function createAuth({ prisma, config, mailer, fetchImpl = fetch }) {
       await prisma.otpChallenge.create({ data: { id, destination, channel: requestedChannel, displayName: name, codeHash: hmac(`${id}:${code}`), expiresAt: new Date(Date.now() + 600000) } });
       try {
         if (requestedChannel === 'email') await mailer.sendMail({ from: config.from, to: destination, subject: 'Madinaty Deals sign-in code', text: `Your Madinaty Deals sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email.` });
-        else {
-          if (!config.sms?.accountSid || !config.sms?.authToken || !config.sms?.from) throw new Error('SMS is not configured');
-          const credentials = Buffer.from(`${config.sms.accountSid}:${config.sms.authToken}`).toString('base64');
-          const form = new URLSearchParams({ To: destination, From: config.sms.from, Body: `Madinaty Deals sign-in code: ${code}. It expires in 10 minutes.` });
-          const smsResponse = await fetchImpl(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.sms.accountSid)}/Messages.json`, { method: 'POST', headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/x-www-form-urlencoded' }, body: form, signal: AbortSignal.timeout(10000) });
-          if (!smsResponse.ok) throw new Error('SMS delivery failed');
-        }
       } catch {
         await prisma.otpChallenge.delete({ where: { id } });
         throw new RequestError(503, 'Code delivery is unavailable. Please try again later.');

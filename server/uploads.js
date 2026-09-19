@@ -1,9 +1,7 @@
 /* global URL */
 import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
-import { createConnection } from 'node:net';
 import sharp from 'sharp';
-import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { RequestError, readJson } from './request.js';
 import { consumeLimit, isReviewer } from './auth.js';
 
@@ -17,37 +15,6 @@ export async function readUpload(request, maxBytes) {
   }
   if (!size) throw new RequestError(400, 'Choose a file');
   return Buffer.concat(chunks);
-}
-
-export async function scanFile(bytes, address) {
-  return new Promise((resolve, reject) => {
-    const socket = createConnection(address);
-    let reply = '';
-    const fail = () => { socket.destroy(); reject(new RequestError(503, 'File scanning is unavailable. Please try again later.')); };
-    socket.setTimeout(30000, fail);
-    socket.on('error', fail);
-    socket.on('connect', () => {
-      socket.write('zINSTREAM\0');
-      for (let offset = 0; offset < bytes.length; offset += 65536) {
-        const chunk = bytes.subarray(offset, offset + 65536);
-        const size = Buffer.alloc(4);
-        size.writeUInt32BE(chunk.length);
-        socket.write(size);
-        socket.write(chunk);
-      }
-      socket.write(Buffer.alloc(4));
-    });
-    socket.on('data', chunk => {
-      reply += chunk.toString();
-      if (reply.length > 4096) return fail();
-      if (!reply.includes('\0')) return;
-      socket.destroy();
-      if (reply.trim().replace(/\0/g, '') === 'stream: OK') resolve();
-      else if (reply.includes('FOUND')) reject(new RequestError(400, 'This file failed the security scan'));
-      else reject(new RequestError(503, 'File scanning is unavailable. Please try again later.'));
-    });
-    socket.on('end', () => { if (!reply.includes('\0')) fail(); });
-  });
 }
 
 export async function sanitizeFile(bytes, mimeType, purpose) {
@@ -68,7 +35,7 @@ export async function sanitizeFile(bytes, mimeType, purpose) {
 
 const documentTypes = new Set(['NATIONAL_ID', 'MADINATY_ID', 'ELECTRICITY_BILL', 'WATER_BILL', 'GAS_BILL', 'LEASE_OR_OWNERSHIP', 'OTHER']);
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
-export function createUploads({ prisma, config, auth, storage, scan = bytes => scanFile(bytes, config.clamav) }) {
+export function createUploads({ prisma, config, auth, storage }) {
   let active = 0;
   async function handle(request, response, parts, send) {
     const url = new URL(request.url, config.origin);
@@ -85,7 +52,6 @@ export function createUploads({ prisma, config, auth, storage, scan = bytes => s
       active++;
       try {
         const original = await readUpload(request, purpose === 'photo' ? 5 * 1024 * 1024 : 10 * 1024 * 1024);
-        await scan(original);
         const file = await sanitizeFile(original, String(request.headers['content-type'] || '').split(';')[0], purpose);
         const id = randomUUID();
         const objectKey = `${purpose}/${current.userId}/${id}`;
@@ -98,7 +64,7 @@ export function createUploads({ prisma, config, auth, storage, scan = bytes => s
           await tx.upload.create({ data });
         });
         try {
-          await storage.send(new PutObjectCommand({ Bucket: config.bucket, Key: objectKey, Body: file.bytes, ContentType: file.mimeType, ...(config.local ? {} : { ServerSideEncryption: 'AES256' }) }));
+          await storage.put(objectKey, file.bytes);
         } catch {
           await prisma.upload.delete({ where: { id } });
           throw new RequestError(503, 'File storage is unavailable. Please try again later.');
@@ -116,8 +82,7 @@ export function createUploads({ prisma, config, auth, storage, scan = bytes => s
       if (!upload || upload.status !== 'READY' || (upload.userId !== current.userId && !isReviewer(current.user))) throw new RequestError(404, 'Not found');
       if (request.method === 'GET') {
         await prisma.auditLog.create({ data: { actorId: current.userId, action: 'upload.read', targetType: 'Upload', targetId: upload.id } });
-        const object = await storage.send(new GetObjectCommand({ Bucket: config.bucket, Key: upload.objectKey }));
-        const bytes = await object.Body.transformToByteArray();
+        const bytes = await storage.get(upload.objectKey);
         response.writeHead(200, { 'content-type': upload.mimeType, 'content-disposition': 'attachment; filename="document"', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; sandbox" });
         return response.end(Buffer.from(bytes));
       }
@@ -126,7 +91,7 @@ export function createUploads({ prisma, config, auth, storage, scan = bytes => s
           await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
           const latest = await tx.upload.findUnique({ where: { id: upload.id } });
           if (!latest || latest.userId !== current.userId || latest.submissionId || latest.verificationId) throw new RequestError(409, 'Submitted evidence cannot be deleted here');
-          await storage.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: latest.objectKey }));
+          await storage.remove(latest.objectKey);
           await tx.upload.delete({ where: { id: latest.id } });
           await tx.auditLog.create({ data: { actorId: current.userId, action: 'upload.deleted', targetType: 'Upload', targetId: latest.id } });
         });

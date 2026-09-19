@@ -23,7 +23,6 @@ import type { CollectionFilters } from './MarketplaceFilters';
 import RevenueDesk from './RevenueDesk';
 import EliteAdSpace from './EliteAdSpace';
 import { splitCategories, businessOnlyCategories, businessTerms, tutoringCategories } from './categoryPolicy';
-import PushNotifications from './PushNotifications';
 import AuthForm from './AuthForm';
 import VerificationForm from './VerificationForm';
 import { getSession, signOut, type Account } from './api';
@@ -333,7 +332,6 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="mobile-post" onClick={openPost} aria-label={t("Post a listing")}><Plus size={22} /></button>
       </div>
 
-      {view !== 'admin' && <PushNotifications />}
       {showScrollTop && <button className="scroll-top-button" type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label={t('Back to top')} title={t('Back to top')}><ArrowUp size={19} /></button>}
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}

@@ -23,7 +23,6 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-madinaty}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-madinaty_deals}
       PORT: 3000
-      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
       APP_ENV: ${APP_ENV:-production}
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in the server .env file}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in the server .env file}
@@ -32,21 +31,9 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:?Set SMTP_FROM in the server .env file}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_FROM: ${TWILIO_FROM:-}
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
-      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:?Set OBJECT_STORAGE_BUCKET in the server .env file}
-      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      CLAMAV_HOST: ${CLAMAV_HOST:?Set CLAMAV_HOST in the server .env file}
-      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      UPLOAD_DIRECTORY: /app/data/uploads
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       RUN_SEED: ${RUN_SEED:-false}
     ports:
@@ -60,6 +47,9 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - madinaty-uploads:/app/data/uploads
 
 volumes:
   madinaty-postgres:
+  madinaty-uploads:

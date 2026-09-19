@@ -17,6 +17,7 @@ export interface BrowseFilters {
   groceryActivity?: string;
   homeServiceType?: string;
   housekeepingType?: string;
+  fitnessProviderType?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -41,7 +42,8 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const groceryActivityMatches = !filters.groceryActivity || (result.type === 'business' && result.groceryActivity === filters.groceryActivity);
     const homeServiceTypeMatches = !filters.homeServiceType || (result.type === 'service' && result.homeServiceType === filters.homeServiceType);
     const housekeepingTypeMatches = !filters.housekeepingType || (result.type === 'service' && result.housekeepingType === filters.housekeepingType);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && matchesQuery(result, filters.query);
+    const fitnessProviderTypeMatches = !filters.fitnessProviderType || (result.type === 'business' && result.fitnessProviderType === filters.fitnessProviderType);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

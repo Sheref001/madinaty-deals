@@ -25,6 +25,8 @@ export const homeServiceTypes = ['Electrician', 'Plumber', 'AC technician', 'Pai
 export type HomeServiceType = typeof homeServiceTypes[number];
 export const housekeepingTypes = ['General cleaning', 'Deep cleaning', 'Move-in/move-out cleaning', 'Upholstery & carpet cleaning'] as const;
 export type HousekeepingType = typeof housekeepingTypes[number];
+export const fitnessProviderTypes = ['Fitness center', 'Personal trainers'] as const;
+export type FitnessProviderType = typeof fitnessProviderTypes[number];
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -81,6 +83,7 @@ export interface Business extends BaseResult {
   whatsapp?: string;
   featured?: boolean;
   groceryActivity?: GroceryActivity;
+  fitnessProviderType?: FitnessProviderType;
 }
 
 export interface Offer extends BaseResult {

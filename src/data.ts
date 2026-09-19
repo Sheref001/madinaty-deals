@@ -105,7 +105,7 @@ export const businesses: Business[] = [
   },
   {
     id: 'business-2', publicAdId: 'MD-WWGNSSTGUR', type: 'business', title: 'Studio 8 Pilates', subtitle: 'Reformer, mat & private sessions', category: 'Health & fitness', rating: 4.9, reviewCount: 96,
-    hours: 'Opening hours to be configured', phone: '', zone: 'Madinaty Sporting Club', createdAt: 'Business profile', image: 'pilates', accent: 'plum', verified: true,
+    hours: 'Opening hours to be configured', phone: '', fitnessProviderType: 'Fitness center', zone: 'Madinaty Sporting Club', createdAt: 'Business profile', image: 'pilates', accent: 'plum', verified: true,
   },
   {
     id: 'business-3', publicAdId: 'MD-DSA9RD7WAU', type: 'business', title: 'Little Explorers Nursery', subtitle: 'Play-based early learning · ages 2–5', category: 'Kids & family', rating: 4.7, reviewCount: 48,

@@ -26,6 +26,7 @@ export const arabic: Record<string, string> = {
   'Business type': 'نوع النشاط', 'All grocery activities': 'كل أنشطة البقالة', 'Grocery store': 'بقالة', 'Butcher': 'جزارة', 'Poultry': 'فراخ ودواجن', 'Bakery': 'مخبز', 'Fishmonger': 'أسماك', 'Fruits & vegetables': 'خضار وفاكهة', 'Dairy & cheese': 'ألبان وأجبان',
   'Service type': 'نوع الخدمة', 'All home services': 'كل خدمات المنزل', 'Electrician': 'كهربائي', 'Plumber': 'سباك', 'AC technician': 'فني تكييف', 'Painter': 'نقاش', 'Carpenter': 'نجار', 'General maintenance': 'صيانة عامة',
   'Cleaning type': 'نوع التنظيف', 'All cleaning services': 'كل خدمات التنظيف', 'General cleaning': 'تنظيف عام', 'Deep cleaning': 'تنظيف عميق', 'Move-in/move-out cleaning': 'تنظيف قبل أو بعد الانتقال', 'Upholstery & carpet cleaning': 'تنظيف المفروشات والسجاد',
+  'Fitness provider': 'نوع مقدم اللياقة', 'All fitness providers': 'كل مقدمي خدمات اللياقة', 'Fitness center': 'مركز لياقة', 'Personal trainers': 'مدربون شخصيون',
   'Small businesses': 'مشروعات صغيرة',
   'Free ads': 'إعلانات مجانية',
   'Agreed fees': 'رسوم بالاتفاق',

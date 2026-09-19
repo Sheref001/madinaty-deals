@@ -566,7 +566,7 @@ function ResultArt({ result }: { result: SearchResult }) {
 function getSafetyMessage(result: SearchResult): string {
   if (result.type === 'listing' && result.category === 'Cars & motorcycles') return 'For vehicles: inspect with a trusted mechanic, verify ownership and registration documents, and do not send a deposit before the details are confirmed.';
   if (result.type === 'listing') return 'Choose a busy public place. Inspect the item before paying, and never share an OTP or send a deposit to an unknown seller.';
-  if (result.type === 'service') return 'Agree on the scope, price and timing in writing. Check reviews and credentials where relevant, avoid full payment upfront to an unknown provider, and never share an OTP or password.';
+  if (result.type === 'service') return 'Agree on the scope, price and timing in writing. For an in-person service, consider meeting first in Madinaty or another busy public place when practical. Check reviews and credentials where relevant, avoid full payment upfront to an unknown provider, and never share an OTP or password.';
   if (result.type === 'business') return 'Confirm the business name, hours, price and delivery details through its listed contact. Be careful with unexpected payment links and never share an OTP.';
   return 'Check the offer terms, expiry date, redemption conditions and final price before paying. Use the business’s listed contact and avoid suspicious payment links.';
 }

@@ -29,6 +29,7 @@ export const arabic: Record<string, string> = {
   'Business request': 'طلب المشروع',
   'Paid posting': 'نشر إعلان مدفوع',
   'Business authentication': 'توثيق المشروع',
+  'Contact Madinaty Deals': 'تواصل مع مدينتي ديلز',
   'Posting and authentication': 'النشر والتوثيق',
   'Small business fees are agreed with our team for posting, business authentication, or both. Authentication requires a review of your business details.': 'رسوم المشروعات الصغيرة تُحدد بالاتفاق مع فريقنا للنشر أو توثيق المشروع أو كليهما. التوثيق يتطلب مراجعة بيانات المشروع.',
 

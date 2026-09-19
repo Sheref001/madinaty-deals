@@ -136,6 +136,9 @@ html[lang="ar"] .brand-latin-rest { display: none; }
 .nav-item.active { background: var(--white); color: var(--teal); font-weight: 700; box-shadow: 0 4px 14px rgba(31, 69, 64, .06); }
 .nav-item span { flex: 1; }
 .nav-item small { background: var(--paper-deep); color: var(--ink-soft); padding: 2px 7px; border-radius: 9px; font-size: 10px; }
+.admin-nav-link { width: 100%; height: 43px; display: flex; align-items: center; gap: 13px; border: 0; border-radius: 10px; background: transparent; color: var(--teal); padding: 0 13px; text-align: start; font: inherit; font-size: 13px; cursor: pointer; }
+.admin-nav-link:hover { background: rgba(255,255,255,.7); }
+.admin-nav-link span { flex: 1; }
 .nav-divider { height: 1px; background: var(--line); margin: 23px 12px 19px; }
 .nav-section-label { margin-bottom: 8px !important; }
 .sidebar-bottom { display: grid; gap: 24px; }

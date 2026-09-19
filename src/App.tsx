@@ -112,6 +112,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [account, setAccount] = useState<Account | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const registered = Boolean(account);
+  const isAdmin = account?.role === 'ADMIN';
   const residentVerified = account?.residentVerified || false;
   const rentalPostsThisMonth = 0;
   useEffect(() => {
@@ -142,6 +143,10 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
   const goTo = (nextView: View) => {
     if (nextView === 'offers' && !featureFlags.offers) return;
+    if (nextView === 'admin' && !isAdmin) {
+      setToast('Admin access required');
+      return;
+    }
     const url = new URL(window.location.href);
     if (url.searchParams.has('ad')) {
       url.searchParams.delete('ad');
@@ -280,14 +285,14 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
-      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
+      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={isAdmin} onAdmin={() => goTo('admin')} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
 
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
           {!registered && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
-          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
+          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={isAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
 
@@ -295,7 +300,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         {view === 'home' ? (
           <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
-          <AdminView onBack={() => goTo('home')} />
+          isAdmin ? <AdminView onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (
           <BrowseView key={`${view}-${selectedCategory}`} selectedCategory={selectedCategory}
             view={view}
@@ -339,11 +344,12 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   );
 }
 
-function Navigation({ view, goTo, favoriteCount, onVerify }: { view: View; goTo: (view: View) => void; favoriteCount: number; onVerify: () => void }) {
+function Navigation({ view, goTo, favoriteCount, isAdmin, onAdmin, onVerify }: { view: View; goTo: (view: View) => void; favoriteCount: number; isAdmin: boolean; onAdmin: () => void; onVerify: () => void }) {
   const { t } = useTranslation();
   return <nav className="nav-list" aria-label={t("Main navigation")}>
     {visibleNavItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
     <NavItem item={{ id: 'saved', label: 'Saved', icon: Bookmark }} active={view === 'saved'} onClick={() => goTo('saved')} count={favoriteCount} />
+    {isAdmin && <button className="admin-nav-link" type="button" onClick={onAdmin}><BarChart3 size={18} /><span>{t('Admin dashboard')}</span></button>}
     <div className="nav-divider" />
     <span className="section-label nav-section-label">{t("For businesses")}</span>
     <button className="mobile-verify-cta" type="button" onClick={onVerify}><ShieldCheck size={18} /><span><b>{t('Become a verified resident')}</b><small>{t('Get verified in 2 mins')}</small></span><ArrowRight size={16} /></button>
@@ -531,6 +537,11 @@ function getSafetyMessage(result: SearchResult): string {
 function EmptyState({ view, query, onReset }: { view: View; query: string; onReset: () => void }) {
   const { t } = useTranslation();
   return <div className="empty-state"><span className="empty-icon"><Search size={23} /></span><h2>{t("No matches yet")}</h2><p>{t(query ? `We couldn't find anything for “${query}”.` : `There are no saved ${view === 'saved' ? 'items' : 'results'} here yet.`)}</p><button className="button button-outline" onClick={onReset}>{t("Clear filters")}</button></div>;
+}
+
+function AdminAccessDenied({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
+  return <div className="empty-state admin-access-denied"><span className="empty-icon"><ShieldCheck size={23} /></span><h2>{t('Admin access required')}</h2><p>{t('This dashboard is restricted to the Madinaty Deals administrator account.')}</p><button className="button button-outline" onClick={onBack}>{t('Back to app')}</button></div>;
 }
 
 function AdminView({ onBack }: { onBack: () => void }) {

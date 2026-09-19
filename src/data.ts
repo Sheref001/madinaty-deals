@@ -97,7 +97,7 @@ export const services: Service[] = [
 export const businesses: Business[] = [
   {
     id: 'business-poultry-demo', publicAdId: 'MD-B7VJ5GFCHA', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & fast local delivery', category: 'Groceries', rating: 4.9, reviewCount: 12,
-    hours: 'Daily · hours to be confirmed', phone: '', whatsapp: '', zone: 'Craft Zone', createdAt: 'Featured demo ad', image: 'poultry', accent: 'coral', verified: false, featured: true,
+    hours: 'Daily · hours to be confirmed', phone: '', whatsapp: '', groceryActivity: 'Poultry', zone: 'Craft Zone', createdAt: 'Featured demo ad', image: 'poultry', accent: 'coral', verified: false, featured: true,
   },
   {
     id: 'business-1', publicAdId: 'MD-WK3L9GV84R', type: 'business', title: 'The Brunch Club', subtitle: 'Coffee, breakfast & all-day plates', category: 'Restaurants', rating: 4.8, reviewCount: 213,

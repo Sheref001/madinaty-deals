@@ -15,6 +15,8 @@ export function listingConditionOptions(category?: string): ListingCondition[] {
     : generalListingConditions;
 }
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
+export const groceryActivities = ['Grocery store', 'Butcher', 'Poultry', 'Bakery', 'Fishmonger', 'Fruits & vegetables', 'Dairy & cheese'] as const;
+export type GroceryActivity = typeof groceryActivities[number];
 export const educationLevels = ['Before university', 'University'] as const;
 export type EducationLevel = typeof educationLevels[number];
 export const tutoringSubjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
@@ -72,6 +74,7 @@ export interface Business extends BaseResult {
   phone: string;
   whatsapp?: string;
   featured?: boolean;
+  groceryActivity?: GroceryActivity;
 }
 
 export interface Offer extends BaseResult {

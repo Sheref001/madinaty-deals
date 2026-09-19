@@ -14,6 +14,7 @@ export interface BrowseFilters {
   maxPrice?: number;
   educationLevel?: string;
   subject?: string;
+  groceryActivity?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -35,7 +36,8 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const priceMatches = !hasPriceFilter || (result.type === 'listing' && result.price !== null && result.price >= (filters.minPrice ?? 0) && result.price <= (filters.maxPrice ?? Infinity));
     const educationLevelMatches = !filters.educationLevel || (result.type === 'service' && result.educationLevel === filters.educationLevel);
     const subjectMatches = !filters.subject || (result.type === 'service' && result.subjects?.includes(filters.subject as never));
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && matchesQuery(result, filters.query);
+    const groceryActivityMatches = !filters.groceryActivity || (result.type === 'business' && result.groceryActivity === filters.groceryActivity);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

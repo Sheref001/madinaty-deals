@@ -8,3 +8,6 @@ dist/
 coverage/
 prisma/*.db
 prisma/*.db-journal
+!.env.test.example
+playwright-report/
+test-results/

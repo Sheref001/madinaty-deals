@@ -2,7 +2,13 @@ export type View = 'home' | 'browse' | 'services' | 'businesses' | 'offers' | 's
 export type ResultType = 'listing' | 'service' | 'business' | 'offer';
 export type ListingCondition = 'Like new' | 'Good' | 'Fair';
 
+export type AdvertiserType = 'individual' | 'small_business';
+export type BusinessRequest = 'posting' | 'authentication' | 'both';
+
 export interface BaseResult {
+  publicAdId?: string;
+  advertiserType?: AdvertiserType;
+  businessRequest?: BusinessRequest;
   id: string;
   type: ResultType;
   title: string;
@@ -12,6 +18,7 @@ export interface BaseResult {
   verified?: boolean;
   image: string;
   accent: string;
+  viewCount?: number;
 }
 
 export interface Listing extends BaseResult {

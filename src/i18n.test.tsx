@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from './App';
 import { allResults } from './data';
 import { matchesQuery } from './domain';
 import { languageKey, translate } from './i18n';
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn().mockResolvedValue({ id: 'user', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false }) }));
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
 describe('Arabic and English experience', () => {
-  it('defaults to Arabic, switches without losing saved state, and remembers English on reload', () => {
+  it('returns home when switching languages, preserves saved state, and remembers the choice on reload', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    window.history.replaceState({}, '', '/?lang=ar');
     const { unmount } = render(<App />);
     expect(document.documentElement.lang).toBe('ar');
     expect(document.documentElement.dir).toBe('rtl');
@@ -17,19 +20,25 @@ describe('Arabic and English experience', () => {
     expect(screen.getByRole('heading', { name: 'إعلاناتك المحفوظة' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(document.documentElement.dir).toBe('ltr');
+    expect(screen.getByRole('heading', { name: 'Buy, sell and discover in Madinaty' })).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Saved' }));
     expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Stokke Tripp Trapp chair' })).toBeTruthy();
     expect(localStorage.getItem(languageKey)).toBe('en');
     unmount();
     render(<App />);
     expect(document.documentElement.lang).toBe('en');
+    fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
     fireEvent.click(screen.getByRole('button', { name: 'التبديل إلى العربية' }));
     expect(document.documentElement.dir).toBe('rtl');
+    expect(screen.getByRole('heading', { name: translate('Buy, sell and discover in Madinaty', 'ar') })).toBeTruthy();
   });
 
-  it('keeps canonical zone and category values in Arabic forms', () => {
+  it('keeps canonical zone and category values in Arabic forms', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'أضف إعلانًا مجانيًا' }));
+    await screen.findByRole('button', { name: 'تسجيل الخروج' });
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'أضف إعلانًا' }));
     fireEvent.click(screen.getByRole('button', { name: /بيع منتج/ }));
     const category = screen.getByLabelText('القسم') as HTMLSelectElement;
     expect(category.value).toBe('Furniture & home');

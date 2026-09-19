@@ -30,6 +30,16 @@ enum VerificationStatus {
   REVIEW_REQUIRED
 }
 
+enum VerificationDocumentType {
+  NATIONAL_ID
+  MADINATY_ID
+  ELECTRICITY_BILL
+  WATER_BILL
+  GAS_BILL
+  LEASE_OR_OWNERSHIP
+  OTHER
+}
+
 enum ListingStatus {
   DRAFT
   PENDING_REVIEW
@@ -63,6 +73,11 @@ enum ReviewStatus {
   PUBLISHED
   HIDDEN
   REMOVED
+}
+
+enum CommentStatus {
+  PUBLISHED
+  HIDDEN
 }
 
 enum ReportReason {
@@ -117,6 +132,9 @@ model User {
   id                       String                 @id @default(uuid()) @db.Uuid
   email                    String?                @unique
   phone                    String?                @unique
+  passwordHash             String?
+  emailVerifiedAt          DateTime?
+  phoneVerifiedAt          DateTime?
   role                     UserRole               @default(RESIDENT)
   status                   AccountStatus          @default(ACTIVE)
   createdAt                DateTime               @default(now())
@@ -139,6 +157,37 @@ model User {
   analyticsEvents          AnalyticsEvent[]
   businessesOwned          Business[]
   reviewResponses          ReviewResponse[]
+  sessions                 Session[]
+  otpChallenges            OtpChallenge[]
+  uploads                  Upload[]
+  submissions              Submission[]
+  comments                 Comment[]
+}
+
+model Session {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model OtpChallenge {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @db.Uuid
+  destination String
+  displayName String   @default("Neighbour")
+  channel     String
+  codeHash    String
+  attempts    Int      @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([destination, expiresAt])
 }
 
 model Profile {
@@ -177,7 +226,24 @@ model ResidentVerification {
   reviewedAt     DateTime?
   user           User               @relation("VerificationSubject", fields: [userId], references: [id], onDelete: Cascade)
   reviewer       User?              @relation("VerificationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  documents      VerificationDocument[]
   @@index([status, submittedAt])
+}
+
+// Evidence is private metadata only. The actual file lives in a private,
+// non-public object-storage bucket addressed by objectKey.
+model VerificationDocument {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  residentVerificationId String                   @db.Uuid
+  documentType           VerificationDocumentType
+  objectKey              String                   @unique
+  originalFileName       String
+  mimeType               String
+  byteSize               Int
+  sha256                 String
+  createdAt              DateTime                 @default(now())
+  residentVerification  ResidentVerification     @relation(fields: [residentVerificationId], references: [id], onDelete: Cascade)
+  @@index([residentVerificationId])
 }
 
 model Zone {
@@ -540,4 +606,103 @@ model AuditLog {
   createdAt      DateTime @default(now())
   actor          User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
   @@index([targetType, targetId, createdAt])
+}
+
+// Flexible interaction records for the current frontend content model.
+// contentId is intentionally a string because the demo uses stable slugs while
+// future database-backed listings may use UUIDs.
+model ContentView {
+  id          String   @id @default(uuid()) @db.Uuid
+  contentType String
+  contentId   String
+  visitorId   String
+  dayKey      String
+  createdAt   DateTime @default(now())
+
+  @@unique([contentType, contentId, visitorId, dayKey])
+  @@index([contentType, contentId])
+}
+
+model Comment {
+  userId      String?       @db.Uuid
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String        @id @default(uuid()) @db.Uuid
+  contentType String
+  contentId   String
+  displayName String        @default("Neighbour")
+  body        String
+  language    String        @default("en")
+  status      CommentStatus @default(PUBLISHED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([contentType, contentId, status, createdAt])
+}
+
+model RateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model Upload {
+  status           String   @default("PENDING")
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  purpose          String
+  documentType     VerificationDocumentType?
+  objectKey        String   @unique
+  originalFileName  String
+  mimeType         String
+  byteSize         Int
+  sha256           String
+  createdAt        DateTime @default(now())
+  submissionId     String?  @db.Uuid
+  verificationId   String?  @db.Uuid
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submission       Submission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  @@index([userId, createdAt])
+}
+
+model Submission {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  kind        String
+  payload     Json
+  status      String   @default("PENDING_REVIEW")
+  rentalMonth String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploads     Upload[]
+  @@unique([userId, rentalMonth])
+  @@index([status, createdAt])
+}
+
+model PushSubscription {
+  id                   String   @id @default(uuid()) @db.Uuid
+  endpoint             String   @unique
+  p256dh               String
+  auth                 String
+  applicationServerKey String
+  language             String
+  consentVersion       String
+  consentedAt          DateTime @default(now())
+  @@index([language])
+}
+
+model PushCampaign {
+  id          String   @id @db.Uuid
+  payloadHash String
+  createdAt   DateTime @default(now())
+  deliveries  PushDelivery[]
+}
+
+model PushDelivery {
+  campaignId     String   @db.Uuid
+  subscriptionId String   @db.Uuid
+  status         String   @default("ATTEMPTED")
+  createdAt      DateTime @default(now())
+  campaign       PushCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@id([campaignId, subscriptionId])
 }

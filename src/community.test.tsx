@@ -1,14 +1,17 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
+import { getSession, submitPost } from './api';
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }), getAuthConfig: vi.fn().mockResolvedValue({ turnstileSiteKey: '' }) }));
+beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); });
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
-it('previews details without publishing and preserves them when editing', () => {
+it('previews details without publishing and preserves them when editing', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ListingForm onPublish={publish} /></LanguageContext.Provider>);
   fireEvent.change(screen.getByLabelText('What are you selling?'), { target: { value: 'Small oak desk' } });
@@ -22,11 +25,12 @@ it('previews details without publishing and preserves them when editing', () => 
   expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toContain('small scratch');
   expect((screen.getByLabelText('Condition') as HTMLSelectElement).value).toBe('Fair');
   fireEvent.click(screen.getByRole('button', { name: 'Preview listing' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Add to this demo' }));
-  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Small oak desk', condition: 'Fair', price: 1450.5, subtitle: 'One year old, a small scratch on the top.' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Small oak desk', condition: 'Fair', price: 1450.5, subtitle: 'One year old, a small scratch on the top.' })));
+  expect(submitPost).toHaveBeenCalled();
 });
 
-it('previews and publishes a service with area and WhatsApp contact', () => {
+it('submits a service with area and WhatsApp contact for review', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
   expect(screen.getByText('No residency verification required')).toBeTruthy();
@@ -35,8 +39,8 @@ it('previews and publishes a service with area and WhatsApp contact', () => {
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Add service to this demo' }));
-  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring', whatsapp: '+20 100 000 0000' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000' })));
 });
 
 it('routes the home services category to providers in Arabic', () => {
@@ -47,10 +51,42 @@ it('routes the home services category to providers in Arabic', () => {
   expect(screen.getByRole('heading', { name: 'كول بوينت للتكييف' })).toBeTruthy();
 });
 
-it('opens the posting form from the new hero action', () => {
+it('opens the posting form for a server-authenticated user', async () => {
+  vi.mocked(getSession).mockResolvedValue({ id: 'user-1', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false });
   render(<App />);
+  await screen.findByRole('button', { name: 'تسجيل الخروج' });
   fireEvent.click(screen.getByRole('button', { name: 'عندك حاجة للبيع؟' }));
   expect(screen.getByRole('dialog')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /بيع منتج/ }));
   expect(screen.getByLabelText('الوصف')).toBeTruthy();
+});
+
+it('ignores a forged local registration flag and requires real sign-in', async () => {
+  localStorage.setItem('madinaty-account-registered', 'true');
+  localStorage.setItem('madinaty-deals-language', 'en');
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in or create account' }));
+  expect(screen.getByRole('dialog', { name: 'Sign in or create account' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Send sign-in code' })).toBeTruthy();
+  expect(screen.queryByLabelText('What are you selling?')).toBeNull();
+});
+
+
+it('preserves a small business authentication request through preview and submission', async () => {
+  const publish = vi.fn();
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Health & fitness' } });
+  expect(screen.queryByLabelText('Advertiser type')).toBeNull();
+  expect(screen.queryByText('Individual ads are free.')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Business request'), { target: { value: 'both' } });
+  fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Neighbourhood fitness studio' } });
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Group fitness classes and personal training.' } });
+  fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
+  expect(screen.getByText(/Small business fees are agreed/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+  expect((screen.getByLabelText('Business request') as HTMLSelectElement).value).toBe('both');
+  fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false })));
 });

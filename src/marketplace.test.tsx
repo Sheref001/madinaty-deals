@@ -5,7 +5,7 @@ import App from './App';
 import { filterResults } from './domain';
 import { listings } from './data';
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
 it('searches all sections from the header and opens result details', () => {
   localStorage.setItem('madinaty-deals-language', 'en');
@@ -46,4 +46,41 @@ it('orders prices with unknown values last and applies inclusive price limits', 
   expect(filterResults(fixtures,base).map(item => item.id)).toEqual([fixtures[1].id,fixtures[0].id,fixtures[2].id]);
   expect(filterResults(fixtures,{...base,minPrice:100,maxPrice:100}).map(item => item.id)).toEqual([fixtures[0].id]);
   expect(filterResults(listings,{...base,sort:'newest'}).map(item => item.createdAt)).toEqual(['2 hours ago','5 hours ago','Yesterday','Yesterday','2 days ago']);
+});
+
+
+it('splits tutoring into free individual ads and small businesses', () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: /Tutoring & education\s*Explore/ }));
+  expect(screen.getByRole('heading', { name: 'Tutoring & education' })).toBeTruthy();
+  expect(screen.getByText('Individual ads are free.')).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Kite Learning Studio' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /Small businesses\s*Agreed fees/ }));
+  expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeNull();
+  expect(screen.getByText(/Small business fees are agreed/)).toBeTruthy();
+});
+
+it.each(['Electronics'])('shows both subcategories for %s even with no matching ads', category => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: `${category}Explore` }));
+  expect(screen.getByRole('heading', { name: category })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Individuals\s*Free ads/ }).getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: /Small businesses\s*Agreed fees/ }));
+  expect(screen.getByRole('button', { name: /Small businesses\s*Agreed fees/ }).getAttribute('aria-pressed')).toBe('true');
+});
+
+
+it('shows gym businesses directly without a free-individual banner', () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Health & fitnessExplore' }));
+  expect(screen.getByRole('heading', { name: 'Health & fitness' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Studio 8 Pilates' })).toBeTruthy();
+  expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
+  expect(screen.queryByText('Individual ads are free.')).toBeNull();
+  expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
 });

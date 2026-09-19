@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1754" viewBox="0 0 1240 1754">
+  <title>مدينتي ديلز — كل احتياجاتك في مدينتي</title>
+  <defs>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#062f2d" flood-opacity=".24"/></filter>
+    <linearGradient id="panel" x1="0" x2="1"><stop stop-color="#fffdf6" stop-opacity=".98"/><stop offset="1" stop-color="#fff5df" stop-opacity=".96"/></linearGradient>
+    <linearGradient id="orange" x1="0" x2="1"><stop stop-color="#e87535"/><stop offset="1" stop-color="#c94e2f"/></linearGradient>
+  </defs>
+  <image href="madinaty-deals-ar-poster-background.png" width="1240" height="1754" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1240" height="1754" fill="#062f2d" opacity=".07"/>
+
+  <rect x="330" y="265" width="580" height="1175" rx="48" fill="url(#panel)" filter="url(#shadow)"/>
+  <text x="620" y="385" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="70" font-weight="900" fill="#073f3b">مدينتي <tspan fill="#e87535">ديلز</tspan></text>
+  <text x="620" y="445" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="29" font-weight="800" fill="#45635d">كل احتياجاتك في مدينتي… أقرب وأسهل</text>
+  <path d="M420 492 Q620 455 820 492" fill="none" stroke="#e87535" stroke-width="5" stroke-linecap="round"/>
+  <text x="620" y="575" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="31" font-weight="900" fill="#073f3b">إيه اللي بتدور عليه؟</text>
+  <text x="620" y="625" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="23" fill="#45635d">هتلاقيه على مدينتي ديلز</text>
+
+  <g font-family="Cairo,Arial,sans-serif" font-size="25" font-weight="800" fill="#073f3b" text-anchor="end" direction="rtl">
+    <rect x="390" y="700" width="460" height="72" rx="36" fill="#e8f2e6"/><circle cx="430" cy="736" r="12" fill="#e87535"/><text x="805" y="747">محتاج مدرس خصوصي؟</text>
+    <rect x="390" y="795" width="460" height="72" rx="36" fill="#fff0df"/><circle cx="430" cy="831" r="12" fill="#073f3b"/><text x="805" y="842">عايز تبيع أو تشتري؟</text>
+    <rect x="390" y="890" width="460" height="72" rx="36" fill="#e8f2e6"/><circle cx="430" cy="926" r="12" fill="#e87535"/><text x="805" y="937">بتدور على شقة للإيجار؟</text>
+    <rect x="390" y="985" width="460" height="72" rx="36" fill="#fff0df"/><circle cx="430" cy="1021" r="12" fill="#073f3b"/><text x="805" y="1032">محتاج صيانة أو تنظيف؟</text>
+    <rect x="390" y="1080" width="460" height="72" rx="36" fill="#e8f2e6"/><circle cx="430" cy="1116" r="12" fill="#e87535"/><text x="805" y="1127">عايز توصيل سريع؟</text>
+    <rect x="390" y="1175" width="460" height="72" rx="36" fill="#fff0df"/><circle cx="430" cy="1211" r="12" fill="#073f3b"/><text x="805" y="1222">بتدور على بقالة أو خضار؟</text>
+  </g>
+
+  <g font-family="Cairo,Arial,sans-serif" font-size="23" font-weight="900" text-anchor="middle" direction="rtl" fill="#073f3b">
+    <rect x="40" y="375" width="360" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="220" y="411">دروس وتعليم</text>
+    <rect x="840" y="375" width="360" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="1020" y="411">بيع وشراء</text>
+    <rect x="35" y="880" width="370" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="220" y="916">إيجارات شقق</text>
+    <rect x="835" y="880" width="370" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="1020" y="916">خدمات منزلية</text>
+    <rect x="35" y="1390" width="370" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="220" y="1426">توصيل قريب</text>
+    <rect x="835" y="1390" width="370" height="54" rx="27" fill="#fffdf6" opacity=".95"/><text x="1020" y="1426">بقالة وخضار</text>
+  </g>
+
+  <rect x="385" y="1480" width="470" height="220" rx="34" fill="#fffdf6" filter="url(#shadow)"/>
+  <image href="madinaty-deals-qr.png" x="420" y="1512" width="145" height="145"/>
+  <text x="810" y="1550" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="27" font-weight="900" fill="#073f3b">امسح الكود وابدأ الآن</text>
+  <text x="810" y="1600" text-anchor="middle" direction="rtl" font-family="Cairo,Arial,sans-serif" font-size="22" fill="#45635d">أنشئ حسابك أو انشر إعلانك</text>
+  <text x="810" y="1650" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#e87535">madinatydeals.com</text>
+</svg>

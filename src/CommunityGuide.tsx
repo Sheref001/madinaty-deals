@@ -22,7 +22,7 @@ export function CommunityGuide() {
 
 export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; onPost: () => void }) {
   const { t, language } = useTranslation();
-  return <footer className="community-footer">
+  return <footer className="community-footer" id="contact-us">
     <div className="footer-intro"><b>{t('Madinaty')} {t('Deals')}</b><p>{t('A place for neighbours to buy, sell and discover local services.')}</p></div>
     <nav aria-label={t('Explore the community')}>
       <h3>{t('Explore')}</h3>

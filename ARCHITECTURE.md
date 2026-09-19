@@ -2,7 +2,7 @@
 
 ## Repository status
 
-This repository started as a blank workspace containing only `Madinaty_Deals_Codex_Product_Brief.docx`. The current milestone is a runnable front-end foundation with seeded domain data. There is no production database, auth provider, object storage, payment gateway, SMS provider, or deployed environment configured yet.
+This repository started as a blank workspace containing only `Madinaty_Deals_Codex_Product_Brief.docx`. The current milestone includes a runnable frontend with seeded domain data and a Node/Prisma API for authentication, private uploads, submissions, verification review, views and comments. There is no production database, auth provider, object storage, payment gateway, SMS provider, or deployed environment configured yet.
 
 ## Current shape
 
@@ -31,15 +31,15 @@ The app uses Vite + React + TypeScript. The current local data layer is intentio
 
 ## Next mergeable milestones
 
-1. Replace local state with a server API, PostgreSQL schema, migrations and seed script. Add user/profile/phone verification/RBAC models.
-2. Add image upload pipeline, moderation/risk signals, audit logs and real admin queues.
+1. Run the isolated integration stack against real PostgreSQL, SMTP capture, private storage and ClamAV. Account and submission flows now call the API; public marketplace inventory remains sample data.
+2. Build the moderation dashboard and a publication workflow connecting approved submissions and photos to public marketplace inventory. Private uploads, image sanitization, scanning, audit records and verification review endpoints are implemented.
 3. Add interaction-linked reviews, business claims, plan/entitlement/promotion models and a gateway adapter.
 4. Add consent-aware analytics, retention/deletion jobs, SEO route generation, CI and staging deployment.
 
 ## Deliberate TODOs
 
-- `TODO: configure OTP adapter and rate limits` — no credentials fabricated.
-- `TODO: configure object storage/image processing` — the current upload area is a UI seam only.
+- Configure SMTP, Turnstile and production secrets. Email codes, sessions, CSRF protection and PostgreSQL-backed action limits are implemented.
+- Configure private S3-compatible storage and ClamAV. Upload processing and retrieval permissions are implemented; validate the real services before release.
 - `TODO: verify and seed official/common Madinaty zone labels` — the current labels are illustrative configuration.
 - `TODO: obtain Egyptian legal advice before production` — verification, marketing, payments and business obligations need review.
 - `TODO: configure a consent-aware analytics provider` — local development logs only.

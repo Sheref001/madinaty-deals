@@ -6,7 +6,11 @@ export const languageKey = 'madinaty-deals-language';
 export const LanguageContext = createContext<Language>('ar');
 
 export function initialLanguage(): Language {
-  try { return localStorage.getItem(languageKey) === 'en' ? 'en' : 'ar'; }
+  try {
+    const requested = new URLSearchParams(window.location.search).get('lang');
+    if (requested === 'en' || requested === 'ar') return requested;
+    return localStorage.getItem(languageKey) === 'en' ? 'en' : 'ar';
+  }
   catch { return 'ar'; }
 }
 

@@ -1,0 +1,46 @@
+# Local integration services only. Use an isolated Compose project and test env.
+services:
+  app:
+    depends_on:
+      mailpit:
+        condition: service_started
+      storage-init:
+        condition: service_completed_successfully
+      clamav:
+        condition: service_healthy
+  mailpit:
+    image: axllent/mailpit:v1.20.4
+    ports:
+      - "127.0.0.1:48025:8025"
+  storage:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: local-storage-user
+      MINIO_ROOT_PASSWORD: local-storage-password-only
+    volumes:
+      - test-storage:/data
+  storage-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      - storage
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >-
+        until mc alias set local http://storage:9000 local-storage-user local-storage-password-only; do sleep 2; done;
+        mc mb --ignore-existing local/madinaty-private;
+        mc anonymous set none local/madinaty-private
+  clamav:
+    image: clamav/clamav:1.4_base
+    volumes:
+      - test-clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 120s
+volumes:
+  test-storage:
+  test-clamav:

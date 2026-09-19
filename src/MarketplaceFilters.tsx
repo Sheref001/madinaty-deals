@@ -2,9 +2,8 @@ import { useTranslation } from './i18n';
 import type { SearchResult } from './types';
 
 export interface CollectionFilters { category: string; condition: string; min: string; max: string }
-const emptyFilters: CollectionFilters = { category: '', condition: '', min: '', max: '' };
 
-export default function MarketplaceFilters({ value, onChange, results, showPrice }: { value: CollectionFilters; onChange: (value: CollectionFilters) => void; results: SearchResult[]; showPrice: boolean }) {
+export default function MarketplaceFilters({ value, onChange, onClear, results, showPrice }: { value: CollectionFilters; onClear: () => void; onChange: (value: CollectionFilters) => void; results: SearchResult[]; showPrice: boolean }) {
   const { t } = useTranslation();
   const categories = [...new Set(results.map(result => result.category))];
   function change(key: keyof CollectionFilters, next: string) { onChange({ ...value, [key]: next }); }
@@ -16,6 +15,6 @@ export default function MarketplaceFilters({ value, onChange, results, showPrice
       {value.min && value.max && Number(value.min) > Number(value.max) && <p role="alert">{t('Maximum price must be at least the minimum.')}</p>}
       <label>{t('Condition')}<select value={value.condition} onChange={event => change('condition', event.target.value)}><option value="">{t('Any condition')}</option>{['Like new','Good','Fair'].map(condition => <option key={condition} value={condition}>{t(condition)}</option>)}</select></label>
     </>}
-    <button className="button button-outline" onClick={() => onChange(emptyFilters)}>{t('Clear filters')}</button>
+    <button className="button button-outline" onClick={onClear}>{t('Clear filters')}</button>
   </aside>;
 }

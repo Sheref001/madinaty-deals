@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
-  Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowRight, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
+  Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowLeft, ArrowRight, ArrowUp, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
   Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront, ShoppingBasket,
-  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp,
-  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike,
+  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp, GraduationCap, Share2,
+  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike, UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { allResults, categories, formatPrice, zones } from './data';
@@ -14,6 +14,7 @@ import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
+import { getComments, postComment, recordView, type PublicComment } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -21,7 +22,17 @@ import MarketplaceFilters from './MarketplaceFilters';
 import type { CollectionFilters } from './MarketplaceFilters';
 import RevenueDesk from './RevenueDesk';
 import EliteAdSpace from './EliteAdSpace';
+import { splitCategories, businessOnlyCategories, businessTerms } from './categoryPolicy';
+import PushNotifications from './PushNotifications';
+import AuthForm from './AuthForm';
+import VerificationForm from './VerificationForm';
+import { getSession, signOut, type Account } from './api';
 const emptyFilters: CollectionFilters = { category: '', condition: '', min: '', max: '' };
+
+const getViewCount = (result: SearchResult) => result.viewCount ?? ({ listing: 64, service: 38, business: 91, offer: 47 }[result.type] + result.id.length * 3);
+
+const getPublicAdId = (result: SearchResult) => result.publicAdId || `MD-${result.id.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+const getAdLink = (result: SearchResult) => { const url = new URL(window.location.href); url.searchParams.set('ad', result.id); return url.toString(); };
 
 const iconMap: Record<string, LucideIcon> = {
   sofa: Sofa,
@@ -35,6 +46,7 @@ const iconMap: Record<string, LucideIcon> = {
   sparkles: Sparkles,
   bike: Bike,
   'shopping-basket': ShoppingBasket,
+  'graduation-cap': GraduationCap,
 };
 
 const navItems: { id: View; label: string; icon: LucideIcon }[] = [
@@ -54,7 +66,15 @@ function App() {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.title = language === 'ar' ? 'مدينتي ديلز | بيع وشراء وخدمات وعروض قريبة منك' : 'Madinaty Deals · Your neighbourhood, better organized';
-    document.querySelector('meta[name="description"]')?.setAttribute('content', language === 'ar' ? 'بيع واشتري واكتشف الخدمات والأنشطة والعروض القريبة منك في مدينتي.' : 'Madinaty Deals — trusted marketplace, local services and businesses for your neighbourhood.');
+    const description = language === 'ar' ? 'بيع واشتري واكتشف الخدمات والأنشطة والعروض القريبة منك في مدينتي، القاهرة، مصر.' : 'Madinaty Deals — buy, sell and discover trusted local services and businesses in Madinaty, Cairo, Egypt.';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', description);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', document.title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
+    document.querySelector('meta[property="og:locale"]')?.setAttribute('content', language === 'ar' ? 'ar_EG' : 'en_US');
+    document.querySelector('meta[property="og:locale:alternate"]')?.setAttribute('content', language === 'ar' ? 'en_US' : 'ar_EG');
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', document.title);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', description);
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://madinatydeals.com/?lang=' + language);
     try { localStorage.setItem(languageKey, language); } catch { /* Preference still works for this visit. */ }
   }, [language]);
   return <LanguageContext.Provider value={language}><AppContent onLanguageChange={setLanguage} /></LanguageContext.Provider>;
@@ -62,25 +82,45 @@ function App() {
 
 function AppContent({ onLanguageChange }: { onLanguageChange: (language: Language) => void }) {
   const { t, language } = useTranslation();
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>(() => { const sharedId = new URLSearchParams(window.location.search).get('ad'); const sharedResult = allResults.find(result => result.id === sharedId); return sharedResult?.type === 'service' ? 'services' : sharedResult?.type === 'business' ? 'businesses' : sharedResult?.type === 'offer' ? 'offers' : sharedResult ? 'browse' : 'home'; });
+  const scrollToCategories = useRef(false);
+  useEffect(() => {
+    if (view !== 'home' || !scrollToCategories.current) return;
+    scrollToCategories.current = false;
+    const categoriesSection = document.getElementById('categories');
+    categoriesSection?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    categoriesSection?.focus({ preventScroll: true });
+  }, [view]);
   const [query, setQuery] = useState('');
   const [zone, setZone] = useState('All zones');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<BrowseFilters['sort']>('recommended');
-  const [results, setResults] = useState<SearchResult[]>(allResults);
+  const [results] = useState<SearchResult[]>(allResults);
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try { const saved = JSON.parse(localStorage.getItem('madinaty-favorites') ?? 'null'); if (Array.isArray(saved)) return new Set(saved.filter((id): id is string => typeof id === 'string')); } catch { /* Start with demo favourites if storage is unavailable. */ }
     return new Set(['listing-3']);
   });
   const [searchType, setSearchType] = useState<View>('search');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categoryNavigation, setCategoryNavigation] = useState(false);
   useEffect(() => { try { localStorage.setItem('madinaty-favorites', JSON.stringify([...favorites])); } catch { /* Session state remains available. */ } }, [favorites]);
-  const [modal, setModal] = useState<'post' | 'report' | 'verify' | null>(null);
+  const [modal, setModal] = useState<'post' | 'register' | 'report' | 'verify' | null>(null);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [toast, setToast] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [residentVerified] = useState(() => localStorage.getItem('madinaty-resident-verified') === 'true');
-  const rentalMonthKey = `madinaty-rental-posts-${new Date().getFullYear()}-${new Date().getMonth() + 1}`;
-  const [rentalPostsThisMonth, setRentalPostsThisMonth] = useState(() => Number(localStorage.getItem(rentalMonthKey) ?? 0));
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const registered = Boolean(account);
+  const residentVerified = account?.residentVerified || false;
+  const rentalPostsThisMonth = 0;
+  useEffect(() => {
+    let cancelled = false;
+    getSession().then(user => { if (!cancelled) setAccount(user); }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const openPost = () => { if (!authLoading) setModal(registered ? 'post' : 'register'); };
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -88,21 +128,83 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    const updateScrollTopVisibility = () => setShowScrollTop(view !== 'home' && view !== 'admin' && window.scrollY > 520);
+    updateScrollTopVisibility();
+    window.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollTopVisibility);
+  }, [view]);
+
   const activeResults = useMemo(() => {
     const scopedResults = view === 'saved' ? results.filter((result) => favorites.has(result.id)) : getViewResults(view, results);
-    return filterResults(scopedResults, { query, zone, verifiedOnly, sort });
-  }, [favorites, query, results, sort, verifiedOnly, view, zone]);
+    return filterResults(scopedResults, { query, zone, verifiedOnly, sort, category: selectedCategory });
+  }, [favorites, query, results, sort, verifiedOnly, view, zone, selectedCategory]);
 
   const goTo = (nextView: View) => {
     if (nextView === 'offers' && !featureFlags.offers) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('ad')) {
+      url.searchParams.delete('ad');
+      window.history.replaceState({}, '', url);
+    }
     setView(nextView);
     setQuery('');
+    setSelectedCategory('');
+    setCategoryNavigation(false);
     setMobileNavOpen(false);
     if (nextView === 'browse') track('search_performed', { source: 'navigation', type: 'listing' });
   };
 
+  const clearFiltersToHome = () => {
+    scrollToCategories.current = true;
+    setZone('All zones');
+    setVerifiedOnly(false);
+    setSort('recommended');
+    setSearchType('search');
+    goTo('home');
+  };
+
+  const changeLanguage = () => {
+    const nextLanguage = language === 'ar' ? 'en' : 'ar';
+    goTo('home');
+    setModal(null);
+    setSelectedResult(null);
+    setToast('');
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', nextLanguage);
+    url.hash = '';
+    window.history.replaceState({}, '', url);
+    onLanguageChange(nextLanguage);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
+
+  const openCategory = (nextView: View, category: string) => {
+    window.history.pushState({ madinatyDealsCategory: true }, '');
+    setCategoryNavigation(true);
+    const split = splitCategories.includes(category) || businessOnlyCategories.includes(category);
+    setSelectedCategory(split ? category : '');
+    setView(split ? 'search' : nextView);
+    setQuery(split ? '' : category);
+    setMobileNavOpen(false);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!categoryNavigation) return;
+      setView('home');
+      setQuery('');
+      setSelectedCategory('');
+      setCategoryNavigation(false);
+      setMobileNavOpen(false);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [categoryNavigation]);
+
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
+    setSelectedCategory('');
+    setCategoryNavigation(false);
     setView(searchType);
     track('search_performed', { query: query || 'empty', zone });
   };
@@ -123,11 +225,13 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
   const contactResult = (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => {
     const eventName = method === 'whatsapp' ? 'whatsapp_clicked' : method === 'phone' ? 'phone_clicked' : 'quote_requested';
-    track(eventName, { result_type: result.type, result_id: result.id });
-    if (method === 'whatsapp') {
+      track(eventName, { result_type: result.type, result_id: result.id });
+      if (method === 'whatsapp') {
       const number = result.type === 'business' ? result.whatsapp || result.phone : result.type === 'service' ? result.whatsapp || result.phone : '';
       if (number) {
-        const message = language === 'ar' ? `السلام عليكم، وصلت لكم من مدينتي ديلز. أريد الطلب من ${result.title}.` : `Hello, I found ${result.title} on Madinaty Deals and would like to place an order.`;
+        const message = language === 'ar'
+          ? '🏷️ مدينتي ديلز\nالسلام عليكم، لقيت رقمك علي مدينتي ديلز. عايز اعرف الاسعار و المواعيد'
+          : `🏷️ Madinaty Deals\nHello, I found ${result.title} on Madinaty Deals and would like to ask about your services.`;
         const normalized = number.replace(/[^\d]/g, '').replace(/^0/, '20');
         window.open(`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
         return;
@@ -144,33 +248,14 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   };
 
   const publishListing = (listing: Listing) => {
-    if (listing.category === 'Apartment rentals') {
-      if (!residentVerified) {
-        setModal('verify');
-        setToast('Apartment rentals require verified Madinaty residency');
-        return;
-      }
-      if (rentalPostsThisMonth >= 1) {
-        setToast('You can post one apartment rental per month');
-        return;
-      }
-      const nextCount = rentalPostsThisMonth + 1;
-      setRentalPostsThisMonth(nextCount);
-      localStorage.setItem(rentalMonthKey, String(nextCount));
-    }
-    setResults((current) => [listing, ...current]);
     setModal(null);
-    setView('browse');
-    track('listing_created', { category: listing.category });
-    setToast('Listing added for this visit');
+    track('listing_submitted', { category: listing.category });
+    setToast('Your submission is awaiting review');
   };
-
   const publishService = (service: Service) => {
-    setResults((current) => [service, ...current]);
     setModal(null);
-    setView('services');
-    track('service_created', { category: service.category });
-    setToast('Service added for this visit');
+    track('service_submitted', { category: service.category });
+    setToast('Your submission is awaiting review');
   };
 
   return (
@@ -188,29 +273,31 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="search-submit" type="submit" aria-label={t('Search')}><Search size={18} /></button>
         </form>
         <div className="top-actions">
-          <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={() => onLanguageChange(language === 'ar' ? 'en' : 'ar')} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
+          <button className="header-contact" onClick={() => document.getElementById('contact-us')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle size={16} />{t('Contact us')}</button>
           <button className="header-saved" aria-label={t('Saved')} onClick={() => goTo('saved')}><Heart size={19} /><span>{t('Saved')}</span></button>
-          <button className="button button-accent header-post" onClick={() => setModal('post')}><Plus size={18} />{t('Post ad')}</button>
-          <button className="avatar-button" onClick={() => setModal('verify')} aria-label={t("Open profile")}><span>{t("SH")}</span></button>
+          <button className="button button-accent header-post" onClick={openPost}><Plus size={18} />{t('Post ad')}</button>
+          <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : 'Sign in or create account')}</span></button>{registered && <button className="text-link" onClick={async () => { try { await signOut(); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
+          <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
-      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} /></div>
+      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
 
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
-          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} />
+          {!registered && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
+          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={() => setModal('post')} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} />
+          <HomeView results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           <AdminView onBack={() => goTo('home')} />
         ) : (
-          <BrowseView key={view}
+          <BrowseView key={`${view}-${selectedCategory}`} selectedCategory={selectedCategory}
             view={view}
             query={query}
             zone={zone}
@@ -223,48 +310,51 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
             onVerifiedChange={(value) => { setVerifiedOnly(value); track('filter_applied', { filter: 'verified', value }); }}
             onSortChange={setSort}
             onTabChange={goTo}
+            onClearFilters={clearFiltersToHome}
             onFavorite={toggleFavorite}
             onContact={contactResult}
             onReport={reportResult}
-            onPost={() => setModal('post')}
+            onPost={openPost}
+            showBackHome={categoryNavigation}
+            onBackHome={() => window.history.back()}
           />
         )}
-        <CommunityFooter goTo={goTo} onPost={() => setModal('post')} />
+        <CommunityFooter goTo={goTo} onPost={openPost} />
       </main>
 
       <div className="mobile-bottom-nav">
         {visibleNavItems.slice(0, 4).map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
-        <button className="mobile-post" onClick={() => setModal('post')} aria-label={t("Post a listing")}><Plus size={22} /></button>
+        <button className="mobile-post" onClick={openPost} aria-label={t("Post a listing")}><Plus size={22} /></button>
       </div>
+
+      {view !== 'admin' && <PushNotifications />}
+      {showScrollTop && <button className="scroll-top-button" type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label={t('Back to top')} title={t('Back to top')}><ArrowUp size={19} /></button>}
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
+      {modal === 'register' && <RegistrationModal onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setModal('post'); track('account_signed_in'); }} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
-      {modal === 'verify' && <VerifyModal onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('verification_submitted'); setToast('Verification submitted for manual review'); }} />}
+      {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>
   );
 }
 
-function Navigation({ view, goTo, favoriteCount }: { view: View; goTo: (view: View) => void; favoriteCount: number }) {
+function Navigation({ view, goTo, favoriteCount, onVerify }: { view: View; goTo: (view: View) => void; favoriteCount: number; onVerify: () => void }) {
   const { t } = useTranslation();
   return <nav className="nav-list" aria-label={t("Main navigation")}>
     {visibleNavItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
     <NavItem item={{ id: 'saved', label: 'Saved', icon: Bookmark }} active={view === 'saved'} onClick={() => goTo('saved')} count={favoriteCount} />
     <div className="nav-divider" />
     <span className="section-label nav-section-label">{t("For businesses")}</span>
-    <NavItem item={{ id: 'admin', label: 'Trust desk', icon: ShieldCheck }} active={view === 'admin'} onClick={() => goTo('admin')} />
+    <button className="mobile-verify-cta" type="button" onClick={onVerify}><ShieldCheck size={18} /><span><b>{t('Become a verified resident')}</b><small>{t('Get verified in 2 mins')}</small></span><ArrowRight size={16} /></button>
   </nav>;
 }
 
 function MadinatyLogo({ compact = false }: { compact?: boolean }) {
-  return <span className={`brand-mark ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
-    <span className="brand-wordmark brand-wordmark-latin"><strong>M</strong><span>adinaty</span><em>Deals</em></span>
-    <span className="brand-wordmark brand-wordmark-arabic"><span className="brand-arabic-name">مدينتي</span><em>ديلز</em></span>
-    <svg className="brand-price-tag" viewBox="0 0 28 34" role="presentation">
-      <path className="logo-tag-strap" d="M5 2c0 9 9 7 9 14" />
-      <path className="logo-tag" d="M8 13h17v14l-8.5 5L8 27z" />
-      <circle className="logo-tag-hole" cx="20.5" cy="17.5" r="2" />
-    </svg>
+  return <span className={`brand-mark reference-logo ${compact ? 'brand-mark-compact' : ''}`} aria-hidden="true">
+    <img src="/madinaty-deals-newlogo1-transparent.png" alt="" />
+    <span className="reference-latin-wordmark"><strong>MADINATY</strong><em>DEALS</em></span>
+    <span className="reference-arabic-wordmark" lang="ar" dir="rtl"><strong>مدينتي</strong><em>ديلز</em></span>
   </span>;
 }
 
@@ -274,7 +364,7 @@ function NavItem({ item, active, onClick, count }: { item: { id: View; label: st
   return <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={18} strokeWidth={active ? 2.3 : 1.8} /><span>{t(item.label)}</span>{count ? <small>{count}</small> : null}</button>;
 }
 
-function HomeView({ goTo, onPost, onAdvertise, onSearch, results, favorites, onFavorite }: { goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
+function HomeView({ goTo, onPost, onAdvertise, onSearch, onCategorySearch, onServiceCategory, onBusinessCategory, results, favorites, onFavorite }: { goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; onCategorySearch: (value: string) => void; onServiceCategory: (value: string) => void; onBusinessCategory: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
   const { t } = useTranslation();
   const [homeSearch, setHomeSearch] = useState('');
   const handleSubmit = (event: FormEvent) => { event.preventDefault(); onSearch(homeSearch); };
@@ -300,9 +390,9 @@ function HomeView({ goTo, onPost, onAdvertise, onSearch, results, favorites, onF
 
     <EliteAdSpace onAdvertise={onAdvertise} />
 
-    <section className="section-block category-section">
+    <section id="categories" tabIndex={-1} className="section-block category-section">
       <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />
-      <div className="category-grid">{categories.map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onSearch(category.label); else goTo(nextView); }}><span className={`category-icon ${category.icon}`}><Icon size={21} /></span><span><b>{t(category.label)}</b><small>{t('Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
+      <div className="category-grid">{categories.map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike', 'graduation-cap'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onCategorySearch(category.label); else if (nextView === 'services') onServiceCategory(category.label); else onBusinessCategory(category.label); }}><span className={`category-icon ${category.icon}`}><img src={category.photo} alt="" loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} /><span className="category-fallback"><Icon size={21} /></span></span><span><b>{t(category.label)}</b><small>{t('Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
     </section>
 
     <section className="section-block featured-section">
@@ -325,58 +415,103 @@ function SectionHeading({ eyebrow, title, action, onAction }: { eyebrow: string;
   return <div className="section-heading"><div><span className="eyebrow">{t(eyebrow)}</span><h2>{t(title)}</h2></div><button className="text-link" onClick={onAction}>{t(action)} <ArrowRight size={15} /></button></div>;
 }
 
-function BrowseView({ view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost }: {
-  view: View; query: string; zone: string; verifiedOnly: boolean; sort: BrowseFilters['sort']; results: SearchResult[]; favorites: Set<string>;
-  onQueryChange: (value: string) => void; onZoneChange: (value: string) => void; onVerifiedChange: (value: boolean) => void; onSortChange: (value: BrowseFilters['sort']) => void; onTabChange: (view: View) => void; onFavorite: (result: SearchResult) => void; onContact: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport: (result: SearchResult) => void; onPost: () => void;
+function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost, showBackHome, onBackHome }: {
+  onClearFilters: () => void; selectedCategory: string; view: View; query: string; zone: string; verifiedOnly: boolean; sort: BrowseFilters['sort']; results: SearchResult[]; favorites: Set<string>;
+  onQueryChange: (value: string) => void; onZoneChange: (value: string) => void; onVerifiedChange: (value: boolean) => void; onSortChange: (value: BrowseFilters['sort']) => void; onTabChange: (view: View) => void; onFavorite: (result: SearchResult) => void; onContact: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport: (result: SearchResult) => void; onPost: () => void; showBackHome: boolean; onBackHome: () => void;
 }) {
   const { t } = useTranslation();
+  const [audience, setAudience] = useState<'individual' | 'small_business'>('individual');
   const [collection, setCollection] = useState<CollectionFilters>(emptyFilters);
   const [layout, setLayout] = useState<'grid' | 'list'>('list');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, category: collection.category, condition: collection.condition, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max) });
-  const heading = view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing';
+  const hasAudienceChoice = splitCategories.includes(selectedCategory);
+  const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, advertiserType: businessOnlyCategories.includes(selectedCategory) ? 'small_business' : hasAudienceChoice ? audience : undefined, category: collection.category, condition: collection.condition, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max) });
+  const heading = selectedCategory || (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
   const subheading = view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Providers with context, reviews and a way to reach them.' : view === 'businesses' ? 'Local businesses with hours, reviews and useful details.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Buy and sell with people in the neighbourhood.';
   const tabs: { id: View; label: string }[] = [{ id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, ...(featureFlags.offers ? [{ id: 'offers' as View, label: 'Offers' }] : [])];
   return <div className="browse-view">
-    <div className="page-intro"><div><span className="eyebrow">{t(view === 'saved' ? 'YOUR SPACE' : 'DISCOVER IN MADINATY')}</span><h1>{t(heading)}</h1><p>{t(subheading)}</p></div><button className="button button-accent" onClick={onPost}><Plus size={17} /> {t(" Post a listing")}</button></div>
+    <div className="page-intro"><div>{showBackHome && <button className="text-link back-home-link" onClick={onBackHome}><ArrowLeft size={15} /> {t('Back to home')}</button>}<span className="eyebrow">{t(view === 'saved' ? 'YOUR SPACE' : 'DISCOVER IN MADINATY')}</span><h1>{t(heading)}</h1><p>{t(hasAudienceChoice ? 'Choose individuals or small businesses in this category.' : subheading)}</p></div><button className="button button-accent" onClick={onPost}><Plus size={17} /> {t(" Post a listing")}</button></div>
+    {hasAudienceChoice && <section className="category-audiences" aria-label={t('Subcategories')}><div className="audience-options">{(['individual', 'small_business'] as const).map(value => <button key={value} type="button" aria-pressed={audience === value} className={audience === value ? 'audience-option active' : 'audience-option'} onClick={() => { setAudience(value); setCollection(emptyFilters); }}><b>{t(value === 'individual' ? 'Individuals' : 'Small businesses')}</b><small>{t(value === 'individual' ? 'Free ads' : 'Agreed fees')}</small></button>)}</div><p>{t(audience === 'individual' ? 'Individual ads are free.' : businessTerms)}</p></section>}
     <div className="browse-tabs" role="tablist" aria-label={t("Discovery type")}>{tabs.map((tab) => <button key={tab.id} className={view === tab.id || (view === 'browse' && tab.id === 'browse') ? 'active' : ''} onClick={() => onTabChange(tab.id)} role="tab" aria-selected={view === tab.id}>{t(tab.label)}</button>)}{view === 'saved' && <span className="saved-tab-label"><Bookmark size={15} fill="currentColor" /> {t(" Saved only")}</span>}</div>
     <div className="browse-toolbar"><div className="inline-search"><Search size={17} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t("Search this collection")} aria-label={t("Search this collection")} /></div><div className="filter-actions"><label className="select-wrap"><MapPin size={15} /><select value={zone} onChange={(event) => onZoneChange(event.target.value)} aria-label={t("Filter by zone")}>{zones.map((option) => <option key={option} value={option}>{t(option)}</option>)}</select><ChevronDown size={14} /></label><label className={`verified-toggle ${verifiedOnly ? 'checked' : ''}`}><input type="checkbox" checked={verifiedOnly} onChange={(event) => onVerifiedChange(event.target.checked)} /><BadgeCheck size={15} /> {t(" Verified only")}</label><label className="select-wrap sort-select"><SlidersHorizontal size={15} /><select value={sort} onChange={(event) => onSortChange(event.target.value as BrowseFilters['sort'])} aria-label={t("Sort results")}><option value="recommended">{t("Recommended")}</option><option value="newest">{t("Newest first")}</option><option value="price-low">{t("Price: low to high")}</option><option value="price-high">{t("Price: high to low")}</option></select><ChevronDown size={14} /></label></div></div>
     <div className="results-meta"><span><b>{displayed.length}</b> {t(displayed.length === 1 ? 'result' : 'results')} <span className="meta-dot" /> {t(zone)}</span><div className="results-controls"><button className="filter-button" aria-expanded={filtersOpen} aria-controls="collection-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={15} />{t('Refine results')}</button><div className="layout-switch" aria-label={t('Results layout')}><button aria-label={t('List view')} aria-pressed={layout === 'list'} onClick={() => setLayout('list')}><ListFilter size={16} /></button><button aria-label={t('Grid view')} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')}><Grid2X2 size={16} /></button></div></div></div>
-    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view)} /></div><div className="results-column">
-    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={() => { setCollection(emptyFilters); onVerifiedChange(false); onQueryChange(''); onZoneChange('All zones'); }} />}
+    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={onClearFilters} value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view)} /></div><div className="results-column">
+    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={onClearFilters} />}
     </div></div>
   </div>;
 }
 
 function ResultCard({ result, compact = false, favorite = false, onFavorite, onContact, onReport }: { result: SearchResult; compact?: boolean; favorite?: boolean; onFavorite?: (result: SearchResult) => void; onContact?: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport?: (result: SearchResult) => void }) {
-  const { t } = useTranslation();
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const { t, language } = useTranslation();
+  const [detailsOpen, setDetailsOpen] = useState(() => new URLSearchParams(window.location.search).get('ad') === result.id);
+  const [shareFeedback, setShareFeedback] = useState('');
+  const closeDetails = () => {
+    setDetailsOpen(false);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('ad')) {
+      url.searchParams.delete('ad');
+      window.history.replaceState({}, '', url);
+    }
+  };
+  const [liveViewCount, setLiveViewCount] = useState(() => getViewCount(result));
   const isListing = result.type === 'listing';
   const isService = result.type === 'service';
   const isBusiness = result.type === 'business';
   const isOffer = result.type === 'offer';
   const isPoultryDemo = result.id === 'business-poultry-demo';
+  useEffect(() => {
+    if (!detailsOpen) return;
+    recordView(result.type, result.id).then(({ viewCount }) => setLiveViewCount(viewCount)).catch(() => { /* The static demo count remains visible until the API is configured. */ });
+  }, [detailsOpen, result.id, result.type]);
   return <article className={`result-card ${compact ? 'compact-card' : ''} type-${result.type}`}>
     <div className={`result-image image-${result.image} art-${result.accent}`}><ResultArt result={result} /><span className="result-type">{isOffer ? <Zap size={11} fill="currentColor" /> : isBusiness ? <Store size={11} /> : isService ? <Wrench size={11} /> : <Package size={11} />} {t(isOffer ? 'Local offer' : isBusiness ? 'Business' : isService ? 'Service' : 'For sale')}</span>{isOffer && result.featured ? <span className="featured-label">{t("Featured")}</span> : null}</div>
     <div className="result-body">
       <div className="result-topline"><span>{t(result.zone)} <span className="meta-dot" /> {t(result.createdAt)}</span>{onFavorite && <button className={`save-button ${favorite ? 'saved' : ''}`} onClick={() => onFavorite(result)} aria-label={t(favorite ? `Remove ${result.title} from saved` : `Save ${result.title}`)}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button>}</div>
-      <h3><button className="listing-title" onClick={() => setDetailsOpen(true)}>{t(result.title)}</button></h3><p className="result-subtitle">{t(result.subtitle)}</p>
+      <h3><button className="listing-title" onClick={() => { const url = new URL(window.location.href); url.searchParams.set('ad', result.id); window.history.pushState({ madinatyDealsAd: result.id }, '', url); setDetailsOpen(true); }}>{t(result.title)}</button></h3><p className="result-subtitle">{t(result.subtitle)}</p>
       {isListing && <div className="result-detail"><strong>{t(formatPrice(result.price))}</strong><span>{t(result.condition)}</span></div>}
       {isService && <div className="result-detail"><strong><Star size={14} fill="currentColor" /> {result.rating}</strong><span>{result.reviewCount} {t(" reviews")}</span></div>}
       {isBusiness && <div className="result-detail"><strong><Star size={14} fill="currentColor" /> {result.rating}</strong><span>{t(result.hours)}</span></div>}
       {isOffer && <div className="result-detail"><strong className="discount-text">{t(result.discount)}</strong><span>{t(result.validUntil)}</span></div>}
-      {!compact && <div className="result-footer">{isListing ? <span className="seller-line">{t(result.seller)}{result.sellerVerified && <BadgeCheck size={14} />} </span> : isOffer ? <span className="seller-line"><Store size={13} /> {t(result.business)}</span> : <span className="seller-line">{result.verified && <BadgeCheck size={14} />} {t(isPoultryDemo ? 'Demo profile' : ' Trusted profile')}</span>}<div className="card-actions">{(isListing || isService || isBusiness) && onContact && <button className="small-action primary-action" onClick={() => onContact(result, isService ? 'quote' : 'whatsapp')}>{t(isService ? 'Request quote' : isPoultryDemo ? 'Order on WhatsApp' : 'Contact')} <ArrowRight size={14} /></button>}{isOffer && <button className="small-action primary-action" onClick={() => onContact?.(result, 'quote')}>{t("View offer ")}<ArrowRight size={14} /></button>}<button className="report-action" onClick={() => onReport?.(result)} aria-label={t(`Report ${result.title}`)}><Flag size={14} /></button></div></div>}
+      <div className="view-count"><Eye size={13} /> {t('Seen by')} {liveViewCount.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-EG')} {t('people')}</div>
+      {!compact && <div className="result-footer">{isListing ? <span className="seller-line">{t(result.seller)}{result.sellerVerified && <BadgeCheck size={14} />} </span> : isOffer ? <span className="seller-line"><Store size={13} /> {t(result.business)}</span> : <span className="seller-line">{result.verified && <BadgeCheck size={14} />} {t(isPoultryDemo ? 'Demo profile' : ' Trusted profile')}</span>}<div className="card-actions">{(isListing || isService || isBusiness) && onContact && <button className="small-action primary-action" onClick={() => onContact(result, isService ? 'whatsapp' : 'whatsapp')}>{t(isService ? 'Contact on WhatsApp' : isPoultryDemo ? 'Order on WhatsApp' : 'Contact')} <ArrowRight size={14} /></button>}{isOffer && <button className="small-action primary-action" onClick={() => onContact?.(result, 'quote')}>{t("View offer ")}<ArrowRight size={14} /></button>}<button className="report-action" onClick={() => onReport?.(result)} aria-label={t(`Report ${result.title}`)}><Flag size={14} /></button></div></div>}
     </div>
-    {detailsOpen && <ModalShell title={result.title} eyebrow={result.category} onClose={() => setDetailsOpen(false)}><div className="ad-details">
-      <p dir="auto">{t(result.subtitle)}</p>
-      {isListing && <strong>{t(formatPrice(result.price))}</strong>}
-      <p><MapPin size={15} />{t(result.zone)} · {t(result.createdAt)}</p>
-      {isListing && <p>{t('Condition')}: {t(result.condition)} · {t(result.seller)}</p>}
-      <aside><ShieldCheck size={18} /><p>{t(getSafetyMessage(result))}</p></aside>
+    {detailsOpen && <ModalShell title={result.title} eyebrow={result.category} onClose={closeDetails}><div className="ad-details">
+      <nav className="ad-breadcrumbs" aria-label={t('Ad breadcrumbs')}><span>{t('Home')}</span><ChevronRight size={13} /><span>{t(result.category)}</span><ChevronRight size={13} /><b>{t(result.title)}</b></nav>
+      <div className="ad-gallery"><div className={`result-image image-${result.image} art-${result.accent}`}><ResultArt result={result} /><span className="gallery-count">1 / 1</span></div><small>{t('Photos supplied by the advertiser')}</small></div>
+      <div className="ad-primary-info"><div><span className="ad-status-label">{t(isOffer ? 'Local offer' : isBusiness ? 'Business profile' : isService ? 'Service listing' : 'For sale')}</span><h3>{t(result.title)}</h3></div>{isListing && <strong>{t(formatPrice(result.price))}</strong>}</div>
+      <div className="ad-meta-row"><span><MapPin size={15} />{t(result.zone)}</span><span>{t(result.createdAt)}</span><span><Eye size={14} />{liveViewCount.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-EG')} {t('views')}</span><span className="ad-id">{t('Ad ID')}: <bdi dir="ltr">{getPublicAdId(result)}</bdi></span></div>
+      <section className="ad-section"><h4>{t('Description')}</h4><p dir="auto">{t(result.subtitle)}</p>{isListing && <p><b>{t('Condition')}:</b> {t(result.condition)}</p>}</section>
+      {isListing && <section className="ad-section"><h4>{t('Transaction options')}</h4><div className="transaction-options"><span><CircleCheck size={15} /> {t('Cash accepted')}</span><span><CircleCheck size={15} /> {t('Arrange pickup or delivery')}</span><span><CircleCheck size={15} /> {t('Confirm final price before payment')}</span></div></section>}
+      <section className="seller-panel"><div className="seller-avatar">{(isListing ? result.seller : isOffer ? result.business : result.title).charAt(0)}</div><div><span className="eyebrow">{t('Listed by')}</span><h4>{t(isListing ? result.seller : isOffer ? result.business : isBusiness ? 'Local business' : 'Trusted provider')}</h4><p>{t(result.verified || ('sellerVerified' in result && result.sellerVerified) ? 'Verified profile' : 'Community profile')}</p></div><button className="button button-accent" onClick={() => onContact?.(result, isService || isBusiness ? 'whatsapp' : 'quote')}><MessageCircle size={16} />{t(isService || isBusiness ? 'Contact on WhatsApp' : 'Send message')}</button></section>
+      <div className="ad-actions"><button className="button button-outline" onClick={() => onFavorite?.(result)}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{t(favorite ? 'Remove from saved' : 'Save listing')}</button><button className="share-action" onClick={async () => { const url = getAdLink(result); try { if (navigator.share) await navigator.share({ title: t(result.title), text: t('See this ad on Madinaty Deals'), url }); else if (navigator.clipboard) { await navigator.clipboard.writeText(url); setShareFeedback(t('Link copied')); } else { window.prompt(t('Copy this link'), url); setShareFeedback(t('Link ready to share')); } } catch { setShareFeedback(t('Share cancelled')); } }}><Share2 size={14} /> {t('Share')}</button><button className="report-action" onClick={() => onReport?.(result)}><Flag size={14} /> {t('Report listing')}</button></div>
+      {shareFeedback && <small className="share-feedback" role="status">{shareFeedback}</small>}
+      <aside className="ad-safety"><ShieldCheck size={18} /><div><h4>{t('Stay safe')}</h4><p>{t(getSafetyMessage(result))}</p></div></aside>
       <p className="modal-intro">{t('Demo content: contact and transactions are not connected yet.')}</p>
-      {onFavorite && <button className="button button-outline" onClick={() => onFavorite(result)}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{t(favorite ? 'Remove from saved' : 'Save listing')}</button>}
+      <CommentBox contentType={result.type} contentId={result.id} language={language} />
     </div></ModalShell>}
   </article>;
+}
+
+function CommentBox({ contentType, contentId, language }: { contentType: string; contentId: string; language: Language }) {
+  const { t } = useTranslation();
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [comments, setComments] = useState<PublicComment[]>([]);
+  const [error, setError] = useState('');
+  useEffect(() => { getComments(contentType, contentId).then(({ comments: stored }) => setComments(stored)).catch(() => setError('Comments are available after the backend is connected.')); }, [contentId, contentType]);
+  const submit = async () => {
+    const body = comment.trim();
+    if (!body) return;
+    setError('');
+    try {
+      await postComment(contentType, contentId, body, language);
+      setComment('');
+      setSubmitted(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Comment could not be posted.');
+    }
+  };
+  return <section className="comment-box" aria-label={t('Comments')}><div className="comment-heading"><MessageCircle size={16} /><b>{t('Community comments')}</b></div>{comments.map(item => <div className="public-comment" key={item.id}><b>{item.displayName}</b><p>{item.body}</p></div>)}<textarea value={comment} onChange={event => { setComment(event.target.value); setSubmitted(false); }} placeholder={t('Leave a helpful comment')} rows={3} maxLength={500} /><div className="comment-actions"><small>{t('Be respectful and share useful local context.')}</small><button className="button button-outline" disabled={!comment.trim()} onClick={submit}>{t('Post comment')}</button></div>{submitted && <p className="comment-success">{t('Your comment is awaiting review')}</p>}{error && <p className="comment-error">{t(error)}</p>}</section>;
 }
 
 function ResultArt({ result }: { result: SearchResult }) {
@@ -432,10 +567,14 @@ function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
+function RegistrationModal({ onClose, onRegistered }: { onClose: () => void; onRegistered: (account: Account) => void }) {
+  return <ModalShell title="Sign in or create account" eyebrow="A QUICK START" onClose={onClose}><AuthForm onSignedIn={onRegistered} /></ModalShell>;
+}
+
 function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {
   const { t } = useTranslation();
   const [postType, setPostType] = useState<'choose' | 'listing' | 'service'>('choose');
-  return <ModalShell title={postType === 'choose' ? 'Post something' : postType === 'service' ? 'Offer a service' : 'Post a free listing'} eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}>
+  return <ModalShell title={postType === 'choose' ? 'Post something' : postType === 'service' ? 'Offer a service' : 'Post a listing'} eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}>
     {postType === 'choose' ? <div className="post-choice-grid">
       <button className="post-choice" onClick={() => setPostType('listing')}><span className="post-choice-icon"><Package size={23} /></span><span><b>{t('Sell an item')}</b><small>{t('Furniture, electronics and more')}</small></span><ArrowRight size={17} /></button>
       <button className="post-choice" onClick={() => setPostType('service')}><span className="post-choice-icon service-choice"><Wrench size={23} /></span><span><b>{t('Offer a service')}</b><small>{t('Tutoring, repairs and local help')}</small></span><ArrowRight size={17} /></button>
@@ -450,12 +589,5 @@ function ReportModal({ result, onClose, onSubmit }: { result: SearchResult; onCl
   const [reason, setReason] = useState(reasons[0]);
   return <ModalShell title="Report this content" eyebrow="HELP KEEP IT TRUSTED" onClose={onClose}><form className="modal-form" onSubmit={(event) => { event.preventDefault(); onSubmit(); }}><p className="modal-intro">{t("You’re reporting ")}<b>{t(result.title)}</b>{t(". Reports are private and reviewed by the trust team.")}</p><label>{t("What’s wrong?")}<select value={reason} onChange={(event) => setReason(event.target.value)}>{reasons.map((item) => <option key={item} value={item}>{t(item)}</option>)}</select></label><label>{t("Anything else? ")}<textarea rows={3} placeholder={t("Optional context for our review team")} /></label><div className="modal-foot"><span className="privacy-note"><Flag size={15} /> {t(" Your report stays private")}</span><button className="button button-dark" type="submit">{t("Submit report ")}<ArrowRight size={16} /></button></div></form></ModalShell>;
 }
-
-function VerifyModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: () => void }) {
-  const { t } = useTranslation();
-  return <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={onClose}><form className="modal-form" onSubmit={(event) => { event.preventDefault(); onSubmit(); }}><div className="verification-callout"><span className="trust-icon"><ShieldCheck size={20} /></span><span><b>{t("Verified Madinaty Resident")}</b><small>{t("Shown on your profile and listings once approved.")}</small></span></div><p className="modal-intro">{t("We’ll review the minimum information needed to confirm that you live in Madinaty. We never show verification evidence publicly.")}</p><label>{t("Phone number")}<input type="tel" placeholder={t("+20 1X XXX XXXX")} required /></label><label>{t("Preferred broad zone")}<select defaultValue={zones[1]}>{zones.slice(1).map((item) => <option key={item} value={item}>{t(item)}</option>)}</select></label><div className="upload-placeholder"><ShieldCheck size={19} /><span><b>{t("Verification evidence")}</b><small>{t("Manual review · source documents stay private")}</small></span><ChevronRight size={17} /></div><div className="modal-foot"><span className="privacy-note"><LockIcon /> {t(" Privacy first")}</span><button className="button button-accent" type="submit">{t("Submit for review ")}<ArrowRight size={16} /></button></div></form></ModalShell>;
-}
-
-function LockIcon() { return <ShieldCheck size={15} />; }
 
 export default App;

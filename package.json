@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server:dev": "node server/index.js",
+    "start": "node server/index.js",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -13,19 +15,29 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "test:integration": "node scripts/integration.mjs",
+    "maintenance:cleanup": "node scripts/cleanup.mjs",
+    "notifications:send": "node scripts/push-send.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1135.0",
     "@prisma/client": "^6.16.0",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
+    "nodemailer": "^10.0.10",
+    "prisma": "^6.19.3",
     "react": "latest",
     "react-dom": "latest",
+    "sharp": "^0.35.4",
+    "tsx": "^4.23.13",
     "typescript": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@playwright/test": "^1.63.0",
     "@testing-library/react": "^16.3.3",
     "@types/react": "latest",
     "@types/react-dom": "latest",
@@ -33,9 +45,10 @@
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
     "jsdom": "^27.0.1",
-    "prisma": "^6.16.0",
-    "tsx": "^4.19.0",
     "typescript-eslint": "latest",
     "vitest": "latest"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
   }
 }

@@ -4,6 +4,11 @@ import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
 import type { Listing, ListingCondition } from './types';
+import MediaUpload from './MediaUpload';
+import { submitPost } from './api';
+import PostingAudience from './PostingAudience';
+import { splitCategories } from './categoryPolicy';
+import type { AdvertiserType, BusinessRequest } from './types';
 
 export default function ListingForm({ onPublish, residentVerified = false, rentalPostsThisMonth = 0 }: { onPublish: (listing: Listing) => void; residentVerified?: boolean; rentalPostsThisMonth?: number }) {
   const { t } = useTranslation();
@@ -13,16 +18,27 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
   const [price, setPrice] = useState('');
   const [zone, setZone] = useState(zones[1]);
   const [condition, setCondition] = useState<ListingCondition>('Good');
+  const [advertiserType, setAdvertiserType] = useState<AdvertiserType>('individual');
+  const [businessRequest, setBusinessRequest] = useState<BusinessRequest>('posting');
   const [preview, setPreview] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const isApartmentRental = category === 'Apartment rentals';
   const valid = title.trim().length >= 5 && description.trim().length >= 10 && Number.isFinite(Number(price)) && Number(price) > 0;
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!valid) return;
+    if (!valid || busy) return;
     if (!preview) { setPreview(true); return; }
-    onPublish({ id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' });
+    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
+    setBusy(true); setError('');
+    try { await submitPost('listing', payload, photos); onPublish(payload); }
+    catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
+    finally { setBusy(false); }
   }
   return <form className="modal-form" onSubmit={submit}>
+    <PostingAudience category={category} value={advertiserType} request={businessRequest} onChange={setAdvertiserType} onRequestChange={setBusinessRequest} preview={preview} />
+    {error && <p className="form-error" role="alert">{error}</p>}
     <ol className="listing-steps" aria-label={t('Listing progress')}><li aria-current={!preview ? 'step' : undefined}>{t('1. Item details')}</li><li aria-current={preview ? 'step' : undefined}>{t('2. Preview')}</li></ol>
     {preview ? <section className="listing-preview" aria-label={t('Listing preview')}>
       <span className="eyebrow">{t('Listing preview')}</span>
@@ -37,13 +53,14 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <div className="form-row"><label>{t('Category')}<select value={category} onChange={event => setCategory(event.target.value)}>{categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'building', 'shopping-basket'].includes(item.icon)).map(item => <option value={item.label} key={item.label}>{t(item.label)}</option>)}</select></label>
       <label>{t('Price (EGP)')}<input type="number" min="0.01" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0" required /></label></div>
       <label>{t('Description')}<textarea dir="auto" rows={4} minLength={10} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('Size, age, included accessories and any signs of use')} required /></label>
+      <MediaUpload files={photos} onChange={setPhotos} />
       <div className="form-row"><label>{t('Condition')}<select value={condition} onChange={event => setCondition(event.target.value as ListingCondition)}>{(['Like new', 'Good', 'Fair'] as const).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
       <label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div>
     </>}
     <div className="modal-foot">
       {preview ? <button className="button button-outline" type="button" onClick={() => setPreview(false)}>{t('Edit details')}</button> : <span className="privacy-note"><ShieldCheck size={15} />{t('Apartment details stay private')}</span>}
-      <button className="button button-accent" type="submit" disabled={!valid}>{t(preview ? 'Add to this demo' : 'Preview listing')}<ArrowRight size={16} /></button>
+      <button className="button button-accent" type="submit" disabled={!valid || busy}>{t(preview ? 'Submit for review' : 'Preview listing')}<ArrowRight size={16} /></button>
     </div>
-    <p className="modal-intro">{t('This is a local preview: your listing is only added for this visit. Photos and public publishing are not connected yet.')}</p>
+    <p className="modal-intro">{t('Your post and photos will be saved privately for review before publishing.')}</p>
   </form>;
 }

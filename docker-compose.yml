@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-madinaty_deals}
+      POSTGRES_USER: ${POSTGRES_USER:-madinaty}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - madinaty-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-madinaty}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-madinaty_deals}
+      PORT: 3000
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+      APP_ENV: ${APP_ENV:-production}
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET}
+      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:?Set SMTP_FROM}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:?Set OBJECT_STORAGE_BUCKET}
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      CLAMAV_HOST: ${CLAMAV_HOST:?Set CLAMAV_HOST}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      RUN_SEED: ${RUN_SEED:-false}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  madinaty-postgres:

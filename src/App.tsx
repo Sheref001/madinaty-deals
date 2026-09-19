@@ -160,13 +160,13 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     if (nextView === 'browse') track('search_performed', { source: 'navigation', type: 'listing' });
   };
 
-  const clearFiltersToHome = () => {
-    scrollToCategories.current = true;
+  const clearFilters = () => {
     setZone('All zones');
     setVerifiedOnly(false);
     setSort('recommended');
     setSearchType('search');
-    goTo('home');
+    setQuery('');
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
 
   const changeLanguage = () => {
@@ -315,7 +315,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
             onVerifiedChange={(value) => { setVerifiedOnly(value); track('filter_applied', { filter: 'verified', value }); }}
             onSortChange={setSort}
             onTabChange={goTo}
-            onClearFilters={clearFiltersToHome}
+            onClearFilters={clearFilters}
             onFavorite={toggleFavorite}
             onContact={contactResult}
             onReport={reportResult}
@@ -431,6 +431,7 @@ function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verif
   const [layout, setLayout] = useState<'grid' | 'list'>('list');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const hasAudienceChoice = splitCategories.includes(selectedCategory);
+  const clearCollectionFilters = () => { setCollection(emptyFilters); onClearFilters(); };
   const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, advertiserType: businessOnlyCategories.includes(selectedCategory) ? 'small_business' : hasAudienceChoice ? audience : undefined, category: collection.category, condition: collection.condition, furnishing: collection.furnishing, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max), educationLevel: collection.educationLevel, subject: collection.subject });
   const heading = selectedCategory || (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
   const subheading = view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Providers with context, reviews and a way to reach them.' : view === 'businesses' ? 'Local businesses with hours, reviews and useful details.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Buy and sell with people in the neighbourhood.';
@@ -441,8 +442,8 @@ function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verif
     <div className="browse-tabs" role="tablist" aria-label={t("Discovery type")}>{tabs.map((tab) => <button key={tab.id} className={view === tab.id || (view === 'browse' && tab.id === 'browse') ? 'active' : ''} onClick={() => onTabChange(tab.id)} role="tab" aria-selected={view === tab.id}>{t(tab.label)}</button>)}{view === 'saved' && <span className="saved-tab-label"><Bookmark size={15} fill="currentColor" /> {t(" Saved only")}</span>}</div>
     <div className="browse-toolbar"><div className="inline-search"><Search size={17} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t("Search this collection")} aria-label={t("Search this collection")} /></div><div className="filter-actions"><label className="select-wrap"><MapPin size={15} /><select value={zone} onChange={(event) => onZoneChange(event.target.value)} aria-label={t("Filter by zone")}>{zones.map((option) => <option key={option} value={option}>{t(option)}</option>)}</select><ChevronDown size={14} /></label><label className={`verified-toggle ${verifiedOnly ? 'checked' : ''}`}><input type="checkbox" checked={verifiedOnly} onChange={(event) => onVerifiedChange(event.target.checked)} /><BadgeCheck size={15} /> {t(" Verified only")}</label><label className="select-wrap sort-select"><SlidersHorizontal size={15} /><select value={sort} onChange={(event) => onSortChange(event.target.value as BrowseFilters['sort'])} aria-label={t("Sort results")}><option value="recommended">{t("Recommended")}</option><option value="newest">{t("Newest first")}</option><option value="price-low">{t("Price: low to high")}</option><option value="price-high">{t("Price: high to low")}</option></select><ChevronDown size={14} /></label></div></div>
     <div className="results-meta"><span><b>{displayed.length}</b> {t(displayed.length === 1 ? 'result' : 'results')} <span className="meta-dot" /> {t(zone)}</span><div className="results-controls"><button className="filter-button" aria-expanded={filtersOpen} aria-controls="collection-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={15} />{t('Refine results')}</button><div className="layout-switch" aria-label={t('Results layout')}><button aria-label={t('List view')} aria-pressed={layout === 'list'} onClick={() => setLayout('list')}><ListFilter size={16} /></button><button aria-label={t('Grid view')} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')}><Grid2X2 size={16} /></button></div></div></div>
-    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={onClearFilters} value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view)} showFurnishing={selectedCategory === 'Apartment rentals'} conditionCategory={selectedCategory} /></div><div className="results-column">
-    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={onClearFilters} />}
+    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={clearCollectionFilters} value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view)} showFurnishing={selectedCategory === 'Apartment rentals'} conditionCategory={selectedCategory} /></div><div className="results-column">
+    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={clearCollectionFilters} />}
     </div></div>
   </div>;
 }

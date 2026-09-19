@@ -186,10 +186,9 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const openCategory = (nextView: View, category: string) => {
     window.history.pushState({ madinatyDealsCategory: true }, '');
     setCategoryNavigation(true);
-    const structuredCategory = splitCategories.includes(category) || businessOnlyCategories.includes(category) || category === 'Apartment rentals';
-    setSelectedCategory(structuredCategory ? category : '');
-    setView(structuredCategory ? 'search' : nextView);
-    setQuery(structuredCategory ? '' : category);
+    setSelectedCategory(category);
+    setView(splitCategories.includes(category) || businessOnlyCategories.includes(category) ? 'search' : nextView);
+    setQuery('');
     setMobileNavOpen(false);
   };
 
@@ -433,7 +432,8 @@ function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verif
   const hasAudienceChoice = splitCategories.includes(selectedCategory);
   const clearCollectionFilters = () => { setCollection(emptyFilters); onClearFilters(); };
   const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, advertiserType: businessOnlyCategories.includes(selectedCategory) ? 'small_business' : hasAudienceChoice ? audience : undefined, category: collection.category, condition: collection.condition, furnishing: collection.furnishing, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max), educationLevel: collection.educationLevel, subject: collection.subject });
-  const heading = selectedCategory || (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
+  const categoryHeading = splitCategories.includes(selectedCategory) || businessOnlyCategories.includes(selectedCategory) || selectedCategory === 'Apartment rentals';
+  const heading = categoryHeading ? selectedCategory : (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Trusted services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
   const subheading = view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Providers with context, reviews and a way to reach them.' : view === 'businesses' ? 'Local businesses with hours, reviews and useful details.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Buy and sell with people in the neighbourhood.';
   const tabs: { id: View; label: string }[] = [{ id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, ...(featureFlags.offers ? [{ id: 'offers' as View, label: 'Offers' }] : [])];
   return <div className="browse-view">

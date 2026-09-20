@@ -27,6 +27,7 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in the server .env file}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in the server .env file}
       MAIL_PROVIDER: ${MAIL_PROVIDER:-smtp}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

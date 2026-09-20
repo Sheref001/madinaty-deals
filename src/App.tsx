@@ -14,7 +14,7 @@ import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
-import { getComments, postComment, recordView, type PublicComment } from './api';
+import { getComments, getPublicConfig, postComment, recordView, type PublicComment } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -111,6 +111,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const registered = Boolean(account);
   const isAdmin = account?.role === 'ADMIN';
@@ -121,6 +122,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     getSession().then(user => { if (!cancelled) setAccount(user); }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => { getPublicConfig().then(value => setRegistrationEnabled(value.registrationEnabled)).catch(() => setRegistrationEnabled(false)); }, []);
 
   const openPost = () => { if (!authLoading) setModal(registered ? 'post' : 'register'); };
 
@@ -281,7 +283,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="header-contact" onClick={() => document.getElementById('contact-us')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle size={16} />{t('Contact us')}</button>
           <button className="header-saved" aria-label={t('Saved')} onClick={() => goTo('saved')}><Heart size={19} /><span>{t('Saved')}</span></button>
           <button className="button button-accent header-post" onClick={openPost}><Plus size={18} />{t('Post ad')}</button>
-          <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : 'Sign in or create account')}</span></button>{registered && <button className="text-link" onClick={async () => { try { await signOut(); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
+          <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : registrationEnabled ? 'Sign in or create account' : 'Sign in')}</span></button>{registered && <button className="text-link" onClick={async () => { try { await signOut(); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
@@ -291,7 +293,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
-          {!registered && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
+          {!registered && registrationEnabled && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
           <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={isAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
@@ -337,7 +339,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
-      {modal === 'register' && <RegistrationModal onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setModal('post'); track('account_signed_in'); }} />}
+      {modal === 'register' && <RegistrationModal registrationEnabled={registrationEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setModal('post'); track('account_signed_in'); }} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>
@@ -616,8 +618,8 @@ function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
-function RegistrationModal({ onClose, onRegistered }: { onClose: () => void; onRegistered: (account: Account) => void }) {
-  return <ModalShell title="Sign in or create account" eyebrow="A QUICK START" onClose={onClose}><AuthForm onSignedIn={onRegistered} /></ModalShell>;
+function RegistrationModal({ onClose, onRegistered, registrationEnabled }: { onClose: () => void; onRegistered: (account: Account) => void; registrationEnabled: boolean }) {
+  return <ModalShell title={registrationEnabled ? 'Sign in or create account' : 'Sign in'} eyebrow="A QUICK START" onClose={onClose}><AuthForm registrationEnabled={registrationEnabled} onSignedIn={onRegistered} /></ModalShell>;
 }
 
 function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {

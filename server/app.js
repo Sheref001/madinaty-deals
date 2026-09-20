@@ -7,7 +7,7 @@ import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, uploads, submissions, admin }) {
+export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, uploads, submissions, admin, config = {} }) {
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
 
@@ -31,6 +31,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     request.clientIp = clientKey;
     if (!requestLimit.take(clientKey)) return send(response, 429, { error: 'Too many requests. Please try again later.' }, { 'retry-after': '60' });
     if (parts.length === 2 && parts[1] === 'health' && request.method === 'GET') return send(response, 200, { ok: true });
+    if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true });
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
     if (['uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);

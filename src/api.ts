@@ -25,6 +25,7 @@ export const postComment = (type: string, id: string, body: string, language: st
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
+export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');

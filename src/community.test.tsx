@@ -5,9 +5,9 @@ import App from './App';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
-import { getSession, submitPost } from './api';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
-beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); });
+import { getPublicConfig, getSession, submitPost } from './api';
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
+beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true }); });
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
@@ -65,10 +65,22 @@ it('ignores a forged local registration flag and requires real sign-in', async (
   localStorage.setItem('madinaty-account-registered', 'true');
   localStorage.setItem('madinaty-deals-language', 'en');
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Sign in or create account' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Sign in or create account' }));
   expect(screen.getByRole('dialog', { name: 'Sign in or create account' })).toBeTruthy();
   expect(await screen.findByRole('button', { name: 'Send sign-in code' })).toBeTruthy();
   expect(screen.queryByLabelText('What are you selling?')).toBeNull();
+});
+
+it('hides account creation and presents sign-in while registrations are paused', async () => {
+  vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: false });
+  localStorage.setItem('madinaty-deals-language', 'en');
+  render(<App />);
+  const signIn = await screen.findByRole('button', { name: 'Sign in' });
+  expect(screen.queryByRole('button', { name: 'Create your account Register before posting' })).toBeNull();
+  fireEvent.click(signIn);
+  expect(screen.getByRole('dialog', { name: 'Sign in' })).toBeTruthy();
+  expect(await screen.findByText(/New account creation is temporarily paused/)).toBeTruthy();
+  expect(screen.queryByLabelText('Your name')).toBeNull();
 });
 
 

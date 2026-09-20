@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAuth, normalizePhone } from './auth.js';
 import { loadConfig } from './config.js';
 
-const config = { local: false, origin: 'https://madinatydeals.com', cookieName: '__Host-madinaty_session', secret: 'test-secret-longer-than-thirty-two-characters', from: 'noreply@example.test' };
+const config = { local: false, origin: 'https://madinatydeals.com', cookieName: '__Host-madinaty_session', secret: 'test-secret-longer-than-thirty-two-characters', from: 'noreply@example.test', registrationEnabled: true };
 const account = { id: 'user-1', email: 'test@example.test', emailVerifiedAt: new Date(), role: 'RESIDENT', status: 'ACTIVE', profile: { displayName: 'Neighbour' } };
 const request = (body, headers = {}) => Object.assign(Readable.from([JSON.stringify(body)]), { method: 'POST', headers: { origin: config.origin, ...headers }, socket: { remoteAddress: '127.0.0.1' } });
-function fixture() {
+function fixture(overrides = {}) {
   let challenge;
   const prisma = {
     $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
@@ -22,13 +22,13 @@ function fixture() {
         return { count: 1 };
       }),
     },
-    user: { upsert: vi.fn().mockResolvedValue(account), update: vi.fn().mockResolvedValue(account) },
+    user: { findUnique: vi.fn().mockResolvedValue(account), upsert: vi.fn().mockResolvedValue(account), update: vi.fn().mockResolvedValue(account) },
     session: { create: vi.fn().mockResolvedValue({}), findUnique: vi.fn(), deleteMany: vi.fn() },
     auditLog: { create: vi.fn().mockResolvedValue({}) },
   };
   prisma.$transaction = async callback => callback(prisma);
   const mailer = { sendMail: vi.fn().mockResolvedValue({}) };
-  const auth = createAuth({ prisma, config, mailer });
+  const auth = createAuth({ prisma, config: { ...config, ...overrides }, mailer });
   const send = vi.fn();
   const call = (route, body, headers) => auth.handle(request(body, headers), {}, ['api', 'auth', route], send);
   const start = async () => {
@@ -65,6 +65,17 @@ describe('authentication boundaries', () => {
     const f = fixture();
     await expect(f.call('request-code', {}, { origin: 'https://other.example' })).rejects.toMatchObject({ status: 403 });
     expect(f.mailer.sendMail).not.toHaveBeenCalled();
+  });
+  it('blocks new registrations while allowing existing accounts to request a code', async () => {
+    const f = fixture({ registrationEnabled: false });
+    f.prisma.user.findUnique.mockResolvedValue(null);
+    await expect(f.call('request-code', { email: 'new@example.test' })).rejects.toMatchObject({ status: 403, message: 'Account creation is temporarily paused. Please try again later.' });
+    expect(f.mailer.sendMail).not.toHaveBeenCalled();
+    expect(f.prisma.otpChallenge.create).not.toHaveBeenCalled();
+
+    f.prisma.user.findUnique.mockResolvedValue(account);
+    await f.call('request-code', { email: account.email });
+    expect(f.mailer.sendMail).toHaveBeenCalledTimes(1);
   });
   it('hashes codes and sessions, consumes codes once, and issues a secure cookie', async () => {
     const f = fixture();

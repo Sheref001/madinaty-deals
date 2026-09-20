@@ -17,7 +17,7 @@ const auth = createAuth({ prisma, config, mailer: createMailer(config) });
 const uploads = createUploads({ prisma, config, auth, storage: createLocalStorage(config.uploadDirectory) });
 const submissions = createSubmissions({ prisma, auth });
 const admin = createAdmin({ prisma, auth });
-const server = createServer(createRequestHandler({ prisma, auth, uploads, submissions, admin, corsOrigin: config.origin }));
+const server = createServer(createRequestHandler({ prisma, auth, uploads, submissions, admin, config, corsOrigin: config.origin }));
 server.requestTimeout = 45000;
 server.headersTimeout = 15000;
 

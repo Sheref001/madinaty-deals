@@ -298,7 +298,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       <main className="main-content">
         {view === 'home' ? (
-          <HomeView residentVerified={residentVerified} results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onAdvertise={() => { track('elite_ad_requested', { daily_rate: 300 }); setToast('Elite ad request noted — we will contact you to confirm the day.'); }} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
+          <HomeView residentVerified={residentVerified} results={results} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           isAdmin ? <AdminView onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (
@@ -370,7 +370,7 @@ function NavItem({ item, active, onClick, count }: { item: { id: View; label: st
   return <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={18} strokeWidth={active ? 2.3 : 1.8} /><span>{t(item.label)}</span>{count ? <small>{count}</small> : null}</button>;
 }
 
-function HomeView({ residentVerified, goTo, onPost, onAdvertise, onSearch, onCategorySearch, onServiceCategory, onBusinessCategory, results, favorites, onFavorite }: { residentVerified: boolean; goTo: (view: View) => void; onPost: () => void; onAdvertise: () => void; onSearch: (value: string) => void; onCategorySearch: (value: string) => void; onServiceCategory: (value: string) => void; onBusinessCategory: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
+function HomeView({ residentVerified, goTo, onPost, onSearch, onCategorySearch, onServiceCategory, onBusinessCategory, results, favorites, onFavorite }: { residentVerified: boolean; goTo: (view: View) => void; onPost: () => void; onSearch: (value: string) => void; onCategorySearch: (value: string) => void; onServiceCategory: (value: string) => void; onBusinessCategory: (value: string) => void; results: SearchResult[]; favorites: Set<string>; onFavorite: (result: SearchResult) => void }) {
   const { t } = useTranslation();
   const [homeSearch, setHomeSearch] = useState('');
   const handleSubmit = (event: FormEvent) => { event.preventDefault(); onSearch(homeSearch); };
@@ -394,7 +394,7 @@ function HomeView({ residentVerified, goTo, onPost, onAdvertise, onSearch, onCat
       <div className="trust-points"><span><BadgeCheck size={16} /> {t(" Verified residents")}</span><span><Star size={16} /> {t(" Community reviews")}</span><span><Flag size={16} /> {t(" Human moderation")}</span></div>
     </section>
 
-    <EliteAdSpace onAdvertise={onAdvertise} />
+    <EliteAdSpace />
 
     <section id="categories" tabIndex={-1} className="section-block category-section">
       <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />

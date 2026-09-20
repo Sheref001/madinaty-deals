@@ -1,10 +1,29 @@
-import { CalendarDays, GraduationCap, Megaphone } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Mail, Megaphone } from 'lucide-react';
 import { useTranslation } from './i18n';
 
-export default function EliteAdSpace({ onAdvertise }: { onAdvertise: () => void }) {
+const contactEmail = 'hello@madinatydeals.com';
+
+export default function EliteAdSpace() {
   const { t } = useTranslation();
   return <section className="elite-ad-space" aria-label={t('Elite daily advertising space')}>
-    <div className="elite-ad-intro"><span className="elite-icon"><Megaphone size={18} /></span><div><span className="eyebrow">{t('ELITE DAILY SPOT')}</span><h2>{t('Put your business first in the neighbourhood.')}</h2><p>{t('One premium homepage placement, sold by the day.')}</p></div><span className="elite-rate"><strong>{t('Contact us')}</strong><a href="mailto:hello@madinatydeals.com">hello@madinatydeals.com</a></span></div>
-    <div className="elite-ad-card"><div className="elite-ad-art tutor-art"><GraduationCap size={30} /><span>{t('Demo ad')}</span></div><div className="elite-ad-copy"><span className="elite-date"><CalendarDays size={14} /> {t('TODAY · ELITE FEATURE')}</span><h3>{t('Ms. Salma · English Tutor')}</h3><p>{t('Experienced English tutor for International and Thanaweya Amma schools.')}</p><div className="elite-tags"><span>{t('IGCSE & American Diploma')}</span><span>{t('1-to-1 and small groups')}</span></div></div><button className="button button-warm" onClick={onAdvertise}>{t('Book this day')}</button></div>
+    <div className="elite-ad-copy">
+      <span className="elite-icon"><Megaphone size={19} /></span>
+      <div>
+        <span className="eyebrow">{t('ELITE DAILY SPOT')}</span>
+        <h2>{t('Make your business the neighbourhood’s daily feature.')}</h2>
+        <p>{t('One premium place on the homepage, reserved one day at a time.')}</p>
+      </div>
+    </div>
+    <div className="elite-email-panel">
+      <div className="elite-email-details">
+        <span className="elite-availability"><CalendarDays size={15} />{t('A featured spot, every day')}</span>
+        <p>{t('Email us to ask about available dates and pricing.')}</p>
+      </div>
+      <a className="elite-email-button" href={`mailto:${contactEmail}?subject=Elite%20daily%20spot%20inquiry`} aria-label={`${t('Email us about the featured spot')} — ${contactEmail}`}>
+        <span className="elite-email-icon"><Mail size={19} /></span>
+        <span><b>{t('Send us an email')}</b><small>{contactEmail}</small></span>
+        <ArrowUpRight size={18} className="elite-email-arrow" />
+      </a>
+    </div>
   </section>;
 }

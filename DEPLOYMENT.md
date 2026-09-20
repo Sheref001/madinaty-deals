@@ -43,8 +43,8 @@ Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `
 - `AUTH_SECRET`: at least 32 random characters. Generate with `openssl rand -hex 32`. Store it securely; changing it invalidates outstanding codes and CSRF tokens.
 - `POSTGRES_PASSWORD`: a long URL-safe random password; Compose interpolates it into the database URL. `DATABASE_URL` is needed for non-Compose commands.
 - For SMTP, set `MAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_FROM`, and provider credentials. Production SMTP requires TLS; port 465 uses implicit TLS.
-- For Microsoft 365 delegated Graph mail, set `MAIL_PROVIDER=microsoft-graph-delegated`, `SMTP_FROM=hello@madinatydeals.com`, `MS_TENANT_ID`, and `MS_CLIENT_ID`. In the existing single-tenant Entra app, add the **delegated** Microsoft Graph `Mail.Send` permission (not the Application permission), enable **Allow public client flows**, and do not create an Exchange Application RBAC assignment or add a client secret. If an unscoped Graph `Mail.Send` **Application** permission was added during setup, remove it. The app signs in as `hello@` once; it saves a refresh token in the persistent `madinaty-mail-auth` Docker volume and rotates it as Microsoft returns updated tokens.
-- After deploying the updated image, run `docker compose --env-file .env run --rm --no-deps --entrypoint node app scripts/microsoft-device-login.js`. Open the printed Microsoft URL, enter the one-time code, sign in as `hello@madinatydeals.com`, and approve the `Mail.Send` request. The code is short-lived and must not be shared. The command stores the refresh token in the named Docker volume; it does not print the token. If authorization is revoked or expires, rerun this command. Back up the `madinaty-mail-auth` volume securely alongside the database and uploads.
+- For Microsoft 365 delegated Graph mail, set `MAIL_PROVIDER=microsoft-graph-delegated`, `SMTP_FROM=hello@madinatydeals.com`, `MS_TENANT_ID`, and `MS_CLIENT_ID`. In the existing single-tenant Entra app, add the **delegated** Microsoft Graph `Mail.Send` permission (not the Application permission), enable **Allow public client flows**, and add `http://localhost` under **Authentication → Add a platform → Mobile and desktop applications**. Do not create an Exchange Application RBAC assignment or add a client secret. If an unscoped Graph `Mail.Send` **Application** permission was added during setup, remove it. Security Defaults blocks device-code sign-in, so use the browser-based PKCE setup below; do not disable Security Defaults.
+- Run `MS_TENANT_ID=<tenant-id> MS_CLIENT_ID=<client-id> node scripts/microsoft-browser-login.js` on your Mac from this repository. Open the printed sign-in link in Safari, sign in as `hello@madinatydeals.com`, and approve `Mail.Send`. This writes `microsoft-mail-token.json` locally; keep it private. Copy it to the server with `scp -P <ssh-port> ./microsoft-mail-token.json <server-user>@<server-ip>:/tmp/microsoft-mail-token.json`. On the server, from the project directory, copy it into the running app container and set its permissions: `docker cp /tmp/microsoft-mail-token.json madinaty-deals-app-1:/app/data/mail-auth/token.json`, then `docker compose exec -u 0 app chown appuser:appgroup /app/data/mail-auth/token.json` and `docker compose exec -u 0 app chmod 600 /app/data/mail-auth/token.json`; remove the temporary host copy with `rm /tmp/microsoft-mail-token.json`. The token is kept in the persistent `madinaty-mail-auth` volume and rotated as Microsoft returns updated tokens. If authorization is revoked, repeat the browser flow and copy the new token. Back up the volume securely alongside the database and uploads.
 - Account registration and sign-in use one-time codes sent through the configured email provider. Phone/SMS sign-in is not enabled.
 - Uploaded photos and verification documents are stored in the `madinaty-uploads` Docker volume on the Ubuntu server. Back up this volume with the database; it is private and is served only through authenticated API routes.
 - `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults. The admin dashboard can later assign `MODERATOR`, `SERVICE_PROVIDER`, `BUSINESS_OWNER`, `RESIDENT` or `ADMIN` roles and suspend accounts. Changes are recorded in the audit log; the last active administrator cannot be removed.
@@ -53,20 +53,9 @@ The entrypoint applies checked-in migrations, optionally seeds, then starts the 
 
 Run `npm run maintenance:cleanup` daily using a scheduler with the same server environment. It deletes expired auth records and up to 100 unsubmitted uploads older than 24 hours per run. Repeat for larger backlogs. Submitted identity documents require a separately agreed retention/deletion policy; they are not deleted automatically.
 
-## Automatic deployment from GitHub
+## Manual deployment
 
-The repository includes `.github/workflows/deploy.yml`. Every push to `main` runs typecheck, lint, build and tests. Only after those checks pass does GitHub connect to the Ubuntu server, copy the tested source, rebuild the Compose app and wait for `/api/ready`. The workflow preserves the server-only `.env` and Docker volumes.
-
-Create a dedicated deployment user on the server with write access to the repository directory and permission to run Docker Compose. Do not use `root` for GitHub Actions. Add the public SSH key to that user’s `~/.ssh/authorized_keys`. The workflow copies the tested source directly, so the server does not need a separate GitHub pull key. In the GitHub repository, create a `production` environment and add these secrets:
-
-- `DEPLOY_HOST`: server hostname or IP.
-- `DEPLOY_PORT`: SSH port, usually `22`.
-- `DEPLOY_USER`: dedicated deployment username.
-- `DEPLOY_PATH`: absolute repository path, such as `/opt/madinaty-deals`.
-- `DEPLOY_SSH_KEY`: the private key for the deployment user, including its complete header and footer.
-- `DEPLOY_KNOWN_HOSTS`: the exact output of `ssh-keyscan -H <server-host>` collected from a trusted machine.
-
-Keep the production `.env` only on the server. The workflow never copies or prints it. Test the connection once from a trusted machine, then push a small change to `main` or run the workflow manually from GitHub Actions.
+Deploy updates from the Ubuntu server with `git pull` followed by `docker compose --env-file .env up -d --build --wait`. GitHub Actions deployment is not used.
 
 ## Local development
 

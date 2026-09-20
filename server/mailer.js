@@ -17,7 +17,7 @@ export function createMailer(config, fetchImpl = globalThis.fetch, tokenStore = 
     try {
       return JSON.parse(await readFile(config.graph.tokenFile, 'utf8')).refreshToken;
     } catch (error) {
-      if (error.code === 'ENOENT') throw new Error('Microsoft delegated mail is not authorized; run the device-login setup command', { cause: error });
+      if (error.code === 'ENOENT') throw new Error('Microsoft delegated mail is not authorized; complete the browser-login setup in DEPLOYMENT.md', { cause: error });
       throw new Error('Microsoft delegated mail token file is invalid', { cause: error });
     }
   },

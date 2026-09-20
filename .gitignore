@@ -11,3 +11,5 @@ prisma/*.db-journal
 !.env.test.example
 playwright-report/
 test-results/
+microsoft-mail-token.json
+microsoft-mail-token.json.*.tmp

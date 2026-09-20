@@ -1,6 +1,6 @@
 # Deployment
 
-The Node application serves the built frontend and `/api` from one origin. It requires PostgreSQL, SMTP and a Docker-managed local upload volume. Use Node 22.13+ (22.x) or a supported Node 24+ release; the container uses Node 22.
+The Node application serves the built frontend and `/api` from one origin. It requires PostgreSQL, an email provider and a Docker-managed local upload volume. Use Node 22.13+ (22.x) or a supported Node 24+ release; the container uses Node 22.
 
 ## Isolated integration stack
 
@@ -42,8 +42,10 @@ Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `
 - `APP_ORIGIN`: exact HTTPS origin. Use a TLS reverse proxy; the container port binds to loopback on the host.
 - `AUTH_SECRET`: at least 32 random characters. Generate with `openssl rand -hex 32`. Store it securely; changing it invalidates outstanding codes and CSRF tokens.
 - `POSTGRES_PASSWORD`: a long URL-safe random password; Compose interpolates it into the database URL. `DATABASE_URL` is needed for non-Compose commands.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and provider credentials. Production SMTP requires TLS; port 465 uses implicit TLS. Use `hello@madinatydeals.com` as the verified sender once the domain is configured with your mail provider.
-- Account registration and sign-in use one-time codes sent through the configured SMTP service. Phone/SMS sign-in is not enabled.
+- For SMTP, set `MAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_FROM`, and provider credentials. Production SMTP requires TLS; port 465 uses implicit TLS.
+- For Microsoft 365 delegated Graph mail, set `MAIL_PROVIDER=microsoft-graph-delegated`, `SMTP_FROM=hello@madinatydeals.com`, `MS_TENANT_ID`, and `MS_CLIENT_ID`. In the existing single-tenant Entra app, add the **delegated** Microsoft Graph `Mail.Send` permission (not the Application permission), enable **Allow public client flows**, and do not create an Exchange Application RBAC assignment or add a client secret. If an unscoped Graph `Mail.Send` **Application** permission was added during setup, remove it. The app signs in as `hello@` once; it saves a refresh token in the persistent `madinaty-mail-auth` Docker volume and rotates it as Microsoft returns updated tokens.
+- After deploying the updated image, run `docker compose --env-file .env run --rm --no-deps --entrypoint node app scripts/microsoft-device-login.js`. Open the printed Microsoft URL, enter the one-time code, sign in as `hello@madinatydeals.com`, and approve the `Mail.Send` request. The code is short-lived and must not be shared. The command stores the refresh token in the named Docker volume; it does not print the token. If authorization is revoked or expires, rerun this command. Back up the `madinaty-mail-auth` volume securely alongside the database and uploads.
+- Account registration and sign-in use one-time codes sent through the configured email provider. Phone/SMS sign-in is not enabled.
 - Uploaded photos and verification documents are stored in the `madinaty-uploads` Docker volume on the Ubuntu server. Back up this volume with the database; it is private and is served only through authenticated API routes.
 - `ADMIN_EMAIL`: initial admin email for one-time seeding. Signing in still requires control of that mailbox. Set `RUN_SEED=false` after first seed; re-seeding resets commercial plan defaults. The admin dashboard can later assign `MODERATOR`, `SERVICE_PROVIDER`, `BUSINESS_OWNER`, `RESIDENT` or `ADMIN` roles and suspend accounts. Changes are recorded in the audit log; the last active administrator cannot be removed.
 

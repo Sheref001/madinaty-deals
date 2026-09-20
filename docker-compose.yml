@@ -26,11 +26,15 @@ services:
       APP_ENV: ${APP_ENV:-production}
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in the server .env file}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in the server .env file}
-      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in the server .env file}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:?Set SMTP_FROM in the server .env file}
+      SMTP_FROM: ${SMTP_FROM:-hello@madinatydeals.com}
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_TOKEN_FILE: ${MS_TOKEN_FILE:-/app/data/mail-auth/token.json}
       UPLOAD_DIRECTORY: /app/data/uploads
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       RUN_SEED: ${RUN_SEED:-false}
@@ -47,7 +51,9 @@ services:
       - /tmp
     volumes:
       - madinaty-uploads:/app/data/uploads
+      - madinaty-mail-auth:/app/data/mail-auth
 
 volumes:
   madinaty-postgres:
   madinaty-uploads:
+  madinaty-mail-auth:

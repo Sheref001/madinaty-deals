@@ -2,8 +2,8 @@
 import { createServer } from 'node:http';
 import { PrismaClient } from '@prisma/client';
 import { createRequestHandler } from './app.js';
-import nodemailer from 'nodemailer';
 import { loadConfig } from './config.js';
+import { createMailer } from './mailer.js';
 import { createAuth } from './auth.js';
 import { createUploads } from './uploads.js';
 import { createLocalStorage } from './local-storage.js';
@@ -13,7 +13,7 @@ import { createAdmin } from './admin.js';
 const prisma = new PrismaClient();
 const port = Number(process.env.PORT || 3000);
 const config = loadConfig();
-const auth = createAuth({ prisma, config, mailer: nodemailer.createTransport(config.smtp) });
+const auth = createAuth({ prisma, config, mailer: createMailer(config) });
 const uploads = createUploads({ prisma, config, auth, storage: createLocalStorage(config.uploadDirectory) });
 const submissions = createSubmissions({ prisma, auth });
 const admin = createAdmin({ prisma, auth });

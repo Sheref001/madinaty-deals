@@ -48,6 +48,19 @@ describe('authentication boundaries', () => {
     expect(() => loadConfig({})).toThrow('HTTPS');
     expect(() => loadConfig({ APP_ORIGIN: config.origin })).toThrow('AUTH_SECRET');
   });
+  it('accepts delegated Microsoft Graph configuration without SMTP or app-secret credentials', () => {
+    const loaded = loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+      MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id',
+    });
+    expect(loaded.mailProvider).toBe('microsoft-graph-delegated');
+    expect(loaded.from).toBe('hello@madinatydeals.com');
+    expect(() => loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+    })).toThrow('MS_TENANT_ID');
+  });
   it('rejects cross-origin login before sending email', async () => {
     const f = fixture();
     await expect(f.call('request-code', {}, { origin: 'https://other.example' })).rejects.toMatchObject({ status: 403 });

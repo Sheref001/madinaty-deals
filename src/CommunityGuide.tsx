@@ -45,6 +45,7 @@ export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; 
       <details><summary>{t('Is posting free?')}</summary><p>{t('Ordinary resident listings are free during the validation period.')}</p></details>
       <p className="footer-contact"><b>{t('Contact Madinaty Deals')}</b><br /><a href="mailto:hello@madinatydeals.com" dir="ltr">hello@madinatydeals.com</a></p>
       <p className="footer-legal-link"><a href={language === 'ar' ? '/terms-of-use-ar.html' : '/terms-of-use.html'}>{t('Terms of Use')}</a></p>
+      <p className="footer-legal-link"><a href="/data-deletion.html">{t('Data deletion instructions')}</a></p>
     </section>
     <p className="footer-note">{t('Built for the Madinaty community.')} · {new Date().getFullYear()} <span className="company-signature">{t('A Connected Community Solutions Product')}</span></p>
   </footer>;

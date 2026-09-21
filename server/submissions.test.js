@@ -12,7 +12,7 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
     profile: { findUnique: vi.fn().mockResolvedValue({ verificationState: verified ? 'VERIFIED' : 'UNVERIFIED' }), update: vi.fn() },
     submission: { findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) },
     upload: { findMany: vi.fn(async ({ where }) => photos.filter(photo => where.id.in.includes(photo.id) && photo.userId === where.userId && photo.purpose === where.purpose && photo.status === where.status && photo.submissionId === null)), updateMany: vi.fn() },
-    residentVerification: { findUnique: vi.fn().mockResolvedValue({ id: verificationId, userId: 'resident' }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    residentVerification: { findMany: vi.fn().mockResolvedValue([]), findUnique: vi.fn().mockResolvedValue({ id: verificationId, userId: 'resident' }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     auditLog: { create: vi.fn() },
   };
   prisma.$transaction = vi.fn(callback => callback(prisma));
@@ -85,6 +85,14 @@ describe('marketplace submission boundaries', () => {
 });
 
 describe('verification review boundaries', () => {
+  it('returns only pending verification requests with their private document references to reviewers', async () => {
+    const f = fixture({ role: 'ADMIN' });
+    f.prisma.residentVerification.findMany.mockResolvedValue([{ id: verificationId, userId: 'resident', submittedAt: new Date('2026-09-20T12:00:00Z'), user: { email: 'resident@example.test', phone: null, profile: { displayName: 'Neighbour' } } }]);
+    f.prisma.upload.findMany.mockResolvedValue([{ id: photoId, verificationId, documentType: 'MADINATY_ID' }]);
+    await f.call({}, 'api/admin/verifications', 'GET');
+    expect(f.prisma.residentVerification.findMany.mock.calls[0][0].where).toEqual({ status: 'PENDING' });
+    expect(f.send.mock.calls[0][2].requests[0]).toMatchObject({ id: verificationId, name: 'Neighbour', email: 'resident@example.test', uploads: [{ id: photoId, documentType: 'MADINATY_ID' }] });
+  });
   it('denies non-reviewers and self-review', async () => {
     const resident = fixture();
     await expect(resident.call({ status: 'VERIFIED' }, review)).rejects.toMatchObject({ status: 403 });

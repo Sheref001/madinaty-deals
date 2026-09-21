@@ -25,6 +25,7 @@ export const postComment = (type: string, id: string, body: string, language: st
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
+export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
 export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
@@ -57,3 +58,13 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
 export const getAdminUsers = () => request('/admin/users') as Promise<{ users: AdminUser[] }>;
 export const updateAdminUserRole = (id: string, role: string) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'POST', body: JSON.stringify({ role }) }) as Promise<{ user: AdminUser }>;
 export const updateAdminUserStatus = (id: string, status: string) => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ user: AdminUser }>;
+export const getAdminVerifications = () => request('/admin/verifications') as Promise<{ requests: AdminVerificationRequest[] }>;
+export const reviewAdminVerification = (id: string, status: 'VERIFIED' | 'REJECTED', reason = '') => request(`/admin/verifications/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ status, reason }) });
+export async function openPrivateUpload(id: string) {
+  const response = await fetch(`${apiBase}/uploads/${encodeURIComponent(id)}`, { credentials: 'include' });
+  if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Could not open the private document');
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url; link.target = '_blank'; link.rel = 'noopener'; link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+}

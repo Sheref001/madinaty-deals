@@ -9,9 +9,9 @@ export function createSubmissions({ prisma, auth }) {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
       if (!isReviewer(current.user)) throw new RequestError(403, 'Reviewer access required');
       if (request.method === 'GET' && parts.join('/') === 'api/admin/verifications') {
-        const requests = await prisma.residentVerification.findMany({ where: { status: 'PENDING' }, take: 50, orderBy: { submittedAt: 'asc' }, select: { id: true, userId: true, submittedAt: true } });
+        const requests = await prisma.residentVerification.findMany({ where: { status: 'PENDING' }, take: 50, orderBy: { submittedAt: 'asc' }, select: { id: true, userId: true, submittedAt: true, user: { select: { email: true, phone: true, profile: { select: { displayName: true } } } } } });
         const records = await prisma.upload.findMany({ where: { verificationId: { in: requests.map(item => item.id) } }, select: { id: true, verificationId: true, documentType: true } });
-        return send(response, 200, { requests: requests.map(item => ({ ...item, uploads: records.filter(upload => upload.verificationId === item.id) })) });
+        return send(response, 200, { requests: requests.map(item => ({ ...item, name: item.user.profile?.displayName || 'Neighbour', email: item.user.email, phone: item.user.phone, user: undefined, uploads: records.filter(upload => upload.verificationId === item.id) })) });
       }
       if (request.method === 'POST' && parts.length === 5 && parts[2] === 'verifications' && parts[4] === 'review') {
         if (!uuid(parts[3])) throw new RequestError(400, 'Invalid verification request');

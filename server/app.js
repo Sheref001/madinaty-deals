@@ -34,6 +34,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true });
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
     if (['uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);
+    if (parts[1] === 'admin' && parts[2] === 'verifications' && submissions) return submissions.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);
     if (parts[1] === 'submissions' && submissions) return submissions.handle(request, response, parts, send);
     if (parts.length === 2 && parts[1] === 'ready' && request.method === 'GET') {

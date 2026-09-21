@@ -39,6 +39,18 @@ describe('API responses', () => {
     expect(result.headers['access-control-allow-credentials']).toBe('true');
   });
 
+  it('routes verification review controls to the submission reviewer and user controls to admin', async () => {
+    const admin = { handle: vi.fn(async (_request, response, _parts, send) => send(response, 200, { source: 'admin' })) };
+    const submissions = { handle: vi.fn(async (_request, response, _parts, send) => send(response, 200, { source: 'verification-review' })) };
+    const handler = createRequestHandler({ prisma: {}, admin, submissions });
+    const verification = await request(handler, '/api/admin/verifications');
+    const users = await request(handler, '/api/admin/users');
+    expect(JSON.parse(verification.body)).toEqual({ source: 'verification-review' });
+    expect(JSON.parse(users.body)).toEqual({ source: 'admin' });
+    expect(submissions.handle).toHaveBeenCalledOnce();
+    expect(admin.handle).toHaveBeenCalledOnce();
+  });
+
   it.each(['/api/content/listing', '/api/content/listing/id/comments/extra', '/api/health/extra'])('rejects incomplete or extra route segments: %s', async url => {
     expect((await request(createRequestHandler({ prisma: {} }), url)).status).toBe(404);
   });

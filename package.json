@@ -24,6 +24,7 @@
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
     "nodemailer": "^10.0.10",
+    "openid-client": "^6.8.8",
     "prisma": "^6.19.3",
     "react": "latest",
     "react-dom": "latest",

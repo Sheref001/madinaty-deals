@@ -26,7 +26,7 @@ export const postComment = (type: string, id: string, body: string, language: st
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
-export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean }>;
+export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');
@@ -39,9 +39,10 @@ export async function verifyCode(challengeId: string, code: string): Promise<Acc
   csrfToken = result.csrfToken;
   return result.user;
 }
-export async function signOut() {
-  await request('/auth/logout', { method: 'POST' });
+export async function signOut(useCognito = false) {
+  const result = await request(useCognito ? '/auth/cognito/logout' : '/auth/logout', { method: 'POST' });
   csrfToken = null;
+  if (typeof result.logoutUrl === 'string') window.location.assign(result.logoutUrl);
 }
 export interface UploadedFile { id: string; originalFileName: string; mimeType: string; byteSize: number; }
 export async function uploadFile(file: File, purpose: 'photo' | 'verification', documentType?: string): Promise<UploadedFile> {

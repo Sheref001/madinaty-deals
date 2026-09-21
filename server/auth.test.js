@@ -61,6 +61,31 @@ describe('authentication boundaries', () => {
       MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
     })).toThrow('MS_TENANT_ID');
   });
+  it('validates the Cognito issuer and same-origin callback before enabling Cognito', () => {
+    const loaded = loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+      MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true', REGISTRATION_ENABLED: 'true',
+      COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
+      COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
+    });
+    expect(loaded.cognitoEnabled).toBe(true);
+    expect(loaded.cognito.clientId).toBe('cognito-client-id');
+    expect(() => loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+      MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true', REGISTRATION_ENABLED: 'true',
+      COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
+      COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/?lang=ar`,
+    })).toThrow('COGNITO_CALLBACK_URL');
+    expect(() => loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+      MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true', REGISTRATION_ENABLED: 'false',
+      COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
+      COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
+    })).toThrow('REGISTRATION_ENABLED=true');
+  });
   it('rejects cross-origin login before sending email', async () => {
     const f = fixture();
     await expect(f.call('request-code', {}, { origin: 'https://other.example' })).rejects.toMatchObject({ status: 403 });

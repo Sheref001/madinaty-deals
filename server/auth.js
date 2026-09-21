@@ -26,6 +26,12 @@ export function createAuth({ prisma, config, mailer }) {
   const hmac = value => createHmac('sha256', config.secret).update(value).digest('hex');
   const csrf = token => hmac(`csrf:${token}`);
   const cookie = (token, maxAge = 604800) => `${config.cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${config.local ? '' : '; Secure'}`;
+  async function createLoginSession(tx, userId, action = 'auth.login.cognito') {
+    const token = randomBytes(32).toString('hex');
+    await tx.session.create({ data: { userId, tokenHash: digest(token), expiresAt: new Date(Date.now() + 604800000) } });
+    await tx.auditLog.create({ data: { actorId: userId, action, targetType: 'User', targetId: userId } });
+    return cookie(token);
+  }
   const assertOrigin = request => {
     if (request.headers.origin !== config.origin) throw new RequestError(403, 'Request origin is not allowed');
   };
@@ -48,6 +54,16 @@ export function createAuth({ prisma, config, mailer }) {
     if (!same(request.headers['x-csrf-token'], current.csrfToken)) throw new RequestError(403, 'Invalid security token. Reload and try again.');
     return current;
   }
+  async function logout(request, response, send, payload = {}, additionalHeaders = {}) {
+    const current = await protect(request);
+    await prisma.$transaction([
+      prisma.session.deleteMany({ where: { id: current.id } }),
+      prisma.auditLog.create({ data: { actorId: current.userId, action: 'auth.logout', targetType: 'Session', targetId: current.id } }),
+    ]);
+    const extraCookies = additionalHeaders['set-cookie'];
+    const headers = { ...additionalHeaders, 'set-cookie': extraCookies ? [cookie('', 0), ...(Array.isArray(extraCookies) ? extraCookies : [extraCookies])] : cookie('', 0) };
+    return send(response, 200, { ok: true, ...payload }, headers);
+  }
   async function handle(request, response, parts, send) {
     const route = parts.slice(1).join('/');
     if (route === 'auth/session' && request.method === 'GET') {
@@ -57,16 +73,12 @@ export function createAuth({ prisma, config, mailer }) {
     if (request.method !== 'POST') throw new RequestError(404, 'Not found');
     assertOrigin(request);
     if (route === 'auth/logout') {
-      const current = await protect(request);
-      await prisma.$transaction([
-        prisma.session.deleteMany({ where: { id: current.id } }),
-        prisma.auditLog.create({ data: { actorId: current.userId, action: 'auth.logout', targetType: 'Session', targetId: current.id } }),
-      ]);
-      return send(response, 200, { ok: true }, { 'set-cookie': cookie('', 0) });
+      return logout(request, response, send);
     }
     const body = await readJson(request);
     const peer = request.clientIp || request.socket.remoteAddress || 'unknown';
     if (route === 'auth/request-code') {
+      if (config.cognitoEnabled) throw new RequestError(410, 'Use the secure account sign-in option to continue.');
       const requestedChannel = 'email';
       const destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
@@ -89,6 +101,7 @@ export function createAuth({ prisma, config, mailer }) {
       return send(response, 202, { challengeId: id });
     }
     if (route === 'auth/verify-code') {
+      if (config.cognitoEnabled) throw new RequestError(410, 'Use the secure account sign-in option to continue.');
       if (typeof body.challengeId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.challengeId) || typeof body.code !== 'string' || !/^\d{6}$/.test(body.code)) throw new RequestError(400, 'Enter the six-digit code');
       await consumeLimit(prisma, 'verify-ip', peer, 60, 3600000);
       // Increment independently of the later transaction so failed guesses persist.
@@ -113,5 +126,5 @@ export function createAuth({ prisma, config, mailer }) {
     }
     throw new RequestError(404, 'Not found');
   }
-  return { handle, session, protect, assertOrigin };
+  return { handle, session, protect, assertOrigin, createLoginSession, logout };
 }

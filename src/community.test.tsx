@@ -7,7 +7,7 @@ import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
 import { getPublicConfig, getSession, submitPost } from './api';
 vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
-beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true }); });
+beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }); });
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
@@ -72,7 +72,7 @@ it('ignores a forged local registration flag and requires real sign-in', async (
 });
 
 it('hides account creation and presents sign-in while registrations are paused', async () => {
-  vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: false });
+  vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: false, cognitoEnabled: false });
   localStorage.setItem('madinaty-deals-language', 'en');
   render(<App />);
   const signIn = await screen.findByRole('button', { name: 'Sign in' });

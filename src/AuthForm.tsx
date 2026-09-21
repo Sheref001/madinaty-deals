@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { requestCode, verifyCode, type Account } from './api';
 import { useTranslation } from './i18n';
 
-export default function AuthForm({ onSignedIn, registrationEnabled }: { onSignedIn: (account: Account) => void; registrationEnabled: boolean }) {
-  const { t } = useTranslation();
+export default function AuthForm({ onSignedIn, registrationEnabled, cognitoEnabled }: { onSignedIn: (account: Account) => void; registrationEnabled: boolean; cognitoEnabled: boolean }) {
+  const { t, language } = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const channel = 'email' as const;
   const [name, setName] = useState('');
@@ -11,6 +11,10 @@ export default function AuthForm({ onSignedIn, registrationEnabled }: { onSigned
   const [challengeId, setChallengeId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  if (cognitoEnabled) return <div className="modal-form">
+    <p>{t(registrationEnabled ? 'Continue to secure sign-in or create an account.' : 'Sign in with your existing account. New account creation is temporarily paused.')}</p>
+    <a className="button button-accent" href={`/api/auth/cognito/start?lang=${language}`}>{t('Continue to account')}</a>
+  </div>;
   return <form className="modal-form" onSubmit={async event => {
     event.preventDefault();
     if (busy) return;

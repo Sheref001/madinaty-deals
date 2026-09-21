@@ -42,6 +42,12 @@ export const arabic: Record<string, string> = {
 
   'Sign in or create an account with a code sent to your email.': 'سجّل دخولك أو أنشئ حسابًا بكود يُرسل إلى بريدك الإلكتروني.', 'Sign in or create an account with a code sent to your phone. Email is optional.': 'سجّل دخولك أو أنشئ حسابًا بكود يُرسل إلى هاتفك. البريد الإلكتروني اختياري.',
   'Check your email for a six-digit code. It expires in 10 minutes.': 'راجع بريدك الإلكتروني للكود المكوّن من ٦ أرقام. صلاحيته ١٠ دقائق.',
+  'Continue to secure sign-in or create an account.': 'تابع لتسجيل الدخول بأمان أو إنشاء حساب.',
+  'Sign in with your existing account. New account creation is temporarily paused.': 'سجّل الدخول بحسابك الحالي. إنشاء الحسابات الجديدة متوقف مؤقتًا.',
+  'Continue to account': 'المتابعة إلى الحساب',
+  'Sign-in could not be completed. Please try again.': 'تعذّر إكمال تسجيل الدخول. حاول مرة أخرى.',
+  'Verify your email address with the account provider, then try again.': 'تحقق من بريدك الإلكتروني لدى مزود الحساب، ثم حاول مرة أخرى.',
+  'This account is unavailable. Please contact support.': 'هذا الحساب غير متاح. يرجى التواصل مع الدعم.',
   'Check your phone for a six-digit code. It expires in 10 minutes.': 'راجع هاتفك للكود المكوّن من ٦ أرقام. صلاحيته ١٠ دقائق.',
   'Code delivery is unavailable. Please try again later.': 'إرسال الكود غير متاح حاليًا. حاول مرة أخرى لاحقًا.',
   'Verification code': 'كود التحقق',

@@ -7,6 +7,7 @@ export const arabic: Record<string, string> = {
   'Notifications are enabled': 'الإشعارات مفعّلة',
   'Allow notifications': 'السماح بالإشعارات',
   'Not now': 'ليس الآن',
+  'Residency verification is optional. You can browse now and verify later.': 'توثيق الإقامة اختياري. يمكنك تصفح الموقع الآن والتوثيق لاحقًا.',
   'Turn off notifications': 'إيقاف الإشعارات',
   'You are subscribed to Madinaty Deals updates and offers.': 'أنت مشترك في إشعارات أخبار وعروض مدينتي ديلز.',
   'Notifications are currently unavailable. Please try again later.': 'الإشعارات غير متاحة حاليًا. حاول مرة أخرى لاحقًا.',

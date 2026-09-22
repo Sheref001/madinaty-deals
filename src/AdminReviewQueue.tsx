@@ -48,6 +48,6 @@ export default function AdminReviewQueue() {
       <div className="verification-documents">{item.uploads.map(upload => <button className="small-action" key={upload.id} disabled={busy === item.id} onClick={async () => { try { await openPrivateUpload(upload.id); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not open the private document'); } }}><FileText size={13} /> {t(documentLabels[upload.documentType] || 'Verification document')}</button>)}</div>
       <div className="verification-actions"><button className="small-action approve-action" disabled={Boolean(busy)} onClick={() => review(item, 'VERIFIED')}><Check size={14} /> {t('Approve resident')}</button><button className="small-action danger-action" disabled={Boolean(busy)} onClick={() => review(item, 'REJECTED')}><X size={14} /> {t('Reject')}</button></div>
     </article>)}</div> : <div className="dashboard-empty"><ShieldCheck size={22} /><p>{t('No resident verification requests are waiting for review.')}</p></div>}
-    <div className="dashboard-note"><ShieldCheck size={17} /><p><b>{t('Other moderation tools')}</b><br />{t('Reports, business claims and post approvals are not connected to a live review queue yet.')}</p></div>
+    <div className="dashboard-note"><ShieldCheck size={17} /><p><b>{t('Other moderation tools')}</b><br />{t('Business claims and post approvals are not connected to a live review queue yet. Reports have their own review panel below.')}</p></div>
   </section>;
 }

@@ -22,6 +22,7 @@ const request = async (path: string, options: RequestInit = {}) => {
 export const recordView = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/view`, { method: 'POST' }) as Promise<{ viewCount: number }>;
 export const getComments = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`) as Promise<{ comments: PublicComment[] }>;
 export const postComment = (type: string, id: string, body: string, language: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ body, language }) }) as Promise<{ comment: PublicComment }>;
+export const submitReport = (contentType: string, contentId: string, reason: string, details: string) => request('/reports', { method: 'POST', body: JSON.stringify({ contentType, contentId, reason, details }) }) as Promise<{ report: { id: string; status: string; createdAt: string } }>;
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
@@ -61,6 +62,9 @@ export const updateAdminUserRole = (id: string, role: string) => request(`/admin
 export const updateAdminUserStatus = (id: string, status: string) => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ user: AdminUser }>;
 export const getAdminVerifications = () => request('/admin/verifications') as Promise<{ requests: AdminVerificationRequest[] }>;
 export const reviewAdminVerification = (id: string, status: 'VERIFIED' | 'REJECTED', reason = '') => request(`/admin/verifications/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ status, reason }) });
+export interface AdminContentReport { id: string; contentType: string; contentId: string; reason: string; details?: string | null; status: string; createdAt: string; resolvedAt?: string | null; reporter?: { email?: string | null; phone?: string | null } | null; }
+export const getAdminReports = () => request('/admin/reports') as Promise<{ reports: AdminContentReport[] }>;
+export const reviewAdminReport = (id: string, status: 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED') => request(`/admin/reports/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ report: AdminContentReport }>;
 export async function openPrivateUpload(id: string) {
   const response = await fetch(`${apiBase}/uploads/${encodeURIComponent(id)}`, { credentials: 'include' });
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Could not open the private document');

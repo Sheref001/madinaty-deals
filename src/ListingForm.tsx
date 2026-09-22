@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
-import { listingConditionOptions, type Listing, type ListingCondition, type RentalFurnishing } from './types';
+import { groceryActivities, listingConditionOptions, type GroceryActivity, type Listing, type ListingCondition, type RentalFurnishing } from './types';
 import MediaUpload from './MediaUpload';
 import { submitPost } from './api';
 import PostingAudience from './PostingAudience';
@@ -19,6 +19,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
   const [zone, setZone] = useState(zones[1]);
   const [condition, setCondition] = useState<ListingCondition>('Good');
   const [furnishing, setFurnishing] = useState<RentalFurnishing>('Unfurnished');
+  const [groceryActivity, setGroceryActivity] = useState<GroceryActivity>('Grocery store');
   const [advertiserType, setAdvertiserType] = useState<AdvertiserType>('individual');
   const [businessRequest, setBusinessRequest] = useState<BusinessRequest>('posting');
   const [preview, setPreview] = useState(false);
@@ -32,7 +33,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
     event.preventDefault();
     if (!valid || busy) return;
     if (!preview) { setPreview(true); return; }
-    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
+    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(category === 'Groceries' ? { groceryActivity } : {}), ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
     setBusy(true); setError('');
     try { await submitPost('listing', payload, photos); onPublish(payload); }
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
@@ -46,7 +47,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <span className="eyebrow">{t('Listing preview')}</span>
       <h3 dir="auto">{title}</h3><p dir="auto">{description}</p>
       <strong>{t(formatPrice(Number(price)))}</strong>
-      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd>{isApartmentRental && <><dt>{t('Furnishing')}</dt><dd>{t(furnishing)}</dd></>}{!isApartmentRental && <><dt>{t('Condition')}</dt><dd>{t(condition)}</dd></>}<dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
+      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd>{isApartmentRental && <><dt>{t('Furnishing')}</dt><dd>{t(furnishing)}</dd></>}{category === 'Groceries' && <><dt>{t('Business type')}</dt><dd>{t(groceryActivity)}</dd></>}{!isApartmentRental && category !== 'Groceries' && <><dt>{t('Condition')}</dt><dd>{t(condition)}</dd></>}<dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
       <p className="privacy-note"><ShieldCheck size={16} />{t('Apartment details stay private')}</p>
     </section> : <>
       <p className="modal-intro">{t('Tell neighbours what makes your item useful. Mention any wear or defects so they know what to expect.')}</p>
@@ -56,8 +57,9 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       <label>{t('Price (EGP)')}<input type="number" min="0.01" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0" required /></label></div>
       <label>{t('Description')}<textarea dir="auto" rows={4} minLength={10} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('Size, age, included accessories and any signs of use')} required /></label>
       <MediaUpload files={photos} onChange={setPhotos} />
-      {!isApartmentRental && <div className="form-row"><label>{t('Condition')}<select value={conditionOptions.includes(condition) ? condition : conditionOptions[0]} onChange={event => setCondition(event.target.value as ListingCondition)}>{conditionOptions.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+      {!isApartmentRental && category !== 'Groceries' && <div className="form-row"><label>{t('Condition')}<select value={conditionOptions.includes(condition) ? condition : conditionOptions[0]} onChange={event => setCondition(event.target.value as ListingCondition)}>{conditionOptions.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
       <label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div>}
+      {category === 'Groceries' && <div className="form-row"><label>{t('Business type')}<select value={groceryActivity} onChange={event => setGroceryActivity(event.target.value as GroceryActivity)}>{groceryActivities.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label><label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div>}
       {isApartmentRental && <><div className="form-row"><label>{t('Furnishing')}<select value={furnishing} onChange={event => setFurnishing(event.target.value as RentalFurnishing)}><option value="Furnished">{t('Furnished')}</option><option value="Unfurnished">{t('Unfurnished')}</option></select></label><label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div></>}
     </>}
     <div className="modal-foot">

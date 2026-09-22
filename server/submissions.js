@@ -46,8 +46,14 @@ export function createSubmissions({ prisma, auth }) {
     const clean = Object.fromEntries(['title', 'subtitle', 'category', 'zone'].map(key => [key, payload[key].trim()]));
     if (body.kind === 'listing') {
       if (!['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
-      if (typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0 || payload.price > 100000000 || !['New', 'Like new', 'Good', 'Fair', 'Fully working - used', 'Needs repair', 'Good used condition', 'Worn', 'Excellent', 'Newly finished', 'Well maintained', 'Needs renovation'].includes(payload.condition)) throw new RequestError(400, 'Invalid price or condition');
-      Object.assign(clean, { price: payload.price, condition: payload.condition });
+      if (typeof payload.price !== 'number' || !Number.isFinite(payload.price) || payload.price <= 0 || payload.price > 100000000) throw new RequestError(400, 'Invalid price');
+      if (clean.category !== 'Groceries' && !['New', 'Like new', 'Good', 'Fair', 'Fully working - used', 'Needs repair', 'Good used condition', 'Worn', 'Excellent', 'Newly finished', 'Well maintained', 'Needs renovation'].includes(payload.condition)) throw new RequestError(400, 'Invalid condition');
+      Object.assign(clean, { price: payload.price, ...(clean.category === 'Groceries' ? {} : { condition: payload.condition }) });
+      if (clean.category === 'Groceries') {
+        const groceryActivities = ['Grocery store', 'Butcher', 'Poultry', 'Bakery', 'Fishmonger', 'Fruits & vegetables', 'Dairy & cheese'];
+        if (!groceryActivities.includes(payload.groceryActivity)) throw new RequestError(400, 'Choose a grocery activity');
+        clean.groceryActivity = payload.groceryActivity;
+      }
       if (clean.category === 'Apartment rentals') {
         if (!['Furnished', 'Unfurnished'].includes(payload.furnishing)) throw new RequestError(400, 'Choose furnished or unfurnished');
         clean.furnishing = payload.furnishing;
@@ -55,7 +61,7 @@ export function createSubmissions({ prisma, auth }) {
     } else {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
-      Object.assign(clean, { whatsapp: payload.whatsapp });
+      Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
       if (clean.category === 'Tutoring & education') {
         const educationLevel = payload.educationLevel || 'Before university';
         const submittedSubjects = payload.subjects || ['Mathematics'];
@@ -64,6 +70,21 @@ export function createSubmissions({ prisma, auth }) {
         if (!Array.isArray(submittedSubjects) || submittedSubjects.length < 1 || submittedSubjects.length > subjects.length || !submittedSubjects.every(subject => subjects.includes(subject))) throw new RequestError(400, 'Choose at least one subject');
         clean.educationLevel = educationLevel;
         clean.subjects = [...new Set(submittedSubjects)];
+      }
+      if (clean.category === 'Home services') {
+        const homeServiceType = payload.homeServiceType || 'General maintenance';
+        if (!['Electrician', 'Plumber', 'AC technician', 'Painter', 'Carpenter', 'General maintenance'].includes(homeServiceType)) throw new RequestError(400, 'Choose a service type');
+        clean.homeServiceType = homeServiceType;
+      }
+      if (clean.category === 'Housekeeping & cleaning') {
+        const housekeepingType = payload.housekeepingType || 'General cleaning';
+        if (!['General cleaning', 'Deep cleaning', 'Move-in/move-out cleaning', 'Upholstery & carpet cleaning'].includes(housekeepingType)) throw new RequestError(400, 'Choose a cleaning type');
+        clean.housekeepingType = housekeepingType;
+      }
+      if (clean.category === 'Health & fitness') {
+        const fitnessProviderType = payload.fitnessProviderType || 'Fitness center';
+        if (!['Fitness center', 'Personal trainers'].includes(fitnessProviderType)) throw new RequestError(400, 'Choose a fitness provider type');
+        clean.fitnessProviderType = fitnessProviderType;
       }
       if (['Tutoring & education', 'Health & fitness'].includes(clean.category) && payload.offer !== undefined) {
         if (!payload.offer || typeof payload.offer !== 'object' || Array.isArray(payload.offer)) throw new RequestError(400, 'Invalid offer');

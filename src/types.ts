@@ -53,6 +53,7 @@ export interface Listing extends BaseResult {
   price: number | null;
   condition: ListingCondition;
   furnishing?: RentalFurnishing;
+  groceryActivity?: GroceryActivity;
   seller: string;
   sellerVerified?: boolean;
   status: 'active' | 'reserved' | 'sold';
@@ -67,6 +68,8 @@ export interface Service extends BaseResult {
   phone: string;
   whatsapp?: string;
   response: string;
+  pricing?: string;
+  availability?: string;
   educationLevel?: EducationLevel;
   subjects?: TutoringSubject[];
   homeServiceType?: HomeServiceType;

@@ -10,7 +10,7 @@ vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof impor
 afterEach(() => { cleanup(); vi.restoreAllMocks(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
 describe('Arabic and English experience', () => {
-  it('returns home when switching languages, preserves saved state, and remembers the choice on reload', () => {
+  it('preserves the current view when switching languages and remembers the choice on reload', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     window.history.replaceState({}, '', '/?lang=ar');
     const { unmount } = render(<App />);
@@ -20,7 +20,7 @@ describe('Arabic and English experience', () => {
     expect(screen.getByRole('heading', { name: 'إعلاناتك المحفوظة' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(document.documentElement.dir).toBe('ltr');
-    expect(screen.getByRole('heading', { name: 'Buy, sell and discover in Madinaty' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Saved' }));
     expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
@@ -32,7 +32,7 @@ describe('Arabic and English experience', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
     fireEvent.click(screen.getByRole('button', { name: 'التبديل إلى العربية' }));
     expect(document.documentElement.dir).toBe('rtl');
-    expect(screen.getByRole('heading', { name: translate('Buy, sell and discover in Madinaty', 'ar') })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: translate('Find your next good thing', 'ar') })).toBeTruthy();
   });
 
   it('keeps canonical zone and category values in Arabic forms', async () => {

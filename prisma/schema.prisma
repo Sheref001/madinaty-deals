@@ -162,6 +162,7 @@ model User {
   uploads                  Upload[]
   submissions              Submission[]
   comments                 Comment[]
+  contentReports           ContentReport[]       @relation("ContentReportReporter")
 }
 
 model Session {
@@ -466,6 +467,21 @@ model Report {
   business       Business?    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   review         Review?      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   @@index([status, createdAt])
+}
+
+model ContentReport {
+  id          String    @id @default(uuid()) @db.Uuid
+  reporterId  String?   @db.Uuid
+  contentType String
+  contentId   String
+  reason      String
+  details     String?
+  status      String    @default("OPEN")
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  reporter    User?     @relation("ContentReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
+  @@index([contentType, contentId, createdAt])
 }
 
 model ModerationAction {

@@ -84,7 +84,7 @@ describe('authentication boundaries', () => {
       MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true', REGISTRATION_ENABLED: 'false',
       COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
       COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
-    })).toThrow('REGISTRATION_ENABLED=true');
+    })).not.toThrow();
   });
   it('rejects cross-origin login before sending email', async () => {
     const f = fixture();

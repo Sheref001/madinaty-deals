@@ -14,7 +14,7 @@ import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
-import { getComments, getPublicConfig, postComment, recordView, type PublicComment } from './api';
+import { getComments, getPublicConfig, postComment, recordView, submitReport, type PublicComment } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -23,6 +23,7 @@ import type { CollectionFilters } from './MarketplaceFilters';
 import RevenueDesk from './RevenueDesk';
 import AdminUsers from './AdminUsers';
 import AdminReviewQueue from './AdminReviewQueue';
+import AdminReports from './AdminReports';
 import EliteAdSpace from './EliteAdSpace';
 import { splitCategories, businessOnlyCategories, businessTerms, tutoringCategories } from './categoryPolicy';
 import AuthForm from './AuthForm';
@@ -196,10 +197,6 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
   const changeLanguage = () => {
     const nextLanguage = language === 'ar' ? 'en' : 'ar';
-    goTo('home');
-    setModal(null);
-    setSelectedResult(null);
-    setToast('');
     const url = new URL(window.location.href);
     url.searchParams.set('lang', nextLanguage);
     url.hash = '';
@@ -362,7 +359,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
       {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal('post'); track('account_signed_in'); }} />}
-      {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
+      {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={async (reason, details) => { await submitReport(selectedResult.type, selectedResult.id, reason, details); setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSkip={() => setModal(null)} onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>
   );
@@ -531,6 +528,11 @@ function ResultCard({ result, compact = false, favorite = false, verifiedResiden
     if (!detailsOpen) return;
     recordView(result.type, result.id).then(({ viewCount }) => setLiveViewCount(viewCount)).catch(() => { /* The static demo count remains visible until the API is configured. */ });
   }, [detailsOpen, result.id, result.type]);
+  useEffect(() => {
+    const syncFromUrl = () => setDetailsOpen(new URLSearchParams(window.location.search).get('ad') === result.id);
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, [result.id]);
   return <article className={`result-card ${compact ? 'compact-card' : ''} type-${result.type}`}>
     <div className={`result-image image-${result.image} art-${result.accent}`}><ResultArt result={result} /><span className="result-type">{isOffer ? <Zap size={11} fill="currentColor" /> : isBusiness ? <Store size={11} /> : isService ? <Wrench size={11} /> : <Package size={11} />} {t(isOffer ? 'Local offer' : isBusiness ? 'Business' : isService ? 'Service' : 'For sale')}</span>{isOffer && result.featured ? <span className="featured-label">{t("Featured")}</span> : null}</div>
     <div className="result-body">
@@ -623,13 +625,31 @@ function AdminView({ onBack }: { onBack: () => void }) {
   return <div className="admin-view operations-dashboard"><div className="page-intro"><div><span className="eyebrow">{t('OWNER DASHBOARD · OPERATIONS')}</span><h1>{t('Understand what is happening.')}</h1><p>{t('Track marketplace activity, demand and the actions that need your attention.')}</p></div><div className="dashboard-actions"><span className="demo-status"><span /> {t('Demo analytics')}</span><button className="button button-outline" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} /> {t('Refresh')}</button><button className="button button-dark" onClick={onBack}>{t('Back to app')}</button></div></div>
     <div className="admin-stats dashboard-stats"><div><span className="admin-stat-icon blue"><BarChart3 size={17} /></span><span><b>{totalListings}</b><small>{t('Listing submissions this session')}</small></span></div><div><span className="admin-stat-icon mint"><Wrench size={17} /></span><span><b>{totalServices}</b><small>{t('Service submissions this session')}</small></span></div><div><span className="admin-stat-icon amber"><MessageCircle size={17} /></span><span><b>{contacts}</b><small>{t('Contact actions')}</small></span></div><div><span className="admin-stat-icon plum"><Eye size={17} /></span><span><b>{searches}</b><small>{t('Searches')}</small></span></div><div><span className="admin-stat-icon blue"><Bookmark size={17} /></span><span><b>{saves}</b><small>{t('Saved items')}</small></span></div><div><span className="admin-stat-icon amber"><Flag size={17} /></span><span><b>{reports}</b><small>{t('Report attempts this session')}</small></span></div></div>
     <div className="dashboard-grid"><section className="admin-panel activity-panel"><div className="panel-heading"><div><span className="eyebrow">{t('LIVE SESSION')}</span><h2>{t('Recent activity')}</h2></div><span className="live-pill light-live"><span /> {t('Tracking')}</span></div>{recentEvents.length ? <div className="activity-list">{recentEvents.map((event, index) => <div className="activity-row" key={`${event.occurredAt}-${index}`}><span className="activity-icon">{eventIcon(event.name)}</span><span><b>{t(eventName(event.name))}</b><small>{new Date(event.occurredAt).toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-EG', { hour: 'numeric', minute: '2-digit' })}{event.properties?.result_type ? ` · ${event.properties.result_type}` : ''}</small></span><strong>{event.properties?.category ? String(event.properties.category) : ''}</strong></div>)}</div> : <div className="dashboard-empty"><Activity size={21} /><p>{t('Activity will appear here as people browse, save, contact and post.')}</p></div>}</section><section className="admin-panel channel-panel"><div className="panel-heading"><div><span className="eyebrow">{t('DEMAND SIGNALS')}</span><h2>{t('What people do')}</h2></div><BarChart3 size={18} className="panel-icon" /></div><div className="channel-row"><span>{t('Searches')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, searches * 18 + 12)}%` }} /></div><b>{searches}</b></div><div className="channel-row"><span>{t('Contact actions')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, contacts * 20 + 8)}%` }} /></div><b>{contacts}</b></div><div className="channel-row"><span>{t('Saved items')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, saves * 20 + 8)}%` }} /></div><b>{saves}</b></div><div className="channel-insight"><TrendingUp size={16} /><span><b>{t('Next insight')}</b><small>{t('Watch which service categories get searches but few contact actions.')}</small></span></div></section></div>
-    <div className="dashboard-note"><ShieldCheck size={18} /><p><b>{t('Analytics status')}</b><br />{t('These analytics are local to this browser session and are not marketplace-wide or persistent.')}</p></div><AdminUsers /><AdminReviewQueue /><RevenueDesk />
+    <div className="dashboard-note"><ShieldCheck size={18} /><p><b>{t('Analytics status')}</b><br />{t('These analytics are local to this browser session and are not marketplace-wide or persistent.')}</p></div><AdminUsers /><AdminReviewQueue /><AdminReports /><RevenueDesk />
   </div>;
 }
 
 function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyebrow: string; children: ReactNode; onClose: () => void }) {
   const { t } = useTranslation();
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
+  const modalRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const modal = modalRef.current;
+    const focusable = modal?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]');
+    (focusable || modal)?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
+      if (event.key !== 'Tab' || !modal) return;
+      const items = [...modal.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]')];
+      if (!items.length) return;
+      const first = items[0]; const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('keydown', onKeyDown); previous?.focus?.(); };
+  }, [onClose]);
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div ref={modalRef} className="modal" role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
 function RegistrationModal({ onClose, onRegistered, registrationEnabled, cognitoEnabled, signInError }: { onClose: () => void; onRegistered: (account: Account) => void; registrationEnabled: boolean; cognitoEnabled: boolean; signInError: string }) {
@@ -649,11 +669,14 @@ function PostModal({ onClose, onPublish, onPublishService, residentVerified, ren
   </ModalShell>;
 }
 
-function ReportModal({ result, onClose, onSubmit }: { result: SearchResult; onClose: () => void; onSubmit: () => void }) {
+function ReportModal({ result, onClose, onSubmit }: { result: SearchResult; onClose: () => void; onSubmit: (reason: string, details: string) => Promise<void> }) {
   const { t } = useTranslation();
   const reasons = ['Scam or fraud', 'Prohibited item or service', 'Duplicate or spam', 'Misleading information', 'Wrong category', 'Something else'];
   const [reason, setReason] = useState(reasons[0]);
-  return <ModalShell title="Report this content" eyebrow="HELP KEEP IT TRUSTED" onClose={onClose}><form className="modal-form" onSubmit={(event) => { event.preventDefault(); onSubmit(); }}><p className="modal-intro">{t("You’re reporting ")}<b>{t(result.title)}</b>{t(". Reports are private and reviewed by the trust team.")}</p><label>{t("What’s wrong?")}<select value={reason} onChange={(event) => setReason(event.target.value)}>{reasons.map((item) => <option key={item} value={item}>{t(item)}</option>)}</select></label><label>{t("Anything else? ")}<textarea rows={3} placeholder={t("Optional context for our review team")} /></label><div className="modal-foot"><span className="privacy-note"><Flag size={15} /> {t(" Your report stays private")}</span><button className="button button-dark" type="submit">{t("Submit report ")}<ArrowRight size={16} /></button></div></form></ModalShell>;
+  const [details, setDetails] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  return <ModalShell title="Report this content" eyebrow="HELP KEEP IT TRUSTED" onClose={onClose}><form className="modal-form" onSubmit={async (event) => { event.preventDefault(); setError(''); setSubmitting(true); try { await onSubmit(reason, details); } catch (submissionError) { setError(submissionError instanceof Error ? submissionError.message : 'Report could not be submitted'); } finally { setSubmitting(false); } }}><p className="modal-intro">{t("You’re reporting ")}<b>{t(result.title)}</b>{t(". Reports are private and reviewed by the trust team.")}</p>{error && <p className="form-error" role="alert">{t(error)}</p>}<label>{t("What’s wrong?")}<select value={reason} onChange={(event) => setReason(event.target.value)}>{reasons.map((item) => <option key={item} value={item}>{t(item)}</option>)}</select></label><label>{t("Anything else? ")}<textarea rows={3} value={details} maxLength={1000} onChange={(event) => setDetails(event.target.value)} placeholder={t("Optional context for our review team")} /></label><div className="modal-foot"><span className="privacy-note"><Flag size={15} /> {t(" Your report stays private")}</span><button className="button button-dark" type="submit" disabled={submitting}>{t(submitting ? 'Submitting…' : "Submit report ")}<ArrowRight size={16} /></button></div></form></ModalShell>;
 }
 
 export default App;

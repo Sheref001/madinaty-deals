@@ -155,12 +155,12 @@ describe('Cognito sign-in', () => {
     expect(f.prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('keeps the Cognito flow unavailable while registrations are disabled', async () => {
+  it('keeps existing Cognito sign-in available while registrations are disabled', async () => {
     const f = setup({ registrationEnabled: false });
     const startResponse = response();
-    await expect(f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start', headers: {} }, startResponse, ['api', 'auth', 'cognito', 'start'])).rejects.toMatchObject({ status: 404 });
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start', headers: {} }, startResponse, ['api', 'auth', 'cognito', 'start']);
     expect(f.prisma.$transaction).not.toHaveBeenCalled();
-    expect(f.oidc.discovery).not.toHaveBeenCalled();
+    expect(f.oidc.discovery).toHaveBeenCalled();
   });
 
   it('clears the local session and redirects through Cognito managed logout', async () => {

@@ -12,7 +12,6 @@ export function loadConfig(env = process.env) {
   const cognitoClientId = env.COGNITO_CLIENT_ID || '';
   const cognitoCallbackUrl = env.COGNITO_CALLBACK_URL || '';
   if (cognitoEnabled) {
-    if (!registrationEnabled) throw new Error('REGISTRATION_ENABLED=true is required when COGNITO_ENABLED=true');
     for (const [key, value] of [['COGNITO_ISSUER_URL', cognitoIssuerUrl], ['COGNITO_CLIENT_ID', cognitoClientId], ['COGNITO_CALLBACK_URL', cognitoCallbackUrl]]) {
       if (!value) throw new Error(`${key} is required when COGNITO_ENABLED=true`);
     }
@@ -38,6 +37,7 @@ export function loadConfig(env = process.env) {
     local, origin: origin.origin, secret: env.AUTH_SECRET,
     cookieName: local ? 'madinaty_session' : '__Host-madinaty_session',
     mailProvider, registrationEnabled, cognitoEnabled,
+    trustedProxyPeers: new Set(String(env.TRUSTED_PROXY_PEERS || '').split(',').map(value => value.trim()).filter(Boolean)),
     cognito: {
       issuerUrl: cognitoIssuerUrl,
       clientId: cognitoClientId,

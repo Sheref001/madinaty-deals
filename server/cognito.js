@@ -62,7 +62,7 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
   };
 
   async function start(request, response) {
-    if (!config.cognitoEnabled || !config.registrationEnabled) throw new RequestError(404, 'Not found');
+    if (!config.cognitoEnabled) throw new RequestError(404, 'Not found');
     const language = new URL(request.url, config.origin).searchParams.get('lang') === 'ar' ? 'ar' : 'en';
     const state = oidcClient.randomState();
     const nonce = oidcClient.randomNonce();
@@ -138,7 +138,7 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
   }
 
   async function handle(request, response, parts, send) {
-    if (!config.cognitoEnabled || !config.registrationEnabled) throw new RequestError(404, 'Not found');
+    if (!config.cognitoEnabled) throw new RequestError(404, 'Not found');
     const route = parts.slice(1).join('/');
     if (route === 'auth/cognito/start' && request.method === 'GET') return start(request, response);
     if (route === 'auth/cognito/callback' && request.method === 'GET') return callback(request, response);

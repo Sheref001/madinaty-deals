@@ -10,6 +10,7 @@ import { createUploads } from './uploads.js';
 import { createLocalStorage } from './local-storage.js';
 import { createSubmissions } from './submissions.js';
 import { createAdmin } from './admin.js';
+import { createReports } from './reports.js';
 
 const prisma = new PrismaClient();
 const port = Number(process.env.PORT || 3000);
@@ -19,7 +20,8 @@ const cognito = createCognitoAuth({ prisma, auth, config });
 const uploads = createUploads({ prisma, config, auth, storage: createLocalStorage(config.uploadDirectory) });
 const submissions = createSubmissions({ prisma, auth });
 const admin = createAdmin({ prisma, auth });
-const server = createServer(createRequestHandler({ prisma, auth, cognito, uploads, submissions, admin, config, corsOrigin: config.origin }));
+const reports = createReports({ prisma, auth, origin: config.origin });
+const server = createServer(createRequestHandler({ prisma, auth, cognito, uploads, submissions, admin, reports, config, corsOrigin: config.origin }));
 server.requestTimeout = 45000;
 server.headersTimeout = 15000;
 

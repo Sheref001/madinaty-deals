@@ -7,7 +7,7 @@ import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, config = {} }) {
+export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, config = {} }) {
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
 
@@ -17,6 +17,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     'referrer-policy': 'strict-origin-when-cross-origin',
     'permissions-policy': 'camera=(self), microphone=(), geolocation=()',
     'content-security-policy': "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    ...(config.local ? {} : { 'strict-transport-security': 'max-age=31536000' }),
   };
 
   const send = (response, status, payload, headers = {}) => {
@@ -27,14 +28,18 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
   const dayKey = () => new Date().toISOString().slice(0, 10);
 
   async function handleApi(request, response, parts) {
-    const clientKey = request.socket.remoteAddress || 'unknown';
+    const peer = request.socket.remoteAddress || 'unknown';
+    const forwarded = config.trustedProxyPeers?.has(peer) ? String(request.headers['x-forwarded-for'] || '').split(',')[0].trim() : '';
+    const clientKey = forwarded || peer;
     request.clientIp = clientKey;
     if (!requestLimit.take(clientKey)) return send(response, 429, { error: 'Too many requests. Please try again later.' }, { 'retry-after': '60' });
     if (parts.length === 2 && parts[1] === 'health' && request.method === 'GET') return send(response, 200, { ok: true });
     if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true, cognitoEnabled: config.cognitoEnabled === true });
     if (parts[1] === 'auth' && parts[2] === 'cognito' && cognito) return cognito.handle(request, response, parts, send);
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
+    if (parts[1] === 'reports' && reports) return reports.handle(request, response, parts, send);
     if (['uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);
+    if (parts[1] === 'admin' && parts[2] === 'reports' && reports) return reports.handle(request, response, parts, send);
     if (parts[1] === 'admin' && parts[2] === 'verifications' && submissions) return submissions.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);
     if (parts[1] === 'submissions' && submissions) return submissions.handle(request, response, parts, send);
@@ -94,13 +99,15 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
       const content = await readFile(filePath);
       const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.gif': 'image/gif', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.webmanifest': 'application/manifest+json' };
       response.writeHead(200, { 'content-type': types[extname(filePath)] || 'application/octet-stream', 'cache-control': relative.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache', ...securityHeaders });
-      response.end(content);
+      if (request.method !== 'HEAD') response.end(content);
+      else response.end();
     } catch (error) {
       if (!['ENOENT', 'EISDIR', 'ENOTDIR'].includes(error.code)) throw error;
       if (extname(relative) || relative.startsWith('assets/')) return send(response, 404, { error: 'Not found' });
       const content = await readFile(join(distDirectory, 'index.html'));
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', ...securityHeaders });
-      response.end(content);
+      if (request.method !== 'HEAD') response.end(content);
+      else response.end();
     }
   }
 
@@ -108,8 +115,16 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (request.method === 'OPTIONS') return send(response, 204, {}, { 'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type,x-visitor-id,x-csrf-token,x-file-name' });
     try {
       const parts = routeParts(request.url);
+      if (!config.local && (request.method === 'GET' || request.method === 'HEAD') && request.headers['x-forwarded-proto'] === 'http') {
+        const url = new URL(request.url, config.origin);
+        if (request.method === 'HEAD') {
+          response.writeHead(308, { location: `${config.origin}${url.pathname}${url.search}`, ...securityHeaders });
+          return response.end();
+        }
+        return send(response, 308, {}, { location: `${config.origin}${url.pathname}${url.search}` });
+      }
       if (parts[0] === 'api') return await handleApi(request, response, parts);
-      if (request.method === 'GET') return await serveStatic(request, response);
+      if (request.method === 'GET' || request.method === 'HEAD') return await serveStatic(request, response);
       return send(response, 405, { error: 'Method not allowed' });
     } catch (error) {
       if (error instanceof RequestError) return send(response, error.status, { error: error.message });

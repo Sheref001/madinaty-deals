@@ -29,6 +29,8 @@ export const fitnessProviderTypes = ['Fitness center', 'Personal trainers'] as c
 export type FitnessProviderType = typeof fitnessProviderTypes[number];
 export const petBusinessTypes = ['Veterinary clinics', 'Pet shops'] as const;
 export type PetBusinessType = typeof petBusinessTypes[number];
+export const serviceOfferKinds = ['First session free', 'Buy two, get one free', 'Percentage discount', 'Fixed amount discount'] as const;
+export type ServiceOfferKind = typeof serviceOfferKinds[number];
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -77,7 +79,7 @@ export interface Service extends BaseResult {
   homeServiceType?: HomeServiceType;
   housekeepingType?: HousekeepingType;
   petBusinessType?: PetBusinessType;
-  offer?: { discount: string; validUntil: string };
+  offer?: { kind: ServiceOfferKind; discount: string; validUntil: string };
 }
 
 export interface Business extends BaseResult {

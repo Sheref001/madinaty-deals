@@ -91,11 +91,14 @@ export function createSubmissions({ prisma, auth }) {
         if (!['Veterinary clinics', 'Pet shops'].includes(payload.petBusinessType)) throw new RequestError(400, 'Choose a pet business type');
         clean.petBusinessType = payload.petBusinessType;
       }
-      if (['Tutoring & education', 'Health & fitness'].includes(clean.category) && payload.offer !== undefined) {
+      if (payload.offer !== undefined) {
         if (!payload.offer || typeof payload.offer !== 'object' || Array.isArray(payload.offer)) throw new RequestError(400, 'Invalid offer');
+        if (!['kind', 'discount', 'validUntil'].every(key => Object.prototype.hasOwnProperty.call(payload.offer, key)) || Object.keys(payload.offer).some(key => !['kind', 'discount', 'validUntil'].includes(key))) throw new RequestError(400, 'Use one promotion per service');
+        if (!['First session free', 'Buy two, get one free', 'Percentage discount', 'Fixed amount discount'].includes(payload.offer.kind)) throw new RequestError(400, 'Choose one promotion type');
         if (typeof payload.offer.discount !== 'string' || payload.offer.discount.trim().length < 2 || payload.offer.discount.length > 120) throw new RequestError(400, 'Enter valid offer details');
+        if (/\r|\n/.test(payload.offer.discount)) throw new RequestError(400, 'Enter one promotion only');
         if (typeof payload.offer.validUntil !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.offer.validUntil)) throw new RequestError(400, 'Choose an offer expiry date');
-        clean.offer = { discount: payload.offer.discount.trim(), validUntil: payload.offer.validUntil };
+        clean.offer = { kind: payload.offer.kind, discount: payload.offer.discount.trim(), validUntil: payload.offer.validUntil };
       }
     }
     if (['Tutoring', 'Tutoring & education', 'Health & fitness', 'Electronics'].includes(clean.category)) {
@@ -116,6 +119,13 @@ export function createSubmissions({ prisma, auth }) {
     const rentalMonth = rental ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date()) : null;
     const result = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+      if (clean.offer) {
+        const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1) - 86400000);
+        const previousPromotions = await tx.submission.findMany({ where: { userId: current.userId, kind: 'service', createdAt: { gte: monthStart } }, select: { createdAt: true, payload: true }, take: 100 });
+        const cairoMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date());
+        const alreadyUsed = previousPromotions.some(item => item.createdAt && new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date(item.createdAt)) === cairoMonth && item.payload && typeof item.payload === 'object' && !Array.isArray(item.payload) && item.payload.offer);
+        if (alreadyUsed) throw new RequestError(409, 'Your free monthly promotion has already been used. Contact hello@madinatydeals.com for a quote for another promotion or changes.');
+      }
       if (rental) {
         const profile = await tx.profile.findUnique({ where: { userId: current.userId } });
         if (profile?.verificationState !== 'VERIFIED' || current.user.role !== 'RESIDENT') throw new RequestError(403, 'Apartment rentals require verified Madinaty residency');

@@ -64,6 +64,17 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' })));
 });
 
+it('offers one structured promotion for every visible service category', () => {
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+  const category = screen.getByLabelText('Choose your service category');
+  fireEvent.change(category, { target: { value: 'Moving' } });
+  expect(screen.getByText('One promotion per calendar month is free. Removing it later uses this month’s free slot. A change or additional promotion requires a quote from us.')).toBeTruthy();
+  expect(screen.getByRole('checkbox', { name: 'Add one promotion to this service' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Add one promotion to this service' }));
+  expect(screen.getByLabelText('Promotion type')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Need another promotion or an edit? Contact hello@madinatydeals.com' }).getAttribute('href')).toContain('mailto:hello@madinatydeals.com');
+});
+
 it('requires an explicit service category and offers every supported service type', () => {
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;

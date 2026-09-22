@@ -53,6 +53,22 @@ describe('marketplace submission boundaries', () => {
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
   });
+  it('allows one structured promotion per month and rejects a second one', async () => {
+    const f = fixture();
+    const service = { ...payload, category: 'Home services', whatsapp: '+201001234567', offer: { kind: 'Percentage discount', discount: '10% off the first booking', validUntil: '2026-12-31' } };
+    await f.call({ kind: 'service', payload: service });
+    expect(f.prisma.submission.create).toHaveBeenCalledOnce();
+    f.prisma.submission.findMany.mockResolvedValue([{ createdAt: new Date(), payload: { offer: service.offer } }]);
+    await expect(f.call({ kind: 'service', payload: { ...service, offer: { ...service.offer, discount: '20% off' } } })).rejects.toMatchObject({ status: 409, message: expect.stringContaining('hello@madinatydeals.com') });
+    expect(f.prisma.submission.create).toHaveBeenCalledOnce();
+  });
+  it('rejects multiple or malformed promotions', async () => {
+    const f = fixture();
+    const baseService = { ...payload, category: 'Moving', whatsapp: '+201001234567' };
+    await expect(f.call({ kind: 'service', payload: { ...baseService, offer: { kind: 'Percentage discount', discount: '10% and first session free', validUntil: '2026-12-31', secondOffer: 'free delivery' } } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: { ...baseService, offer: { kind: 'Percentage discount', discount: '10%\nFirst session free', validUntil: '2026-12-31' } } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
   it('keeps pet-care research submissions restricted to administrators and validates the subtype', async () => {
     const resident = fixture();
     const petCare = { ...payload, category: 'Pet care', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics' };

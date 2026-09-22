@@ -51,6 +51,7 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
   expect(screen.getByText('No residency verification required')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Tutoring & education' } });
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Math tutoring for students' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Private lessons for school students and exam preparation.' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });
@@ -58,6 +59,17 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000' })));
+});
+
+it('requires an explicit service category and offers every supported service type', () => {
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+  const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
+  expect(category.value).toBe('');
+  expect(Array.from(category.options).map(option => option.value)).toEqual([
+    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services',
+  ]);
+  expect(screen.queryByLabelText('Education stage')).toBeNull();
+  expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it('routes the home services category to providers in Arabic', () => {
@@ -104,7 +116,7 @@ it('hides account creation and presents sign-in while registrations are paused',
 it('preserves a small business authentication request through preview and submission', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
-  fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Health & fitness' } });
+  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Health & fitness' } });
   expect(screen.getByLabelText('Advertiser type')).toBeTruthy();
   expect(screen.queryByText('Individual ads are free.')).toBeNull();
   fireEvent.change(screen.getByLabelText('Advertiser type'), { target: { value: 'small_business' } });

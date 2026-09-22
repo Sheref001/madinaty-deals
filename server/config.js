@@ -11,14 +11,17 @@ export function loadConfig(env = process.env) {
   const cognitoIssuerUrl = env.COGNITO_ISSUER_URL || '';
   const cognitoClientId = env.COGNITO_CLIENT_ID || '';
   const cognitoCallbackUrl = env.COGNITO_CALLBACK_URL || '';
+  const cognitoDomainUrl = env.COGNITO_DOMAIN_URL || '';
   if (cognitoEnabled) {
     for (const [key, value] of [['COGNITO_ISSUER_URL', cognitoIssuerUrl], ['COGNITO_CLIENT_ID', cognitoClientId], ['COGNITO_CALLBACK_URL', cognitoCallbackUrl]]) {
       if (!value) throw new Error(`${key} is required when COGNITO_ENABLED=true`);
     }
     const issuer = new URL(cognitoIssuerUrl);
     const callback = new URL(cognitoCallbackUrl);
+    const domain = cognitoDomainUrl ? new URL(cognitoDomainUrl) : null;
     if (issuer.protocol !== 'https:' || issuer.search || issuer.hash || issuer.username || issuer.password) throw new Error('COGNITO_ISSUER_URL must be a valid HTTPS issuer URL');
     if (callback.origin !== origin.origin || callback.protocol !== 'https:' && !local || callback.pathname !== '/api/auth/cognito/callback' || callback.search || callback.hash) throw new Error('COGNITO_CALLBACK_URL must be the HTTPS callback route on APP_ORIGIN');
+    if (domain && (domain.protocol !== 'https:' || domain.pathname !== '/' || domain.search || domain.hash || domain.username || domain.password)) throw new Error('COGNITO_DOMAIN_URL must be an HTTPS origin only');
   }
   const from = env.SMTP_FROM || 'hello@madinatydeals.com';
   if (mailProvider === 'smtp') {
@@ -43,6 +46,7 @@ export function loadConfig(env = process.env) {
       clientId: cognitoClientId,
       clientSecret: env.COGNITO_CLIENT_SECRET || '',
       callbackUrl: cognitoCallbackUrl,
+      domainUrl: cognitoDomainUrl,
     },
     smtp: { host: env.SMTP_HOST, port: Number(env.SMTP_PORT || 587), secure: env.SMTP_PORT === '465', requireTLS: !local, auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } : undefined, connectionTimeout: 10000, socketTimeout: 15000 },
     graph: { tenantId: env.MS_TENANT_ID, clientId: env.MS_CLIENT_ID, tokenFile: env.MS_TOKEN_FILE || '/app/data/mail-auth/token.json' },

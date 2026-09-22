@@ -8,7 +8,7 @@ const config = {
   registrationEnabled: true, cognitoEnabled: true,
   cognito: {
     issuerUrl: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
-    clientId: 'client-id', clientSecret: '', callbackUrl: 'https://madinatydeals.com/api/auth/cognito/callback',
+    clientId: 'client-id', clientSecret: '', callbackUrl: 'https://madinatydeals.com/api/auth/cognito/callback', domainUrl: '',
   },
 };
 const response = () => ({ writeHead: vi.fn(), end: vi.fn() });
@@ -21,7 +21,7 @@ const oidcClient = () => ({
   buildAuthorizationUrl: vi.fn(() => new URL('https://example.auth.eu-north-1.amazoncognito.com/oauth2/authorize')),
   authorizationCodeGrant: vi.fn().mockResolvedValue({ claims: () => ({ sub: 'cognito-subject', email: 'new@example.com', email_verified: true, name: 'New Neighbour' }) }),
 });
-function setup({ registrationEnabled = true, existingUser = null, useRealAuth = false } = {}) {
+function setup({ registrationEnabled = true, existingUser = null, useRealAuth = false, domainUrl = '' } = {}) {
   const oidc = oidcClient();
   const createdUser = { id: 'user-1', email: 'new@example.com', emailVerifiedAt: new Date(), status: 'ACTIVE', profile: { displayName: 'New Neighbour' } };
   const tx = {
@@ -43,7 +43,7 @@ function setup({ registrationEnabled = true, existingUser = null, useRealAuth = 
     logout: vi.fn().mockResolvedValue({}),
   };
   const logger = { warn: vi.fn(), error: vi.fn() };
-  const cognito = createCognitoAuth({ prisma, auth, config: { ...config, registrationEnabled }, oidcClient: oidc, logger });
+  const cognito = createCognitoAuth({ prisma, auth, config: { ...config, registrationEnabled, cognito: { ...config.cognito, domainUrl } }, oidcClient: oidc, logger });
   return { cognito, oidc, prisma, auth, tx, logger, createdUser };
 }
 
@@ -77,6 +77,13 @@ describe('Cognito sign-in', () => {
     const res = response();
     await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?lang=en&provider=google', headers: {} }, res, ['api', 'auth', 'cognito', 'start']);
     expect(f.oidc.buildAuthorizationUrl.mock.calls[0][1]).toMatchObject({ identity_provider: 'Google', lang: 'en' });
+  });
+
+  it('uses the branded Cognito domain for authorization when configured', async () => {
+    const f = setup({ domainUrl: 'https://auth.madinatydeals.com' });
+    const res = response();
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?provider=google', headers: {} }, res, ['api', 'auth', 'cognito', 'start']);
+    expect(new URL(res.writeHead.mock.calls[0][1].location).origin).toBe('https://auth.madinatydeals.com');
   });
 
   it('opens Cognito signup directly and refuses signup while registration is paused', async () => {
@@ -193,5 +200,11 @@ describe('Cognito sign-in', () => {
     expect(f.auth.logout.mock.calls[0][0]).toBe(request);
     expect(f.auth.logout.mock.calls[0][2]).toBe(send);
     expect(f.auth.logout.mock.calls[0][4]['set-cookie']).toHaveLength(1);
+  });
+
+  it('uses the branded Cognito domain for logout when configured', async () => {
+    const f = setup({ domainUrl: 'https://auth.madinatydeals.com' });
+    await f.cognito.handle({ method: 'POST', url: '/api/auth/cognito/logout', headers: {} }, response(), ['api', 'auth', 'cognito', 'logout'], vi.fn());
+    expect(new URL(f.auth.logout.mock.calls[0][3].logoutUrl).origin).toBe('https://auth.madinatydeals.com');
   });
 });

@@ -68,9 +68,11 @@ describe('authentication boundaries', () => {
       MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true', REGISTRATION_ENABLED: 'true',
       COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
       COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
+      COGNITO_DOMAIN_URL: 'https://auth.madinatydeals.com',
     });
     expect(loaded.cognitoEnabled).toBe(true);
     expect(loaded.cognito.clientId).toBe('cognito-client-id');
+    expect(loaded.cognito.domainUrl).toBe('https://auth.madinatydeals.com');
     expect(() => loadConfig({
       APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
       MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
@@ -85,6 +87,14 @@ describe('authentication boundaries', () => {
       COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
       COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
     })).not.toThrow();
+    expect(() => loadConfig({
+      APP_ENV: 'production', APP_ORIGIN: config.origin, AUTH_SECRET: 'a'.repeat(48),
+      MAIL_PROVIDER: 'microsoft-graph-delegated', SMTP_FROM: 'hello@madinatydeals.com',
+      MS_TENANT_ID: 'tenant-id', MS_CLIENT_ID: 'client-id', COGNITO_ENABLED: 'true',
+      COGNITO_ISSUER_URL: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
+      COGNITO_CLIENT_ID: 'cognito-client-id', COGNITO_CALLBACK_URL: `${config.origin}/api/auth/cognito/callback`,
+      COGNITO_DOMAIN_URL: 'https://auth.madinatydeals.com/path',
+    })).toThrow('COGNITO_DOMAIN_URL');
   });
   it('rejects cross-origin login before sending email', async () => {
     const f = fixture();

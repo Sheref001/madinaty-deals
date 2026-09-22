@@ -85,6 +85,11 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
       lang: language,
       ...(provider === 'google' ? { identity_provider: 'Google' } : {}),
     });
+    if (config.cognito.domainUrl) {
+      const brandedDomain = new URL(config.cognito.domainUrl);
+      authorizationUrl.protocol = brandedDomain.protocol;
+      authorizationUrl.host = brandedDomain.host;
+    }
     if (mode === 'signup') authorizationUrl.pathname = '/signup';
     const stateCookie = createStateCookie(config, { state, nonce, verifier, language, expiresAt: Date.now() + 600000 });
     response.writeHead(302, { location: authorizationUrl.href, 'cache-control': 'no-store', 'set-cookie': stateCookie, 'referrer-policy': 'no-referrer' });
@@ -140,7 +145,7 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
   async function logout(request, response, send) {
     const metadata = (await getClientConfiguration()).serverMetadata();
     if (typeof metadata.authorization_endpoint !== 'string') throw new RequestError(503, 'Sign-out is temporarily unavailable');
-    const logoutUrl = new URL('/logout', metadata.authorization_endpoint);
+    const logoutUrl = new URL('/logout', config.cognito.domainUrl || metadata.authorization_endpoint);
     logoutUrl.searchParams.set('client_id', config.cognito.clientId);
     logoutUrl.searchParams.set('logout_uri', `${config.origin}/`);
     return auth.logout(request, response, send, { logoutUrl: logoutUrl.href }, { 'set-cookie': [clearStateCookie(config)] });

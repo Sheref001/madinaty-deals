@@ -54,11 +54,14 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Tutoring & education' } });
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Math tutoring for students' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Private lessons for school students and exam preparation.' } });
+  const area = screen.getByLabelText('Service area') as HTMLSelectElement;
+  expect(Array.from(area.options).some(option => option.text === 'All of Madinaty')).toBe(true);
+  fireEvent.change(area, { target: { value: 'All zones' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
-  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000' })));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' })));
 });
 
 it('requires an explicit service category and offers every supported service type', () => {

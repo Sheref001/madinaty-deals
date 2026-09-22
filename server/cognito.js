@@ -37,7 +37,7 @@ function readStateCookie(config, header = '') {
   }
 }
 
-export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc }) {
+export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, logger = console }) {
   let clientConfiguration;
   const getClientConfiguration = () => {
     if (!clientConfiguration) {
@@ -54,6 +54,8 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc }) {
   };
 
   const callbackError = (response, language, reason = 'signin_failed') => {
+    // Log only our fixed reason codes, never provider descriptions, claims or cookies.
+    logger.warn('Cognito sign-in rejected', reason);
     const path = language === 'ar' ? '/?lang=ar' : '/';
     response.writeHead(302, { location: `${config.origin}${path}${path.includes('?') ? '&' : '?'}auth_error=${reason}`, 'cache-control': 'no-store', 'set-cookie': clearStateCookie(config), 'referrer-policy': 'no-referrer' });
     response.end();
@@ -83,8 +85,8 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc }) {
   async function callback(request, response) {
     const stored = readStateCookie(config, request.headers.cookie);
     const language = stored?.language || 'en';
-    if (!stored) return callbackError(response, language);
-    if (new URL(request.url, config.origin).searchParams.has('error')) return callbackError(response, language);
+    if (!stored) return callbackError(response, language, 'signin_state_invalid');
+    if (new URL(request.url, config.origin).searchParams.has('error')) return callbackError(response, language, 'provider_rejected');
 
     try {
       const tokens = await oidcClient.authorizationCodeGrant(await getClientConfiguration(), new URL(request.url, config.origin), {
@@ -94,9 +96,8 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc }) {
       });
       const claims = tokens.claims();
       const email = typeof claims?.email === 'string' ? claims.email.trim().toLowerCase() : '';
-      if (!claims?.sub || claims.email_verified !== true || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-        return callbackError(response, language, 'email_not_verified');
-      }
+      if (!claims?.sub || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return callbackError(response, language, 'invalid_identity');
+      if (claims.email_verified !== true) return callbackError(response, language, 'email_not_verified');
 
       const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
       if (!existing && !config.registrationEnabled) return callbackError(response, language, 'registration_paused');
@@ -122,7 +123,7 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc }) {
       response.end();
     } catch (error) {
       if (error instanceof RequestError && error.message === 'Account is unavailable') return callbackError(response, language, 'account_unavailable');
-      console.error('Cognito sign-in failed', error?.code || error?.name || 'unknown');
+      logger.error('Cognito sign-in failed', error?.code || error?.name || 'unknown');
       return callbackError(response, language);
     }
   }

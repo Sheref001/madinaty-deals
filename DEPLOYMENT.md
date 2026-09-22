@@ -60,6 +60,30 @@ Run `npm run maintenance:cleanup` daily using a scheduler with the same server e
 
 Deploy updates from the Ubuntu server with `git pull` followed by `docker compose --env-file .env up -d --build --wait`. GitHub Actions deployment is not used.
 
+## Google sign-in through Cognito
+
+In the existing user pool's Google identity provider, map **Google `email` to Cognito `email`**, **Google `email_verified` to Cognito `email_verified`**, and optionally `name` to `name`. Mapping the email address alone does not verify it. AWS documents that [mapped email addresses are unverified by default](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-specifying-attribute-mapping.html). Keep the verified-email check in `server/cognito.js`; it protects account linking, including existing administrator accounts. The app client must allow Google and the `openid email profile` scopes, and must have the appropriate read/write permissions for the mapped attributes.
+
+For the current replacement pool, inspect only the non-secret mapping in **AWS CloudShell**:
+
+```bash
+aws cognito-idp describe-identity-provider --user-pool-id eu-north-1_CQwYUlilX --provider-name Google --region eu-north-1 --query 'IdentityProvider.AttributeMapping' --output json --no-cli-pager
+```
+
+If `email_verified` is missing or mapped incorrectly, open **Cognito → this pool → Social and external providers → Google → Edit attribute mapping**. Add `email_verified` on both sides and save, preserving every existing mapping and the Google client credentials. This configuration change does not require a Docker rebuild or an SES approval. Start a new Google sign-in from the website after saving, so Cognito refreshes the mapped attributes. The website's local `/api/auth/session` must return a user before login is considered successful. Never publish that endpoint's CSRF token or any browser cookie values.
+
+If the console doesn't offer the attribute, the same repair can be applied with CloudShell while preserving existing mappings:
+
+```bash
+aws cognito-idp describe-identity-provider --user-pool-id eu-north-1_CQwYUlilX --provider-name Google --region eu-north-1 --query 'IdentityProvider.AttributeMapping' --output json --no-cli-pager > madinaty-google-mapping.before.json
+python3 -c 'import json; p=json.load(open("madinaty-google-mapping.before.json")); assert isinstance(p,dict) and p.get("email")=="email", "Review the current email mapping before continuing"; p["email_verified"]="email_verified"; json.dump(p,open("madinaty-google-mapping.fixed.json","w"))'
+aws cognito-idp update-identity-provider --user-pool-id eu-north-1_CQwYUlilX --provider-name Google --region eu-north-1 --attribute-mapping file://madinaty-google-mapping.fixed.json --query 'IdentityProvider.AttributeMapping' --output json --no-cli-pager
+```
+
+Run each line in order and stop if any line fails. These files contain attribute names only. The update changes only the provider's attribute mapping; it does not update/reset the pool or app-client settings. Keep the `before` file for rollback.
+
+Failed callbacks reopen the website account dialog with a persistent error instead of a disappearing toast. The server logs `Cognito sign-in rejected` and a fixed reason: `email_not_verified` (check provider mapping), `signin_state_invalid` (restart from the website to establish state), `provider_rejected` (Cognito returned an error), or `invalid_identity` (missing required identity claims). It never logs claims, codes, cookies or raw provider descriptions. A successful redirect alone does not prove a session exists. The old direct Cognito authorization link is not a valid end-to-end test because it bypasses the website's state/PKCE cookie setup.
+
 ## Local development
 
 With the services configured, export server environment variables in your shell, then run:

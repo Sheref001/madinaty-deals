@@ -114,6 +114,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [account, setAccount] = useState<Account | null>(null);
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [cognitoEnabled, setCognitoEnabled] = useState(false);
+  const [signInError, setSignInError] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
   const registered = Boolean(account);
   const isAdmin = account?.role === 'ADMIN';
@@ -132,11 +133,15 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       if (!authError) return;
       const messages: Record<string, string> = {
         signin_failed: 'Sign-in could not be completed. Please try again.',
-        email_not_verified: 'Verify your email address with the account provider, then try again.',
+        email_not_verified: 'Your sign-in provider did not confirm your email address. Please contact hello@madinatydeals.com for help.',
+        signin_state_invalid: 'Your sign-in attempt expired or could not be verified. Please start again using Continue to account.',
+        provider_rejected: 'Your account provider could not complete sign-in. Please try again or contact hello@madinatydeals.com.',
+        invalid_identity: 'Your sign-in provider did not return the account details needed to sign in. Please contact hello@madinatydeals.com.',
         registration_paused: 'Account creation is temporarily paused. Please try again later.',
         account_unavailable: 'This account is unavailable. Please contact support.',
       };
-      setToast(t(messages[authError] || messages.signin_failed));
+      setSignInError(messages[authError] || messages.signin_failed);
+      setModal('register');
       url.searchParams.delete('auth_error');
       window.history.replaceState({}, '', url);
     }, 0);
@@ -358,7 +363,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onPublish={publishListing} onPublishService={publishService} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
-      {modal === 'register' && <RegistrationModal registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setModal('post'); track('account_signed_in'); }} />}
+      {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal('post'); track('account_signed_in'); }} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={() => { setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>
@@ -629,8 +634,9 @@ function ModalShell({ title, eyebrow, children, onClose }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><span className="eyebrow">{t(eyebrow)}</span><h2 id="modal-title">{t(title)}</h2></div><button className="icon-button" onClick={onClose} aria-label={t("Close dialog")}><X size={20} /></button></div>{children}</div></div>;
 }
 
-function RegistrationModal({ onClose, onRegistered, registrationEnabled, cognitoEnabled }: { onClose: () => void; onRegistered: (account: Account) => void; registrationEnabled: boolean; cognitoEnabled: boolean }) {
-  return <ModalShell title={registrationEnabled ? 'Sign in or create account' : 'Sign in'} eyebrow="A QUICK START" onClose={onClose}><AuthForm registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onSignedIn={onRegistered} /></ModalShell>;
+function RegistrationModal({ onClose, onRegistered, registrationEnabled, cognitoEnabled, signInError }: { onClose: () => void; onRegistered: (account: Account) => void; registrationEnabled: boolean; cognitoEnabled: boolean; signInError: string }) {
+  const { t } = useTranslation();
+  return <ModalShell title={registrationEnabled ? 'Sign in or create account' : 'Sign in'} eyebrow="A QUICK START" onClose={onClose}>{signInError && <p className="form-error" role="alert">{t(signInError)}</p>}<AuthForm registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onSignedIn={onRegistered} /></ModalShell>;
 }
 
 function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {

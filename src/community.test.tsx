@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -9,7 +9,23 @@ import { getPublicConfig, getSession, submitPost } from './api';
 vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
 beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }); });
 
-afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
+afterEach(() => { cleanup(); vi.useRealTimers(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
+
+it.each(['en', 'ar'])('keeps Cognito failures visible in the account dialog in %s with a fresh login link', async language => {
+  vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: true });
+  window.history.replaceState({}, '', `/?lang=${language}&auth_error=email_not_verified`);
+  render(<App />);
+  const alert = await screen.findByRole('alert');
+  expect(alert.textContent).toContain('hello@madinatydeals.com');
+  expect(screen.getByRole('dialog').contains(alert)).toBe(true);
+  await waitFor(() => expect(screen.getByRole('dialog').querySelector('a')?.getAttribute('href')).toBe(`/api/auth/cognito/start?lang=${language}`));
+  expect(window.location.search).not.toContain('auth_error');
+  expect(screen.queryByRole('status')).toBeNull();
+  vi.useFakeTimers();
+  act(() => { vi.advanceTimersByTime(10000); });
+  expect(screen.getByRole('alert').textContent).toContain('hello@madinatydeals.com');
+  expect(screen.queryByRole('button', { name: language === 'ar' ? 'تسجيل الخروج' : 'Sign out' })).toBeNull();
+});
 
 it('previews details without publishing and preserves them when editing', async () => {
   const publish = vi.fn();

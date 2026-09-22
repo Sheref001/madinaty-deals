@@ -1,9 +1,10 @@
 /* global URL */
 import { describe, expect, it, vi } from 'vitest';
 import { createCognitoAuth } from './cognito.js';
+import { createAuth } from './auth.js';
 
 const config = {
-  origin: 'https://madinatydeals.com', local: false, secret: 'test-secret-longer-than-thirty-two-characters',
+  origin: 'https://madinatydeals.com', local: false, secret: 'test-secret-longer-than-thirty-two-characters', cookieName: '__Host-madinaty_session',
   registrationEnabled: true, cognitoEnabled: true,
   cognito: {
     issuerUrl: 'https://cognito-idp.eu-north-1.amazonaws.com/eu-north-1_example',
@@ -20,23 +21,39 @@ const oidcClient = () => ({
   buildAuthorizationUrl: vi.fn(() => new URL('https://example.auth.eu-north-1.amazoncognito.com/oauth2/authorize')),
   authorizationCodeGrant: vi.fn().mockResolvedValue({ claims: () => ({ sub: 'cognito-subject', email: 'new@example.com', email_verified: true, name: 'New Neighbour' }) }),
 });
-function setup({ registrationEnabled = true, existingUser = null } = {}) {
+function setup({ registrationEnabled = true, existingUser = null, useRealAuth = false } = {}) {
   const oidc = oidcClient();
   const createdUser = { id: 'user-1', email: 'new@example.com', emailVerifiedAt: new Date(), status: 'ACTIVE', profile: { displayName: 'New Neighbour' } };
   const tx = {
     user: { upsert: vi.fn().mockResolvedValue(createdUser), update: vi.fn().mockResolvedValue(createdUser) },
     profile: { create: vi.fn().mockResolvedValue({}) },
+    session: { create: vi.fn().mockResolvedValue({}) },
+    auditLog: { create: vi.fn().mockResolvedValue({}) },
   };
   const prisma = {
     user: { findUnique: vi.fn().mockResolvedValue(existingUser) },
+    session: { findUnique: vi.fn(async ({ where }) => {
+      const saved = tx.session.create.mock.calls.at(-1)?.[0].data;
+      return saved?.tokenHash === where.tokenHash ? { ...saved, id: 'session-1', user: createdUser } : null;
+    }) },
     $transaction: vi.fn(async callback => callback(tx)),
   };
-  const auth = {
+  const auth = useRealAuth ? createAuth({ prisma, config }) : {
     createLoginSession: vi.fn().mockResolvedValue('__Host-madinaty_session=token; Path=/; HttpOnly; Secure'),
     logout: vi.fn().mockResolvedValue({}),
   };
-  const cognito = createCognitoAuth({ prisma, auth, config: { ...config, registrationEnabled }, oidcClient: oidc });
-  return { cognito, oidc, prisma, auth, tx };
+  const logger = { warn: vi.fn(), error: vi.fn() };
+  const cognito = createCognitoAuth({ prisma, auth, config: { ...config, registrationEnabled }, oidcClient: oidc, logger });
+  return { cognito, oidc, prisma, auth, tx, logger, createdUser };
+}
+
+async function completeSignIn(f, query = 'code=one-time-code&state=secure-state') {
+  const started = response();
+  await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?lang=ar', headers: {} }, started, ['api', 'auth', 'cognito', 'start']);
+  const cookie = started.writeHead.mock.calls[0][1]['set-cookie'].split(';')[0];
+  const completed = response();
+  await f.cognito.handle({ method: 'GET', url: `/api/auth/cognito/callback?${query}`, headers: { cookie } }, completed, ['api', 'auth', 'cognito', 'callback']);
+  return completed.writeHead.mock.calls[0][1];
 }
 
 describe('Cognito sign-in', () => {
@@ -78,10 +95,64 @@ describe('Cognito sign-in', () => {
     await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start', headers: {} }, startResponse, ['api', 'auth', 'cognito', 'start']);
     const [name, value] = startResponse.writeHead.mock.calls[0][1]['set-cookie'].split(';')[0].split('=');
     const callbackResponse = response();
-    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/callback?code=x&state=secure-state', headers: { cookie: `${name}=${value.slice(0, -1)}x` } }, callbackResponse, ['api', 'auth', 'cognito', 'callback']);
+    const tampered = `${value[0] === 'A' ? 'B' : 'A'}${value.slice(1)}`;
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/callback?code=x&state=secure-state', headers: { cookie: `${name}=${tampered}` } }, callbackResponse, ['api', 'auth', 'cognito', 'callback']);
     expect(f.oidc.authorizationCodeGrant).not.toHaveBeenCalled();
     expect(f.prisma.$transaction).not.toHaveBeenCalled();
-    expect(callbackResponse.writeHead.mock.calls[0][1].location).toContain('auth_error=signin_failed');
+    expect(callbackResponse.writeHead.mock.calls[0][1].location).toContain('auth_error=signin_state_invalid');
+    expect(f.logger.warn).toHaveBeenCalledWith('Cognito sign-in rejected', 'signin_state_invalid');
+  });
+
+  it.each([undefined, false, 'true'])('rejects an unverified or missing email flag (%s) before creating a session and logs only the reason', async verified => {
+    const f = setup();
+    f.oidc.authorizationCodeGrant.mockResolvedValue({ claims: () => ({ sub: 'google-user', email: 'private@example.com', email_verified: verified }) });
+    const headers = await completeSignIn(f);
+    expect(headers.location).toBe(`${config.origin}/?lang=ar&auth_error=email_not_verified`);
+    expect(f.prisma.$transaction).not.toHaveBeenCalled();
+    expect(f.auth.createLoginSession).not.toHaveBeenCalled();
+    expect(f.logger.warn.mock.calls).toEqual([['Cognito sign-in rejected', 'email_not_verified']]);
+    expect(headers['set-cookie']).not.toContain('madinaty_session=');
+  });
+
+  it('returns a readable local session from the real session code after verified Google claims', async () => {
+    const f = setup({ useRealAuth: true });
+    const headers = await completeSignIn(f);
+    const sessionCookie = headers['set-cookie'][0];
+    expect(sessionCookie).toMatch(/^__Host-madinaty_session=[a-f0-9]{64}; Path=\/; HttpOnly; SameSite=Lax; Max-Age=604800; Secure$/);
+    const rawToken = sessionCookie.split(';')[0].split('=')[1];
+    expect(f.tx.session.create.mock.calls[0][0].data.tokenHash).not.toBe(rawToken);
+    const send = vi.fn();
+    await f.auth.handle({ method: 'GET', headers: { cookie: sessionCookie.split(';')[0] } }, response(), ['api', 'auth', 'session'], send);
+    expect(send.mock.calls[0][2]).toMatchObject({ user: { id: 'user-1', email: 'new@example.com' }, csrfToken: expect.any(String) });
+    expect(f.tx.auditLog.create).toHaveBeenCalledWith({ data: { actorId: 'user-1', action: 'auth.login.cognito', targetType: 'User', targetId: 'user-1' } });
+    expect(f.logger.warn).not.toHaveBeenCalled();
+  });
+
+  it('preserves an existing administrator role when signing in with the same verified email', async () => {
+    const f = setup({ existingUser: { id: 'user-1' }, useRealAuth: true });
+    f.createdUser.role = 'ADMIN';
+    await completeSignIn(f);
+    expect(f.tx.user.upsert.mock.calls[0][0].update).toEqual({});
+    expect(f.tx.user.upsert.mock.calls[0][0].create).not.toHaveProperty('role');
+    expect(f.createdUser.role).toBe('ADMIN');
+  });
+
+  it('logs provider rejection without exposing its error description or calling the token endpoint', async () => {
+    const f = setup();
+    const headers = await completeSignIn(f, 'error=access_denied&error_description=PRIVATE_PROVIDER_RESPONSE');
+    expect(headers.location).toContain('auth_error=provider_rejected');
+    expect(f.logger.warn.mock.calls).toEqual([['Cognito sign-in rejected', 'provider_rejected']]);
+    expect(f.oidc.authorizationCodeGrant).not.toHaveBeenCalled();
+    expect(f.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('reports missing OAuth state without creating a user', async () => {
+    const f = setup();
+    const res = response();
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/callback?code=x', headers: {} }, res, ['api', 'auth', 'cognito', 'callback']);
+    expect(f.logger.warn).toHaveBeenCalledWith('Cognito sign-in rejected', 'signin_state_invalid');
+    expect(f.oidc.authorizationCodeGrant).not.toHaveBeenCalled();
+    expect(f.prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('keeps the Cognito flow unavailable while registrations are disabled', async () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { uploadFile, submitVerification } from './api';
 import { useTranslation } from './i18n';
@@ -7,6 +7,7 @@ export default function VerificationForm({ onSubmitted, onSkip }: { onSubmitted:
   const { t } = useTranslation();
   const [type, setType] = useState<string>('MADINATY_ID');
   const [file, setFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return <form className="modal-form" onSubmit={async event => {
@@ -21,7 +22,7 @@ export default function VerificationForm({ onSubmitted, onSkip }: { onSubmitted:
     <button type="button" className="button button-outline" onClick={onSkip} disabled={busy}>{t('Not now')}</button>
     <p>{t('One document is enough. Evidence is linked only to your verification request, never your public profile.')}</p>
     <label>{t('Document type')}<select value={type} onChange={event => setType(event.target.value)}>{types.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
-    <label className="file-picker"><span><b>{t('Take a photo or choose a file')}</b><small>{file ? file.name : t('JPG, PNG or PDF · maximum 10 MB')}</small></span><span className="file-picker-button"><FileUp size={16} />{t('Choose file')}</span><input className="file-input" type="file" accept="image/jpeg,image/png,application/pdf" required onChange={event => { const selected = event.target.files?.[0]; setError(''); if (selected && selected.size > 10 * 1024 * 1024) { setFile(null); setError(t('Use a JPG, PNG or PDF under 10 MB.')); } else setFile(selected || null); }} /></label>
+    <div className="file-picker"><span><b>{t('Take a photo or choose a file')}</b><small>{file ? file.name : t('JPG, PNG or PDF · maximum 10 MB')}</small></span><button type="button" className="file-picker-button" onClick={() => inputRef.current?.click()}><FileUp size={16} />{t('Choose file')}</button><input ref={inputRef} className="file-input" type="file" accept="image/jpeg,image/png,application/pdf" required onChange={event => { const selected = event.target.files?.[0]; setError(''); if (selected && selected.size > 10 * 1024 * 1024) { setFile(null); setError(t('Use a JPG, PNG or PDF under 10 MB.')); } else setFile(selected || null); }} /></div>
     <p>{t('Private to you and the admin reviewer only. Files are not publicly accessible or shown to other users.')}</p>
     {error && <p role="alert" className="form-error">{error}</p>}
     <button type="submit" className="button button-accent" disabled={!file || busy}>{t(busy ? 'Please wait…' : 'Request verification')}</button>

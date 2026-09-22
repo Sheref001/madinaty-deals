@@ -48,3 +48,14 @@ This validates local behavior and API boundaries; it does not establish producti
 - Submission forms retain advertiser type and business requests for posting, authentication or both. Server validation records business fees as awaiting agreement and authentication requests as pending review; client-supplied payment or authentication approvals are ignored.
 - Added discovery, form-preview and server validation coverage. No payment collection or business authentication approval workflow is enabled by this change.
 - All 92 tests passed with `npm test -- --maxWorkers=2`; TypeScript, ESLint, production build and diff whitespace checks also passed. Default test concurrency again hit the existing five-second language-switch timeout; reducing workers resolved it without changing assertions.
+
+## Native upload controls (Safari repair)
+
+Photo pickers for listings/services and the residency document picker now expose a visible, labelled native file input. There is no hidden-input `.click()` forwarding. Document cancellation keeps the previous selection; controls are disabled during document upload.
+
+Regression checks:
+
+- `npx vitest run src/uploads.test.tsx server/uploads.test.js src/community.test.tsx --maxWorkers=1`: selection/removal/reselection, photo count limits, document cancellation and retry, form submission and server upload sanitization/privacy.
+- With Vite running locally and Playwright browsers installed: `UPLOAD_TEST_BASE=http://127.0.0.1:5173 node scripts/test-upload-controls.mjs`. This clicks the native controls and waits for real browser file-chooser events in WebKit/Chromium, checks previews/reselection and document submission at 320/390/1280px in both languages. All API requests are mocked; no production data is created. Optional `UPLOAD_TEST_BROWSER=webkit` selects one engine.
+
+Browser automation checks the chooser event and supplies files through the browser testing API. It does not verify the macOS/iOS system file dialog itself or production upload storage. Confirm those after deployment in the affected Safari installation.

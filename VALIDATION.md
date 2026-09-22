@@ -59,3 +59,16 @@ Regression checks:
 - With Vite running locally and Playwright browsers installed: `UPLOAD_TEST_BASE=http://127.0.0.1:5173 node scripts/test-upload-controls.mjs`. This clicks the native controls and waits for real browser file-chooser events in WebKit/Chromium, checks previews/reselection and document submission at 320/390/1280px in both languages. All API requests are mocked; no production data is created. Optional `UPLOAD_TEST_BROWSER=webkit` selects one engine.
 
 Browser automation checks the chooser event and supplies files through the browser testing API. It does not verify the macOS/iOS system file dialog itself or production upload storage. Confirm those after deployment in the affected Safari installation.
+
+## Production upload failure follow-up
+
+A bounded, unauthenticated check against production reproduced a proxy failure: a tiny POST to `/api/uploads?purpose=photo` returned the expected application JSON 401, while a 1,100,000-byte POST returned Nginx HTML 413. Neither request could create an upload or listing. The deployed asset names matched commit bd28ece. This confirms a server upload-size blocker; it does not prove signed-in submission/persistence succeeds.
+
+The frontend now handles non-JSON HTTP errors explicitly, keeps form details for retry, shows a busy state, and accepts dropped/pasted files through the same validation as chooser-selected files. This gives users an alternative to the native file dialog; the affected Mac Safari dialog itself remains unverified.
+
+Regression commands:
+
+- `npx vitest run src/api-upload.test.ts src/uploads.test.tsx server/uploads.test.js src/community.test.tsx --maxWorkers=1`
+- `UPLOAD_TEST_BASE=http://127.0.0.1:5173 node scripts/test-upload-controls.mjs`
+
+The browser script now exercises an injected HTML 413 during listing submission, verifies that no submission is sent after a failed upload, preserves entered details, drops a replacement photo, and retries against mocked successful responses. This is frontend regression coverage, not a production end-to-end test. After correcting host Nginx, complete an authenticated real upload/submission and verify persistence before claiming the whole journey works.

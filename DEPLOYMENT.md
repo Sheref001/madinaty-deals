@@ -61,6 +61,18 @@ Run `npm run maintenance:cleanup` daily using a scheduler with the same server e
 
 Deploy updates from the Ubuntu server with `git pull` followed by `docker compose --env-file .env up -d --build --wait`. GitHub Actions deployment is not used.
 
+### Nginx upload size (host configuration, outside Docker)
+
+The app accepts photos up to 5 MiB and verification documents up to 10 MiB, one file per request. Nginx's default 1 MiB request limit rejects valid files before Node receives them. In the existing Madinaty Deals `server { ... }` block, add this directive once, preserving the current TLS and proxy settings:
+
+```nginx
+client_max_body_size 12m;
+```
+
+Use `sudo nginx -T` to identify the active site file and back it up before editing. Run `sudo nginx -t && sudo systemctl reload nginx`. If validation fails, correct the reported filename/line before reloading. Pulling the repository or rebuilding the app does **not** update the host's Nginx configuration. The app continues to enforce its stricter per-file limits.
+
+After reloading, test a real signed-in submission with a photo larger than 1 MiB and a verification document within 10 MiB. Check that the upload returns 201, the submission returns 201, and the saved record is present; health checks alone do not test this flow.
+
 ## Google sign-in through Cognito
 
 In the existing user pool's Google identity provider, map **Google `email` to Cognito `email`**, **Google `email_verified` to Cognito `email_verified`**, and optionally `name` to `name`. Mapping the email address alone does not verify it. AWS documents that [mapped email addresses are unverified by default](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-specifying-attribute-mapping.html). Keep the verified-email check in `server/cognito.js`; it protects account linking, including existing administrator accounts. The app client must allow Google and the `openid email profile` scopes, and must have the appropriate read/write permissions for the mapped attributes.

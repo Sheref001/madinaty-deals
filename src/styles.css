@@ -961,3 +961,7 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 
 /* Keep the learning scene visible above the caption on the tutoring card. */
 .category-card > .category-icon.graduation-cap img { object-position: 50% 68%; }
+
+.file-drop-area { display: grid; gap: 8px; min-width: 0; flex: 1; padding: 6px; border: 1px dashed #9ec5b0; border-radius: 8px; }
+.file-drop-area:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.file-drop-area > small { color: var(--ink-soft); font-size: 12px; line-height: 1.5; }

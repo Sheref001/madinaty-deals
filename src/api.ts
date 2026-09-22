@@ -15,7 +15,21 @@ const visitorId = () => {
 
 const request = async (path: string, options: RequestInit = {}) => {
   const response = await fetch(`${apiBase}${path}`, { ...options, credentials: 'include', headers: { ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}), 'content-type': 'application/json', 'x-visitor-id': visitorId(), ...(options.headers || {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Request failed');
+  if (!response.ok) {
+    // A reverse proxy can return HTML before the request ever reaches Node.
+    // Do not discard the HTTP status or display the proxy's raw HTML to users.
+    const body = await response.json().catch(() => null);
+    const fallback = response.status === 413
+      ? 'The server rejected the file size. Try a smaller file or contact hello@madinatydeals.com.'
+      : response.status === 401
+        ? 'Your session has expired. Sign in again, then retry.'
+        : response.status === 403
+          ? 'The request was blocked. Refresh the page and try again. If it continues, contact hello@madinatydeals.com.'
+          : response.status === 429
+            ? 'Too many attempts. Please wait before trying again.'
+            : 'The server could not complete this request. Please try again later.';
+    throw new Error(typeof body?.error === 'string' ? body.error : fallback);
+  }
   return response.json();
 };
 

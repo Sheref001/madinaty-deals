@@ -43,6 +43,31 @@ it('retains existing photos when a later selection exceeds limits', () => {
   expect(screen.getAllByRole('img')).toHaveLength(1);
 });
 
+it.each(['drop', 'paste'])('accepts photos through %s without a file dialog and still validates formats', method => {
+  render(<LanguageContext.Provider value="en"><Photos /></LanguageContext.Provider>);
+  const area = screen.getByRole('group', { name: 'Drag or paste files' });
+  const select = (file: File) => method === 'drop'
+    ? fireEvent.drop(area, { dataTransfer: { files: [file] } })
+    : fireEvent.paste(area, { clipboardData: { files: [file] } });
+  select(new File(['photo'], 'table.jpg', { type: 'image/jpeg' }));
+  expect(screen.getByRole('img')).toBeTruthy();
+  select(new File(['script'], 'script.svg', { type: 'image/svg+xml' }));
+  expect(screen.getByRole('alert')).toBeTruthy();
+  expect(screen.getAllByRole('img')).toHaveLength(1);
+});
+
+it('accepts one dropped PDF and rejects multiple documents without discarding the previous file', async () => {
+  render(<LanguageContext.Provider value="en"><VerificationForm onSubmitted={vi.fn()} onSkip={vi.fn()} /></LanguageContext.Provider>);
+  const area = screen.getByRole('group', { name: 'Drag or paste files' });
+  const file = new File(['%PDF-1.7\n%%EOF'], 'proof.pdf', { type: 'application/pdf' });
+  fireEvent.drop(area, { dataTransfer: { files: [file] } });
+  expect(screen.getByText('proof.pdf')).toBeTruthy();
+  fireEvent.drop(area, { dataTransfer: { files: [file, file] } });
+  expect(screen.getByRole('alert').textContent).toBe('Choose one document at a time.');
+  fireEvent.submit(area.closest('form')!);
+  await waitFor(() => expect(uploadFile).toHaveBeenCalledWith(file, 'verification', 'MADINATY_ID'));
+});
+
 it('keeps the selected document on cancel and submits its upload ID', async () => {
   const onSubmitted = vi.fn();
   render(<LanguageContext.Provider value="en"><VerificationForm onSubmitted={onSubmitted} onSkip={vi.fn()} /></LanguageContext.Provider>);

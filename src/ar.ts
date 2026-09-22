@@ -1,5 +1,15 @@
 // English keys stay stable for the existing English interface and stored taxonomy.
 export const arabic: Record<string, string> = {
+  'Drag or paste files': 'سحب الملفات أو لصقها',
+  'The server rejected the file size. Try a smaller file or contact hello@madinatydeals.com.': 'رفض الخادم حجم الملف. جرّب ملفًا أصغر أو تواصل معنا على hello@madinatydeals.com.',
+  'Your session has expired. Sign in again, then retry.': 'انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة.',
+  'The request was blocked. Refresh the page and try again. If it continues, contact hello@madinatydeals.com.': 'تم حظر الطلب. حدّث الصفحة وأعد المحاولة. إذا استمرت المشكلة، تواصل معنا على hello@madinatydeals.com.',
+  'Too many attempts. Please wait before trying again.': 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.',
+  'The server could not complete this request. Please try again later.': 'تعذّر على الخادم إكمال الطلب. يرجى المحاولة لاحقًا.',
+  'You can also drag files here, or click here and paste a copied image.': 'يمكنك أيضًا سحب الملفات إلى هنا، أو الضغط هنا ولصق صورة منسوخة.',
+  'Choose one document at a time.': 'اختر مستندًا واحدًا في كل مرة.',
+  'Use JPG, PNG, WEBP, GIF or AVIF images under 5 MB each.': 'استخدم صور JPG أو PNG أو WEBP أو GIF أو AVIF بحجم أقل من ٥ ميجابايت للصورة.',
+
   'Other local services': 'خدمات محلية أخرى',
   'Choose file': 'اختيار ملف', 'JPG, PNG or PDF · maximum 10 MB': 'JPG أو PNG أو PDF · بحد أقصى ١٠ ميجابايت',
   'Translate to Arabic': 'ترجمة إلى العربية', 'Translate to English': 'ترجمة إلى الإنجليزية', 'Show original': 'عرض النص الأصلي', 'Machine translation': 'ترجمة آلية', 'Translating…': 'جارٍ الترجمة…', 'Translation is temporarily unavailable.': 'الترجمة غير متاحة مؤقتًا.',

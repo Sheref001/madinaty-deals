@@ -1,3 +1,4 @@
+/* global DataTransfer, File, DragEvent */
 // Run against local Vite only. API calls are mocked; no accounts or files reach production.
 // UPLOAD_TEST_BASE=http://127.0.0.1:5173 node scripts/test-upload-controls.mjs
 import assert from 'node:assert/strict';
@@ -21,6 +22,8 @@ for (const [name, engine] of Object.entries({ webkit, chromium })) {
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
       let uploaded;
+      let rejectPhoto = true;
+      let submissions = 0;
       await page.route('**/*', async route => {
         const url = new URL(route.request().url());
         if (url.origin !== new URL(base).origin) return route.abort();
@@ -29,10 +32,11 @@ for (const [name, engine] of Object.entries({ webkit, chromium })) {
         if (url.pathname === '/api/config') data = { registrationEnabled: true, cognitoEnabled: true };
         if (url.pathname === '/api/auth/session') data = { csrfToken: 'test', user: { id: 'test', name: 'Test', role: 'RESIDENT', residentVerified: false } };
         if (url.pathname === '/api/uploads') {
+          if (url.searchParams.get('purpose') === 'photo' && rejectPhoto) return route.fulfill({ status: 413, contentType: 'text/html', body: '<html>413 Request Entity Too Large</html>' });
           uploaded = route.request().headers();
           data = { upload: { id: 'test-upload' } };
         }
-        if (url.pathname === '/api/submissions') data = { submission: { id: 'test-submission', status: 'PENDING_REVIEW' } };
+        if (url.pathname === '/api/submissions') { submissions++; data = { id: 'test-submission', status: 'PENDING_REVIEW' }; }
         return route.fulfill({ json: data });
       });
       const text = (en, ar) => language === 'en' ? en : ar;
@@ -57,7 +61,31 @@ for (const [name, engine] of Object.entries({ webkit, chromium })) {
         await input.click();
         await (await nextChooser).setFiles(photo);
         await page.locator('.media-preview-grid img').waitFor();
-        await page.keyboard.press('Escape');
+        if (!service) {
+          await page.getByLabel(text('What are you selling?', 'ماذا تبيع؟'), { exact: true }).fill('Small wooden table');
+          await page.getByLabel(text('Description', 'الوصف'), { exact: true }).fill('A wooden table in good condition.');
+          await page.getByLabel(text('Price (EGP)', 'السعر (جنيه مصري)'), { exact: true }).fill('500');
+          await page.getByRole('button', { name: text('Preview listing', 'معاينة الإعلان'), exact: true }).click();
+          await page.getByRole('button', { name: text('Submit for review', 'إرسال للمراجعة'), exact: true }).click();
+          await page.getByRole('alert').waitFor();
+          assert.match(await page.getByRole('alert').innerText(), /hello@madinatydeals.com/);
+          assert.equal(submissions, 0, 'Upload failure must not create a submission');
+          await page.getByRole('button', { name: text('Edit details', 'تعديل التفاصيل'), exact: true }).click();
+          assert.equal(await page.getByLabel(text('What are you selling?', 'ماذا تبيع؟'), { exact: true }).inputValue(), 'Small wooden table');
+          await page.locator('.media-preview-grid button').click();
+          // Test the alternative that avoids the operating system's file window.
+          await page.locator('.file-drop-area').evaluate((el, bytes) => {
+            const data = new DataTransfer();
+            data.items.add(new File([new Uint8Array(bytes)], 'dropped.png', { type: 'image/png' }));
+            el.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: data }));
+          }, Array.from(photo.buffer));
+          await page.locator('.media-preview-grid img').waitFor();
+          rejectPhoto = false;
+          await page.getByRole('button', { name: text('Preview listing', 'معاينة الإعلان'), exact: true }).click();
+          await page.getByRole('button', { name: text('Submit for review', 'إرسال للمراجعة'), exact: true }).click();
+          await page.getByRole('dialog').waitFor({ state: 'hidden' });
+          assert.equal(submissions, 1);
+        } else await page.keyboard.press('Escape');
       }
       // Exercise the document input inside the real verification modal.
       await page.locator('.mobile-verify-cta').first().evaluate(el => el.click());
@@ -72,7 +100,7 @@ for (const [name, engine] of Object.entries({ webkit, chromium })) {
       assert.equal(uploaded?.['content-type'], pdf.mimeType);
       assert.equal(uploaded?.['x-file-name'], pdf.name);
       assert.deepEqual(errors, []);
-      console.log(`PASS ${name} ${language} ${width}px: product/service chooser, previews, reselection, document upload`);
+      console.log(`PASS ${name} ${language} ${width}px: chooser, drop, HTML 413 recovery, mocked listing/document submission`);
       await page.close();
     }
   } finally { await browser.close(); }

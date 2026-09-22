@@ -63,8 +63,8 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
       {isApartmentRental && <><div className="form-row"><label>{t('Furnishing')}<select value={furnishing} onChange={event => setFurnishing(event.target.value as RentalFurnishing)}><option value="Furnished">{t('Furnished')}</option><option value="Unfurnished">{t('Unfurnished')}</option></select></label><label>{t('Broad zone')}<select value={zone} onChange={event => setZone(event.target.value)}>{zones.slice(1).map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label></div></>}
     </>}
     <div className="modal-foot">
-      {preview ? <button className="button button-outline" type="button" onClick={() => setPreview(false)}>{t('Edit details')}</button> : <span className="privacy-note"><ShieldCheck size={15} />{t('Apartment details stay private')}</span>}
-      <button className="button button-accent" type="submit" disabled={!valid || busy}>{t(preview ? 'Submit for review' : 'Preview listing')}<ArrowRight size={16} /></button>
+      {preview ? <button className="button button-outline" type="button" disabled={busy} onClick={() => setPreview(false)}>{t('Edit details')}</button> : <span className="privacy-note"><ShieldCheck size={15} />{t('Apartment details stay private')}</span>}
+      <button className="button button-accent" type="submit" disabled={!valid || busy}>{t(busy ? 'Please wait…' : preview ? 'Submit for review' : 'Preview listing')}<ArrowRight size={16} /></button>
     </div>
     <p className="modal-intro">{t('Your post and photos will be saved privately for review before publishing.')}</p>
   </form>;

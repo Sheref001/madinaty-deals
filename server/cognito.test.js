@@ -64,12 +64,28 @@ describe('Cognito sign-in', () => {
     expect(f.oidc.discovery).toHaveBeenCalledWith(new URL(config.cognito.issuerUrl), config.cognito.clientId, undefined);
     expect(f.oidc.buildAuthorizationUrl.mock.calls[0][1]).toMatchObject({
       redirect_uri: config.cognito.callbackUrl, response_type: 'code', scope: 'openid email profile',
-      state: 'secure-state', nonce: 'secure-nonce', code_challenge: 'pkce-challenge', code_challenge_method: 'S256',
+      state: 'secure-state', nonce: 'secure-nonce', code_challenge: 'pkce-challenge', code_challenge_method: 'S256', lang: 'ar',
     });
     expect(res.writeHead.mock.calls[0][1].location).toContain('example.auth');
     const cookie = res.writeHead.mock.calls[0][1]['set-cookie'];
     expect(cookie).toMatch(/^__Host-madinaty_oauth=[A-Za-z0-9_-]+; Path=\/; HttpOnly; SameSite=Lax; Max-Age=600; Secure$/);
     expect(cookie).not.toContain('pkce-verifier');
+  });
+
+  it('routes the branded Google button directly through the configured Google provider', async () => {
+    const f = setup();
+    const res = response();
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?lang=en&provider=google', headers: {} }, res, ['api', 'auth', 'cognito', 'start']);
+    expect(f.oidc.buildAuthorizationUrl.mock.calls[0][1]).toMatchObject({ identity_provider: 'Google', lang: 'en' });
+  });
+
+  it('opens Cognito signup directly and refuses signup while registration is paused', async () => {
+    const f = setup();
+    const res = response();
+    await f.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?mode=signup', headers: {} }, res, ['api', 'auth', 'cognito', 'start']);
+    expect(new URL(res.writeHead.mock.calls[0][1].location).pathname).toBe('/signup');
+    const paused = setup({ registrationEnabled: false });
+    await expect(paused.cognito.handle({ method: 'GET', url: '/api/auth/cognito/start?mode=signup', headers: {} }, response(), ['api', 'auth', 'cognito', 'start'])).rejects.toMatchObject({ status: 403 });
   });
 
   it('creates only a normal resident account after a verified Cognito email and issues a local session', async () => {

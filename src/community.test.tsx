@@ -18,7 +18,8 @@ it.each(['en', 'ar'])('keeps Cognito failures visible in the account dialog in %
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('hello@madinatydeals.com');
   expect(screen.getByRole('dialog').contains(alert)).toBe(true);
-  await waitFor(() => expect(screen.getByRole('dialog').querySelector('a')?.getAttribute('href')).toBe(`/api/auth/cognito/start?lang=${language}`));
+  await waitFor(() => expect(screen.getByRole('link', { name: language === 'ar' ? 'تسجيل الدخول بالبريد الإلكتروني' : 'Login with Email' }).getAttribute('href')).toBe(`/api/auth/cognito/start?lang=${language}&provider=email`));
+  expect(screen.getByRole('link', { name: language === 'ar' ? 'تسجيل الدخول باستخدام Google' : 'Login with Google' }).getAttribute('href')).toBe(`/api/auth/cognito/start?lang=${language}&provider=google`);
   expect(window.location.search).not.toContain('auth_error');
   expect(screen.queryByRole('status')).toBeNull();
   vi.useFakeTimers();

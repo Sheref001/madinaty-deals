@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Mail, UserPlus } from 'lucide-react';
 import { requestCode, verifyCode, type Account } from './api';
 import { useTranslation } from './i18n';
 
@@ -11,9 +12,14 @@ export default function AuthForm({ onSignedIn, registrationEnabled, cognitoEnabl
   const [challengeId, setChallengeId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  if (cognitoEnabled) return <div className="modal-form">
-    <p>{t(registrationEnabled ? 'Continue to secure sign-in or create an account.' : 'Sign in with your existing account. New account creation is temporarily paused.')}</p>
-    <a className="button button-accent" href={`/api/auth/cognito/start?lang=${language}`}>{t('Continue to account')}</a>
+  if (cognitoEnabled) return <div className="modal-form branded-auth">
+    <div className="auth-welcome"><h3>{t('Login to your Madinaty Deals account')}</h3><p>{t(registrationEnabled ? 'Choose how you would like to continue.' : 'Sign in with your existing account. New account creation is temporarily paused.')}</p></div>
+    <div className="auth-provider-list">
+      <a className="auth-provider-button email" href={`/api/auth/cognito/start?lang=${language}&provider=email`}><Mail size={19} /><span>{t('Login with Email')}</span></a>
+      <div className="auth-divider"><span>{t('OR')}</span></div>
+      <a className="auth-provider-button google" href={`/api/auth/cognito/start?lang=${language}&provider=google`}><span className="google-mark" aria-hidden="true">G</span><span>{t('Login with Google')}</span></a>
+    </div>
+    {registrationEnabled && <div className="auth-register-prompt"><span>{t('New to Madinaty Deals?')}</span><a href={`/api/auth/cognito/start?lang=${language}&mode=signup`}><UserPlus size={16} />{t('Create an account')}</a></div>}
   </div>;
   return <form className="modal-form" onSubmit={async event => {
     event.preventDefault();

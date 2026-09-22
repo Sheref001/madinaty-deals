@@ -63,7 +63,13 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
 
   async function start(request, response) {
     if (!config.cognitoEnabled) throw new RequestError(404, 'Not found');
-    const language = new URL(request.url, config.origin).searchParams.get('lang') === 'ar' ? 'ar' : 'en';
+    const requestUrl = new URL(request.url, config.origin);
+    const language = requestUrl.searchParams.get('lang') === 'ar' ? 'ar' : 'en';
+    const provider = requestUrl.searchParams.get('provider');
+    const mode = requestUrl.searchParams.get('mode');
+    if (provider && !['email', 'google'].includes(provider)) throw new RequestError(400, 'Unsupported sign-in provider');
+    if (mode && mode !== 'signup') throw new RequestError(400, 'Unsupported account action');
+    if (mode === 'signup' && !config.registrationEnabled) throw new RequestError(403, 'Account creation is temporarily paused. Please try again later.');
     const state = oidcClient.randomState();
     const nonce = oidcClient.randomNonce();
     const verifier = oidcClient.randomPKCECodeVerifier();
@@ -76,7 +82,10 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
       nonce,
       code_challenge: challenge,
       code_challenge_method: 'S256',
+      lang: language,
+      ...(provider === 'google' ? { identity_provider: 'Google' } : {}),
     });
+    if (mode === 'signup') authorizationUrl.pathname = '/signup';
     const stateCookie = createStateCookie(config, { state, nonce, verifier, language, expiresAt: Date.now() + 600000 });
     response.writeHead(302, { location: authorizationUrl.href, 'cache-control': 'no-store', 'set-cookie': stateCookie, 'referrer-policy': 'no-referrer' });
     response.end();

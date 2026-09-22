@@ -451,7 +451,7 @@ function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verif
   const [collection, setCollection] = useState<CollectionFilters>(emptyFilters);
   const [layout, setLayout] = useState<'grid' | 'list'>('list');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const hasAudienceChoice = splitCategories.includes(selectedCategory);
+  const hasAudienceChoice = splitCategories.includes(selectedCategory) && selectedCategory !== 'Health & fitness';
   const clearCollectionFilters = () => { setCollection(emptyFilters); onClearFilters(); };
   const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, advertiserType: businessOnlyCategories.includes(selectedCategory) ? 'small_business' : hasAudienceChoice ? audience : undefined, category: collection.category, condition: collection.condition, furnishing: collection.furnishing, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max), educationLevel: collection.educationLevel, subject: collection.subject, groceryActivity: collection.groceryActivity, homeServiceType: collection.homeServiceType, housekeepingType: collection.housekeepingType, fitnessProviderType: collection.fitnessProviderType });
   const categoryHeading = splitCategories.includes(selectedCategory) || businessOnlyCategories.includes(selectedCategory) || selectedCategory === 'Apartment rentals' || selectedCategory === 'Groceries';

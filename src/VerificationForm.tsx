@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileUp } from 'lucide-react';
 import { uploadFile, submitVerification } from './api';
 import { useTranslation } from './i18n';
 const types = [['MADINATY_ID', 'Madinaty ID / community card'], ['ELECTRICITY_BILL', 'Electricity bill'], ['WATER_BILL', 'Water bill / receipt'], ['GAS_BILL', 'Gas bill / receipt'], ['LEASE_OR_OWNERSHIP', 'Lease or ownership document'], ['NATIONAL_ID', 'National ID (optional)']] as const;
@@ -20,7 +21,7 @@ export default function VerificationForm({ onSubmitted, onSkip }: { onSubmitted:
     <button type="button" className="button button-outline" onClick={onSkip} disabled={busy}>{t('Not now')}</button>
     <p>{t('One document is enough. Evidence is linked only to your verification request, never your public profile.')}</p>
     <label>{t('Document type')}<select value={type} onChange={event => setType(event.target.value)}>{types.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
-    <label>{t('Take a photo or choose a file')}<input type="file" accept="image/jpeg,image/png,application/pdf" required onChange={event => { const selected = event.target.files?.[0]; setError(''); if (selected && selected.size > 10 * 1024 * 1024) { setFile(null); setError(t('Use a JPG, PNG or PDF under 10 MB.')); } else setFile(selected || null); }} /></label>
+    <label className="file-picker"><span><b>{t('Take a photo or choose a file')}</b><small>{file ? file.name : t('JPG, PNG or PDF · maximum 10 MB')}</small></span><span className="file-picker-button"><FileUp size={16} />{t('Choose file')}</span><input className="file-input" type="file" accept="image/jpeg,image/png,application/pdf" required onChange={event => { const selected = event.target.files?.[0]; setError(''); if (selected && selected.size > 10 * 1024 * 1024) { setFile(null); setError(t('Use a JPG, PNG or PDF under 10 MB.')); } else setFile(selected || null); }} /></label>
     <p>{t('Private to you and the admin reviewer only. Files are not publicly accessible or shown to other users.')}</p>
     {error && <p role="alert" className="form-error">{error}</p>}
     <button type="submit" className="button button-accent" disabled={!file || busy}>{t(busy ? 'Please wait…' : 'Request verification')}</button>

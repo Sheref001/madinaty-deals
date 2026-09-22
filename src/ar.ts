@@ -20,7 +20,7 @@ export const arabic: Record<string, string> = {
   'Choose a business request': 'اختر طلب المشروع',
   'Choose individuals or small businesses in this category.': 'اختر الأفراد أو المشروعات الصغيرة في هذا القسم.',
   'Health & fitness posts require an agreed business fee': 'إعلانات الصحة واللياقة تتطلب رسومًا تجارية بالاتفاق',
-  'Individuals': 'أفراد', 'Admin dashboard': 'لوحة تحكم المسؤول', 'Admin access required': 'يلزم دخول المسؤول', 'This dashboard is restricted to the Madinaty Deals administrator account.': 'لوحة التحكم هذه مخصصة لحساب مسؤول مدينتي ديلز فقط.',
+  'Individuals': 'أفراد', 'Provider type': 'نوع مقدم الخدمة', 'All providers': 'كل مقدمي الخدمات', 'Admin dashboard': 'لوحة تحكم المسؤول', 'Admin access required': 'يلزم دخول المسؤول', 'This dashboard is restricted to the Madinaty Deals administrator account.': 'لوحة التحكم هذه مخصصة لحساب مسؤول مدينتي ديلز فقط.',
   'Share this ad': 'مشاركة هذا الإعلان', 'WhatsApp': 'واتساب', 'Messenger': 'ماسنجر', 'Facebook': 'فيسبوك', 'Telegram': 'تيليجرام', 'Copy link': 'نسخ الرابط', 'More sharing options': 'خيارات مشاركة إضافية', 'Share link opened': 'تم فتح رابط المشاركة',
   'Tutoring centres': 'مراكز الدروس', 'Tutoring subcategory': 'نوع مقدم الدروس', 'Choose a tutoring subcategory.': 'اختر نوع مقدم الدروس.',
   'Education stage': 'المرحلة التعليمية', 'All education stages': 'كل المراحل التعليمية', 'Before university': 'قبل الجامعة', 'University': 'الجامعة', 'Subject': 'المادة', 'Subjects': 'المواد', 'All subjects': 'كل المواد', 'Quran': 'القرآن الكريم', 'Mathematics': 'الرياضيات', 'English': 'اللغة الإنجليزية', 'Arabic': 'اللغة العربية', 'Physics': 'الفيزياء', 'Chemistry': 'الكيمياء', 'Biology': 'الأحياء', 'French': 'اللغة الفرنسية', 'German': 'اللغة الألمانية', 'Computer science': 'علوم الحاسب',

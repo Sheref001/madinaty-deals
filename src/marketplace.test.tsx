@@ -49,20 +49,20 @@ it('orders prices with unknown values last and applies inclusive price limits', 
 });
 
 
-it('splits tutoring into individuals and tutoring centres', () => {
+it('filters tutoring individuals and centres without an audience banner', () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Tutoring & education\s*Explore/ }));
   expect(screen.getByRole('heading', { name: 'Tutoring & education' })).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Individuals' })).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Tutoring centres' })).toBeTruthy();
-  expect(screen.queryByText('Individual ads are free.')).toBeNull();
+  expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
+  expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
+  expect(screen.getByLabelText('Provider type')).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeTruthy();
-  expect(screen.queryByRole('heading', { name: 'Kite Learning Studio' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Tutoring centres' }));
+  expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Provider type'), { target: { value: 'small_business' } });
   expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
   expect(screen.queryByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeNull();
-  expect(screen.queryByText(/Small business fees are agreed/)).toBeNull();
 });
 
 it.each(['Electronics'])('shows both subcategories for %s even with no matching ads', category => {
@@ -70,9 +70,11 @@ it.each(['Electronics'])('shows both subcategories for %s even with no matching 
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: `${category}Explore` }));
   expect(screen.getByRole('heading', { name: category })).toBeTruthy();
-  expect(screen.getByRole('button', { name: /Individuals\s*Free ads/ }).getAttribute('aria-pressed')).toBe('true');
-  fireEvent.click(screen.getByRole('button', { name: /Small businesses\s*Agreed fees/ }));
-  expect(screen.getByRole('button', { name: /Small businesses\s*Agreed fees/ }).getAttribute('aria-pressed')).toBe('true');
+  expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
+  expect(screen.getByLabelText('Provider type')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Provider type'), { target: { value: 'small_business' } });
+  expect((screen.getByLabelText('Provider type') as HTMLSelectElement).value).toBe('small_business');
 });
 
 

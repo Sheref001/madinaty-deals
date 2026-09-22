@@ -69,10 +69,39 @@ it('requires an explicit service category and offers every supported service typ
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
   expect(category.value).toBe('');
   expect(Array.from(category.options).map(option => option.value)).toEqual([
-    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services',
+    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other services',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
   expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('keeps the pet-care research category and its subcategories admin-only', async () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  const publicView = render(<App />);
+  await screen.findByRole('button', { name: 'Sign in or create account' });
+  expect(screen.queryByRole('button', { name: /Pet care/ })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /research preview/ })).toBeNull();
+  publicView.unmount();
+
+  vi.mocked(getSession).mockResolvedValue({ id: 'admin-1', name: 'Admin', email: 'hello@madinatydeals.com', role: 'ADMIN', residentVerified: false });
+  render(<App />);
+  await screen.findByRole('button', { name: 'Sign out' });
+  fireEvent.click(screen.getByRole('button', { name: /Pet care.*Admin research preview/ }));
+  expect(screen.getByRole('heading', { name: 'Pet care' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Veterinary clinics · research preview' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Pet business type'), { target: { value: 'Pet shops' } });
+  expect(screen.queryByRole('heading', { name: 'Veterinary clinics · research preview' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
+});
+
+it('lets only an admin prepare a pet-care submission with an approved subtype', () => {
+  const regular = render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+  expect(Array.from((screen.getByLabelText('Choose your service category') as HTMLSelectElement).options).some(option => option.value === 'Pet care')).toBe(false);
+  regular.unmount();
+  render(<LanguageContext.Provider value="en"><ServiceForm isAdmin onPublish={vi.fn()} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Pet care' } });
+  expect(Array.from((screen.getByLabelText('Pet business type') as HTMLSelectElement).options).map(option => option.value)).toEqual(['Veterinary clinics', 'Pet shops']);
 });
 
 it('routes the home services category to providers in Arabic', () => {

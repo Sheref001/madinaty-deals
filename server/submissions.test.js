@@ -53,6 +53,16 @@ describe('marketplace submission boundaries', () => {
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
   });
+  it('keeps pet-care research submissions restricted to administrators and validates the subtype', async () => {
+    const resident = fixture();
+    const petCare = { ...payload, category: 'Pet care', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics' };
+    await expect(resident.call({ kind: 'service', payload: petCare })).rejects.toMatchObject({ status: 403 });
+    expect(resident.prisma.submission.create).not.toHaveBeenCalled();
+    const admin = fixture({ role: 'ADMIN' });
+    await expect(admin.call({ kind: 'service', payload: { ...petCare, petBusinessType: 'Dog walkers' } })).rejects.toMatchObject({ status: 400 });
+    await admin.call({ kind: 'service', payload: petCare });
+    expect(admin.prisma.submission.create.mock.calls[0][0].data.payload.petBusinessType).toBe('Veterinary clinics');
+  });
   it.each([{ role: 'RESIDENT', verified: false }, { role: 'SERVICE_PROVIDER', verified: true }])('rejects ineligible rentals: %j', async options => {
     const f = fixture(options);
     await expect(f.call(rental)).rejects.toMatchObject({ status: 403 });

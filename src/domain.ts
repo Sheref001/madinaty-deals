@@ -18,6 +18,7 @@ export interface BrowseFilters {
   homeServiceType?: string;
   housekeepingType?: string;
   fitnessProviderType?: string;
+  petBusinessType?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -43,7 +44,8 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const homeServiceTypeMatches = !filters.homeServiceType || (result.type === 'service' && result.homeServiceType === filters.homeServiceType);
     const housekeepingTypeMatches = !filters.housekeepingType || (result.type === 'service' && result.housekeepingType === filters.housekeepingType);
     const fitnessProviderTypeMatches = !filters.fitnessProviderType || (result.type === 'business' && result.fitnessProviderType === filters.fitnessProviderType);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && matchesQuery(result, filters.query);
+    const petBusinessTypeMatches = !filters.petBusinessType || ((result.type === 'business' || result.type === 'service') && result.petBusinessType === filters.petBusinessType);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

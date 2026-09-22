@@ -27,6 +27,8 @@ export const housekeepingTypes = ['General cleaning', 'Deep cleaning', 'Move-in/
 export type HousekeepingType = typeof housekeepingTypes[number];
 export const fitnessProviderTypes = ['Fitness center', 'Personal trainers'] as const;
 export type FitnessProviderType = typeof fitnessProviderTypes[number];
+export const petBusinessTypes = ['Veterinary clinics', 'Pet shops'] as const;
+export type PetBusinessType = typeof petBusinessTypes[number];
 
 export type AdvertiserType = 'individual' | 'small_business';
 export type BusinessRequest = 'posting' | 'authentication' | 'both';
@@ -74,6 +76,7 @@ export interface Service extends BaseResult {
   subjects?: TutoringSubject[];
   homeServiceType?: HomeServiceType;
   housekeepingType?: HousekeepingType;
+  petBusinessType?: PetBusinessType;
   offer?: { discount: string; validUntil: string };
 }
 
@@ -88,6 +91,7 @@ export interface Business extends BaseResult {
   featured?: boolean;
   groceryActivity?: GroceryActivity;
   fitnessProviderType?: FitnessProviderType;
+  petBusinessType?: PetBusinessType;
 }
 
 export interface Offer extends BaseResult {

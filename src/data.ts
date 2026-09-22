@@ -33,6 +33,7 @@ export const categories = [
   { label: 'Groceries', icon: 'shopping-basket', count: 18, photo: 'https://www.foodbusinessmea.com/wp-content/uploads/2022/12/Food-Tank2.jpg' },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Health & fitness', icon: 'heart-pulse', count: 29, photo: 'https://plus.unsplash.com/premium_photo-1726614172307-15106d1750cd?auto=format&fit=crop&w=1200&q=88' },
+  { label: 'Pet care', icon: 'paw-print', count: 2, adminOnly: true },
   { label: 'Deals & promotions', icon: 'tag', count: 3, photo: '/images/madinaty-offers.webp' },
 ];
 
@@ -81,10 +82,6 @@ export const services: Service[] = [
     serviceArea: 'Madinaty-wide', phone: '+13433639621', whatsapp: '+13433639621', response: 'Usually replies quickly', educationLevel: 'Before university', subjects: ['English'], zone: 'B10', createdAt: 'Demo profile', image: 'tutor', accent: 'lilac', verified: false,
   },
   {
-    id: 'service-4', publicAdId: 'MD-EWEAA2Z4Y2', type: 'service', title: 'Paws & Paths', subtitle: 'Dog walking, sitting and home visits', category: 'Pet care', rating: 4.9, reviewCount: 16,
-    serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', zone: 'B11', createdAt: 'Verified provider', image: 'pet', accent: 'mint', verified: true,
-  },
-  {
     id: 'service-cleaning-demo', publicAdId: 'MD-NHXCV537G3', type: 'service', title: 'Madinaty Home Care · DEMO', subtitle: 'Housekeeping, deep cleaning & move-in cleaning', category: 'Housekeeping & cleaning', rating: 0, reviewCount: 0,
     serviceArea: 'Madinaty-wide', phone: '', response: 'Response time to be configured', housekeepingType: 'General cleaning', zone: 'All zones', createdAt: 'Community provider', image: 'cleaning', accent: 'blue', verified: false,
   },
@@ -95,6 +92,14 @@ export const services: Service[] = [
 ];
 
 export const businesses: Business[] = [
+  {
+    id: 'business-pet-clinic-research', publicAdId: 'MD-PETCLINIC', type: 'business', title: 'Veterinary clinics · research preview', subtitle: 'Admin-only category concept — no real business is represented', category: 'Pet care', rating: 0, reviewCount: 0,
+    hours: 'Research preview', phone: '', petBusinessType: 'Veterinary clinics', zone: 'All zones', createdAt: 'Admin research preview', image: 'pet', accent: 'mint', verified: false,
+  },
+  {
+    id: 'business-pet-shop-research', publicAdId: 'MD-PETSHOP', type: 'business', title: 'Pet shops · research preview', subtitle: 'Admin-only category concept — no real business is represented', category: 'Pet care', rating: 0, reviewCount: 0,
+    hours: 'Research preview', phone: '', petBusinessType: 'Pet shops', zone: 'All zones', createdAt: 'Admin research preview', image: 'pet', accent: 'mint', verified: false,
+  },
   {
     id: 'business-poultry-demo', publicAdId: 'MD-B7VJ5GFCHA', type: 'business', title: 'Craft Zone Poultry · DEMO', subtitle: 'Fresh poultry, eggs & fast local delivery', category: 'Groceries', rating: 4.9, reviewCount: 12,
     hours: 'Daily · hours to be confirmed', phone: '', whatsapp: '', groceryActivity: 'Poultry', zone: 'Craft Zone', createdAt: 'Featured demo ad', image: 'poultry', accent: 'coral', verified: false, featured: true,

@@ -1,9 +1,9 @@
 import { useTranslation } from './i18n';
 import type { SearchResult } from './types';
 import { listingConditionOptions } from './types';
-import { educationLevels, fitnessProviderTypes, groceryActivities, homeServiceTypes, housekeepingTypes, tutoringSubjects } from './types';
+import { educationLevels, fitnessProviderTypes, groceryActivities, homeServiceTypes, housekeepingTypes, petBusinessTypes, tutoringSubjects } from './types';
 
-export interface CollectionFilters { category: string; condition: string; furnishing: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string; homeServiceType: string; housekeepingType: string; fitnessProviderType: string }
+export interface CollectionFilters { category: string; condition: string; furnishing: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string; homeServiceType: string; housekeepingType: string; fitnessProviderType: string; petBusinessType: string }
 
 export default function MarketplaceFilters({ value, onChange, onClear, results, showPrice, showFurnishing, conditionCategory }: { value: CollectionFilters; onClear: () => void; onChange: (value: CollectionFilters) => void; results: SearchResult[]; showPrice: boolean; showFurnishing?: boolean; conditionCategory?: string }) {
   const { t } = useTranslation();
@@ -18,6 +18,7 @@ export default function MarketplaceFilters({ value, onChange, onClear, results, 
     {conditionCategory === 'Home services' && <label>{t('Service type')}<select value={value.homeServiceType} onChange={event => change('homeServiceType', event.target.value)}><option value="">{t('All home services')}</option>{homeServiceTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
     {conditionCategory === 'Housekeeping & cleaning' && <label>{t('Cleaning type')}<select value={value.housekeepingType} onChange={event => change('housekeepingType', event.target.value)}><option value="">{t('All cleaning services')}</option>{housekeepingTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
     {conditionCategory === 'Health & fitness' && <label>{t('Fitness provider')}<select value={value.fitnessProviderType} onChange={event => change('fitnessProviderType', event.target.value)}><option value="">{t('All fitness providers')}</option>{fitnessProviderTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
+    {conditionCategory === 'Pet care' && <label>{t('Pet business type')}<select value={value.petBusinessType} onChange={event => change('petBusinessType', event.target.value)}><option value="">{t('All pet businesses')}</option>{petBusinessTypes.map(type => <option value={type} key={type}>{t(type)}</option>)}</select></label>}
     {showPrice && <>
       <fieldset><legend>{t('Price (EGP)')}</legend><div className="price-inputs"><label>{t('Minimum price')}<input type="number" min="0" step="0.01" value={value.min} onChange={event => change('min', event.target.value)} /></label><label>{t('Maximum price')}<input type="number" min="0" step="0.01" value={value.max} onChange={event => change('max', event.target.value)} /></label></div></fieldset>
       {value.min && value.max && Number(value.min) > Number(value.max) && <p role="alert">{t('Maximum price must be at least the minimum.')}</p>}

@@ -288,6 +288,7 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .category-icon.wrench { color: #6a8d79; background: #dcefdc; }
 .category-icon.utensils { color: #bd7a51; background: #f9e3c4; }
 .category-icon.heart-pulse { color: #ac6463; background: #f6dddd; }
+.category-icon.paw-print { color: #7c654f; background: #efe4d7; }
 .category-icon.graduation-cap { color: #68548d; background: #e9e1f7; }
 .view-count { display: flex; align-items: center; gap: 4px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .comment-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }

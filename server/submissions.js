@@ -60,6 +60,7 @@ export function createSubmissions({ prisma, auth }) {
       }
     } else {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other services'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
+      if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
       Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
       if (clean.category === 'Tutoring & education') {
@@ -85,6 +86,10 @@ export function createSubmissions({ prisma, auth }) {
         const fitnessProviderType = payload.fitnessProviderType || 'Fitness center';
         if (!['Fitness center', 'Personal trainers'].includes(fitnessProviderType)) throw new RequestError(400, 'Choose a fitness provider type');
         clean.fitnessProviderType = fitnessProviderType;
+      }
+      if (clean.category === 'Pet care') {
+        if (!['Veterinary clinics', 'Pet shops'].includes(payload.petBusinessType)) throw new RequestError(400, 'Choose a pet business type');
+        clean.petBusinessType = payload.petBusinessType;
       }
       if (['Tutoring & education', 'Health & fitness'].includes(clean.category) && payload.offer !== undefined) {
         if (!payload.offer || typeof payload.offer !== 'object' || Array.isArray(payload.offer)) throw new RequestError(400, 'Invalid offer');

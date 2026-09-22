@@ -56,9 +56,7 @@ const navItems: { id: View; label: string; icon: LucideIcon }[] = [
   { id: 'browse', label: 'Buy & sell', icon: Package },
   { id: 'services', label: 'Services', icon: Wrench },
   { id: 'businesses', label: 'Businesses', icon: Store },
-  { id: 'offers', label: 'Offers', icon: Tag },
 ];
-const visibleNavItems = navItems.filter(item => item.id !== 'offers' || featureFlags.offers);
 const searchScopes = (['search', 'browse', 'services', 'businesses', ...(featureFlags.offers ? ['offers'] : [])] as View[]);
 const searchScopeLabels = ['All categories', 'Buy & sell', 'Services', 'Businesses', ...(featureFlags.offers ? ['Offers'] : [])];
 
@@ -355,7 +353,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       </main>
 
       <div className="mobile-bottom-nav">
-        {visibleNavItems.slice(0, 4).map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
+        {navItems.slice(0, 4).map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
         <button className="mobile-post" onClick={openPost} aria-label={t("Post a listing")}><Plus size={22} /></button>
       </div>
 
@@ -373,7 +371,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 function Navigation({ view, goTo, favoriteCount, isAdmin, onAdmin, onVerify }: { view: View; goTo: (view: View) => void; favoriteCount: number; isAdmin: boolean; onAdmin: () => void; onVerify: () => void }) {
   const { t } = useTranslation();
   return <nav className="nav-list" aria-label={t("Main navigation")}>
-    {visibleNavItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
+    {navItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
     <NavItem item={{ id: 'saved', label: 'Saved', icon: Bookmark }} active={view === 'saved'} onClick={() => goTo('saved')} count={favoriteCount} />
     {isAdmin && <button className="admin-nav-link" type="button" onClick={onAdmin}><BarChart3 size={18} /><span>{t('Admin dashboard')}</span></button>}
     <div className="nav-divider" />

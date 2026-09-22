@@ -39,7 +39,7 @@ docker compose --env-file .env up -d --build --wait
 
 Paste the two generated values into `AUTH_SECRET` and `POSTGRES_PASSWORD`. The `config` command is a safe preflight check: it resolves Compose variables without starting containers. It will identify any remaining missing setting before deployment.
 
-- `APP_ORIGIN`: exact HTTPS origin. Use a TLS reverse proxy; the container port binds to loopback on the host. Set `TRUSTED_PROXY_PEERS` to the exact socket peer address(es) of proxies that overwrite `X-Forwarded-For` (usually `127.0.0.1` for the local Nginx setup). HTTP requests reported by the proxy are redirected to HTTPS.
+- `APP_ORIGIN`: exact HTTPS origin. Use a TLS reverse proxy; the container port binds to loopback on the host. Set `TRUSTED_PROXY_PEERS` to the exact socket peer address(es) of proxies that overwrite `X-Forwarded-For` (usually `127.0.0.1` for the local Nginx setup). Enforce HTTP-to-HTTPS and `www`-to-apex redirects at Cloudflare or Nginx; do not add an origin-level redirect when Cloudflare uses an HTTP origin connection.
 - `AUTH_SECRET`: at least 32 random characters. Generate with `openssl rand -hex 32`. Store it securely; changing it invalidates outstanding codes and CSRF tokens.
 - `POSTGRES_PASSWORD`: a long URL-safe random password; Compose interpolates it into the database URL. `DATABASE_URL` is needed for non-Compose commands.
 - `REGISTRATION_ENABLED=false` pauses new account creation while allowing existing Cognito accounts to sign in. The server rejects legacy OTP requests for unknown email addresses while paused. Set it to `true` after OTP/SES delivery is restored to reopen public registration.

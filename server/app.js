@@ -115,14 +115,6 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (request.method === 'OPTIONS') return send(response, 204, {}, { 'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type,x-visitor-id,x-csrf-token,x-file-name' });
     try {
       const parts = routeParts(request.url);
-      if (!config.local && (request.method === 'GET' || request.method === 'HEAD') && request.headers['x-forwarded-proto'] === 'http') {
-        const url = new URL(request.url, config.origin);
-        if (request.method === 'HEAD') {
-          response.writeHead(308, { location: `${config.origin}${url.pathname}${url.search}`, ...securityHeaders });
-          return response.end();
-        }
-        return send(response, 308, {}, { location: `${config.origin}${url.pathname}${url.search}` });
-      }
       if (parts[0] === 'api') return await handleApi(request, response, parts);
       if (request.method === 'GET' || request.method === 'HEAD') return await serveStatic(request, response);
       return send(response, 405, { error: 'Method not allowed' });

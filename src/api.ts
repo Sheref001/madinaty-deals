@@ -23,11 +23,12 @@ export const recordView = (type: string, id: string) => request(`/content/${enco
 export const getComments = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`) as Promise<{ comments: PublicComment[] }>;
 export const postComment = (type: string, id: string, body: string, language: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ body, language }) }) as Promise<{ comment: PublicComment }>;
 export const submitReport = (contentType: string, contentId: string, reason: string, details: string) => request('/reports', { method: 'POST', body: JSON.stringify({ contentType, contentId, reason, details }) }) as Promise<{ report: { id: string; status: string; createdAt: string } }>;
+export const translateText = (text: string, sourceLanguage: 'ar' | 'en', targetLanguage: 'ar' | 'en') => request('/translate', { method: 'POST', body: JSON.stringify({ text, sourceLanguage, targetLanguage }) }) as Promise<{ translation: string; cached: boolean; sourceLanguage: string; targetLanguage: string }>;
 
 export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
-export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean }>;
+export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');

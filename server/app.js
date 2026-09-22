@@ -7,8 +7,9 @@ import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, config = {} }) {
+export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, translator, config = {} }) {
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
+  const translationLimit = createRateLimiter({ limit: 20, windowMs: 60000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
 
   const securityHeaders = {
@@ -34,7 +35,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     request.clientIp = clientKey;
     if (!requestLimit.take(clientKey)) return send(response, 429, { error: 'Too many requests. Please try again later.' }, { 'retry-after': '60' });
     if (parts.length === 2 && parts[1] === 'health' && request.method === 'GET') return send(response, 200, { ok: true });
-    if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true, cognitoEnabled: config.cognitoEnabled === true });
+    if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true, cognitoEnabled: config.cognitoEnabled === true, translationEnabled: config.translation?.enabled === true });
     if (parts[1] === 'auth' && parts[2] === 'cognito' && cognito) return cognito.handle(request, response, parts, send);
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
     if (parts[1] === 'reports' && reports) return reports.handle(request, response, parts, send);
@@ -43,6 +44,17 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (parts[1] === 'admin' && parts[2] === 'verifications' && submissions) return submissions.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);
     if (parts[1] === 'submissions' && submissions) return submissions.handle(request, response, parts, send);
+    if (parts.length === 2 && parts[1] === 'translate' && request.method === 'POST') {
+      if (!translator) return send(response, 503, { error: 'Translation is temporarily unavailable.' });
+      if (!translationLimit.take(clientKey)) return send(response, 429, { error: 'Too many translation requests. Please try again later.' }, { 'retry-after': '60' });
+      const body = await readJson(request);
+      const text = typeof body.text === 'string' ? body.text.trim() : '';
+      const sourceLanguage = body.sourceLanguage === 'ar' || body.sourceLanguage === 'en' ? body.sourceLanguage : '';
+      const targetLanguage = body.targetLanguage === 'ar' || body.targetLanguage === 'en' ? body.targetLanguage : '';
+      if (!text || text.length > 3000 || !sourceLanguage || !targetLanguage || sourceLanguage === targetLanguage) return send(response, 400, { error: 'Invalid translation request' });
+      const translation = await translator.translate({ text, sourceLanguage, targetLanguage });
+      return send(response, 200, translation);
+    }
     if (parts.length === 2 && parts[1] === 'ready' && request.method === 'GET') {
       await prisma.$queryRaw`SELECT 1`;
       return send(response, 200, { ok: true });

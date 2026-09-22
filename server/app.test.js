@@ -74,6 +74,14 @@ describe('API responses', () => {
     expect(JSON.parse(result.body)).toEqual({ viewCount: 1 });
   });
 
+  it('translates content only through the server translation service', async () => {
+    const translator = { translate: vi.fn().mockResolvedValue({ translation: 'Mathematics tutor', cached: false, sourceLanguage: 'ar', targetLanguage: 'en' }) };
+    const result = await request(createRequestHandler({ prisma: {}, translator }), '/api/translate', { method: 'POST', body: JSON.stringify({ text: 'مدرس رياضيات', sourceLanguage: 'ar', targetLanguage: 'en' }) });
+    expect(result.status).toBe(200);
+    expect(JSON.parse(result.body).translation).toBe('Mathematics tutor');
+    expect(translator.translate).toHaveBeenCalledWith({ text: 'مدرس رياضيات', sourceLanguage: 'ar', targetLanguage: 'en' });
+  });
+
   it('queues valid Arabic comments and throttles concurrent submissions', async () => {
     const prisma = database();
     const handler = createRequestHandler({ prisma, auth });

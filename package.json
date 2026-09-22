@@ -20,6 +20,7 @@
     "maintenance:cleanup": "node scripts/cleanup.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-translate": "^3.1138.0",
     "@prisma/client": "^6.16.0",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",

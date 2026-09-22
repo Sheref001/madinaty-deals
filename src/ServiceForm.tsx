@@ -10,7 +10,7 @@ import PostingAudience from './PostingAudience';
 import { splitCategories, businessOnlyCategories } from './categoryPolicy';
 import type { AdvertiserType, BusinessRequest } from './types';
 
-const serviceCategories = ['Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other services'];
+const serviceCategories = ['Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other local services'];
 const serviceAreas = [{ value: 'All zones', label: 'All of Madinaty' }, ...zones.slice(1).map(value => ({ value, label: value }))];
 const petBusinessType: PetBusinessType = 'Veterinary clinics';
 

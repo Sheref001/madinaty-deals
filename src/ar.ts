@@ -1,5 +1,6 @@
 // English keys stay stable for the existing English interface and stored taxonomy.
 export const arabic: Record<string, string> = {
+  'Other local services': 'خدمات محلية أخرى',
   'This website would like to send you awesome updates and offers!': 'نحب نبعتلك أحدث الأخبار والعروض المميزة من مدينتي ديلز!',
   'Notifications can be turned off anytime from browser settings.': 'تقدر توقف الإشعارات في أي وقت من إعدادات المتصفح.',
   'Updates and offers': 'الأخبار والعروض',

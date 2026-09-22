@@ -80,7 +80,7 @@ it('requires an explicit service category and offers every supported service typ
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
   expect(category.value).toBe('');
   expect(Array.from(category.options).map(option => option.value)).toEqual([
-    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other services',
+    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other local services',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
   expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);

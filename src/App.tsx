@@ -3,7 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import {
   Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowLeft, ArrowRight, ArrowUp, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
   Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront, ShoppingBasket,
-  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp, GraduationCap, Share2,
+  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp, GraduationCap, Share2, CircleHelp,
   Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike, UserRound, PawPrint,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -49,6 +49,7 @@ const iconMap: Record<string, LucideIcon> = {
   bike: Bike,
   'shopping-basket': ShoppingBasket,
   'graduation-cap': GraduationCap,
+  'circle-help': CircleHelp,
   tag: Tag,
   'paw-print': PawPrint,
 };
@@ -422,7 +423,7 @@ function HomeView({ isAdmin, residentVerified, goTo, onPost, onSearch, onCategor
 
     <section id="categories" tabIndex={-1} className="section-block category-section">
       <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />
-      <div className="category-grid">{categories.filter(category => !category.adminOnly || isAdmin).map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike', 'graduation-cap'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse', 'shopping-basket', 'paw-print'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onCategorySearch(category.label); else if (nextView === 'services') onServiceCategory(category.label); else onBusinessCategory(category.label); }}><span className={`category-icon ${category.icon}`}>{category.photo && <img src={category.photo} alt="" loading={category.label === 'Apartment rentals' ? 'eager' : 'lazy'} decoding="async" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} />}<span className="category-fallback"><Icon size={21} /></span></span><span><b>{t(category.label)}</b><small>{t(category.adminOnly ? 'Admin research preview' : 'Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
+      <div className="category-grid">{categories.filter(category => !category.adminOnly || isAdmin).map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike', 'graduation-cap', 'circle-help'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse', 'shopping-basket', 'paw-print'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onCategorySearch(category.label); else if (nextView === 'services') onServiceCategory(category.label); else onBusinessCategory(category.label); }}><span className={`category-icon ${category.icon}`}>{category.photo && <img src={category.photo} alt="" loading={category.label === 'Apartment rentals' ? 'eager' : 'lazy'} decoding="async" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} />}<span className="category-fallback"><Icon size={21} /></span></span><span><b>{t(category.label)}</b><small>{t(category.adminOnly ? 'Admin research preview' : 'Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
     </section>
 
     <section className="section-block featured-section">

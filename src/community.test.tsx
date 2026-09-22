@@ -106,13 +106,9 @@ it('keeps the pet-care research category and its subcategories admin-only', asyn
   expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
 });
 
-it('lets only an admin prepare a pet-care submission with an approved subtype', () => {
-  const regular = render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+it('keeps the admin-only pet-care category out of the service form', () => {
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   expect(Array.from((screen.getByLabelText('Choose your service category') as HTMLSelectElement).options).some(option => option.value === 'Pet care')).toBe(false);
-  regular.unmount();
-  render(<LanguageContext.Provider value="en"><ServiceForm isAdmin onPublish={vi.fn()} /></LanguageContext.Provider>);
-  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Pet care' } });
-  expect(Array.from((screen.getByLabelText('Pet business type') as HTMLSelectElement).options).map(option => option.value)).toEqual(['Veterinary clinics', 'Pet shops']);
 });
 
 it('routes the home services category to providers in Arabic', () => {

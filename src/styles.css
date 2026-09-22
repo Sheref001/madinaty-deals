@@ -44,6 +44,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .community-footer { border-block-start: 1px solid var(--line); margin-block-start: 50px; padding-block-start: 28px; display: grid; grid-template-columns: 1fr .75fr .95fr 1.3fr; gap: 24px; }
 .community-footer h3 { font-size: 14px; margin-block-end: 12px; }
 .footer-intro b { font-size: 20px; }.footer-intro p { margin-block-start: 10px; }
+.community-footer a { color: var(--teal); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.community-footer a:hover, .community-footer a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .community-footer nav button { display: flex; gap: 8px; align-items: center; border: 0; background: none; color: var(--teal); font-size: 13px; padding-block: 8px; padding-inline: 0; }
 .footer-help details { border-block-end: 1px solid var(--line); padding-block: 10px; font-size: 13px; }
 .footer-help summary { cursor: pointer; }.footer-help p { margin-block-start: 8px; }

@@ -958,10 +958,10 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 .posting-audience label { display: grid; gap: 8px; margin-block-start: 10px; }
 .posting-audience h3 { margin: 0; font-size: 16px; }
 .posting-audience-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-block-start: 12px; }
-.posting-audience-options label { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; overflow: visible; }
+.posting-audience-options label { position: relative; z-index: 1; display: grid !important; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 10px; box-sizing: border-box; width: 100%; min-width: 0; min-height: 76px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; overflow: hidden; }
 .posting-audience-options label.selected { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
 .posting-audience-options input { flex: 0 0 auto; margin-block-start: 3px; accent-color: var(--teal); }
-.posting-audience-options span { position: relative; z-index: 2; display: grid; gap: 4px; min-width: 0; color: var(--ink); }
+.posting-audience-options .posting-audience-card-content { position: relative; z-index: 2; display: grid; gap: 4px; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
 .posting-audience-options small { color: var(--ink-soft); line-height: 1.4; }
 .draft-note { margin: 0; color: var(--teal); font-size: 13px; }
 @media (max-width: 480px) { .posting-audience-options { grid-template-columns: 1fr; } }

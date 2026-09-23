@@ -51,7 +51,6 @@ it('shows vehicle and transport choices within the Cars & motorcycles collection
   localStorage.setItem('madinaty-deals-language', 'en');
   await renderReady();
   fireEvent.click(screen.getByRole('button', { name: /Cars & motorcycles\s*Explore/ }));
-  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
   const filter = screen.getByLabelText('Vehicle & transport') as HTMLSelectElement;
   expect(Array.from(filter.options).map(option => option.value)).toEqual(['', 'Cars', 'Motorcycles', 'Moving furniture', 'Private transportation']);
   fireEvent.change(filter, { target: { value: 'Moving furniture' } });
@@ -75,7 +74,6 @@ it('filters tutoring individuals and centres without an audience banner', async 
   expect(screen.getByRole('heading', { name: 'Tutoring & education' })).toBeTruthy();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
   expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
   expect(screen.getByLabelText('Provider type')).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
@@ -90,7 +88,6 @@ it.each(['Electronics'])('shows both subcategories for %s even with no matching 
   fireEvent.click(screen.getByRole('button', { name: `${category}Explore` }));
   expect(screen.getByRole('heading', { name: category })).toBeTruthy();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
   expect(screen.getByLabelText('Provider type')).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Provider type'), { target: { value: 'small_business' } });
   expect((screen.getByLabelText('Provider type') as HTMLSelectElement).value).toBe('small_business');
@@ -107,7 +104,6 @@ it('shows gym providers without an individual and business audience panel', asyn
   expect(screen.queryByRole('button', { name: 'Individuals' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Small businesses' })).toBeNull();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
   expect(screen.queryByLabelText('Provider type')).toBeNull();
   expect(screen.getByLabelText('Fitness provider')).toBeTruthy();
 });

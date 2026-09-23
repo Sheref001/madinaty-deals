@@ -85,8 +85,8 @@
   .home-listings,.results-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .category-grid { gap: 8px; }.category-card { padding: 14px 6px; }.category-card b { font-size: 11px; }
   .trust-strip { margin-block-end: 26px; }.hero-search { height: 48px; }.hero-search input { font-size: 12px; }
-  .market-results-layout { grid-template-columns: 1fr; gap: 12px; }.collection-filters { display: none; }.collection-filters.is-open { display: block; }
-  .filter-button { display: inline-flex; }.market-filters { gap: 14px; }
+  .market-results-layout { grid-template-columns: 1fr; gap: 12px; }.collection-filters, .collection-filters.is-open { display: block; }
+  .filter-button { display: none; }.market-filters { gap: 14px; }
   .list-layout .result-card { grid-template-columns: 110px minmax(0,1fr); }.list-layout .result-image { min-height: 170px; }.list-layout .result-body { padding: 12px; }.list-layout .result-body h3 { font-size: 14px; }.list-layout .result-subtitle { font-size: 11px; }.list-layout .result-detail { flex-wrap: wrap; }.list-layout .result-detail strong { font-size: 16px; }.list-layout .result-footer { display: grid; }
   .page-intro h1 { font-size: 28px; }.results-meta { gap: 8px; }.brand > span:last-child { display: flex; }.language-switch { min-height: 38px; font-size: 12px; padding: 6px; }
 }

@@ -37,6 +37,7 @@ export function CommunityFooter({ goTo, onPost }: { goTo: (view: View) => void; 
       <details><summary>{t('Verification')}</summary><p>{t('Verification adds context to a profile; it does not guarantee a transaction or replace your own checks.')}</p></details>
       <details><summary>{t('Posting rules')}</summary><p>{t('Post one real item or service at a time, choose the correct category and write clear, honest details.')}</p></details>
       <details><summary>{t('Apartment rentals')}</summary><p>{t('Apartment rentals are for verified Madinaty residents only. Brokers and dealers are not allowed.')}</p></details>
+      <details><summary>{t('Cars & motorcycles')}</summary><p>{t('Only verified Madinaty residents can post a car or motorcycle. Moving and private transportation are service listings.')}</p></details>
     </section>
     <section className="footer-help" aria-label={t('Help and safety')}>
       <h3>{t('Help and safety')}</h3>

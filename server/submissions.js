@@ -1,5 +1,6 @@
 import { RequestError, readJson } from './request.js';
 import { canReview, consumeLimit } from './auth.js';
+import { vehicleResidenceAllowed } from './moderation.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 const riskyText = /(?:guaranteed\s+profit|send\s+otp|password|weapon|firearm| наркот|مخدر|سلاح|احصل على ربح مضمون)/i;
@@ -15,7 +16,7 @@ function publicationStatus(payload) {
 function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone'];
   const fields = kind === 'listing'
-    ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity']
+    ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
     : [...common, 'whatsapp', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
 }
@@ -27,7 +28,7 @@ export function createSubmissions({ prisma, auth }) {
         prisma.submission.findMany({ where: { status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
         prisma.contentControl.findMany({ where: { status: { in: ['HIDDEN', 'REMOVED'] } }, select: { contentType: true, contentId: true } }),
       ]);
-      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
+      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
@@ -82,8 +83,12 @@ export function createSubmissions({ prisma, auth }) {
         if (!['Furnished', 'Unfurnished'].includes(payload.furnishing)) throw new RequestError(400, 'Choose furnished or unfurnished');
         clean.furnishing = payload.furnishing;
       }
+      if (clean.category === 'Cars & motorcycles') {
+        if (!['Cars', 'Motorcycles'].includes(payload.vehicleType)) throw new RequestError(400, 'Choose cars or motorcycles');
+        clean.vehicleType = payload.vehicleType;
+      }
     } else {
-      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
+      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
       Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
@@ -140,9 +145,14 @@ export function createSubmissions({ prisma, auth }) {
     const ids = body.uploadIds || [];
     if (!Array.isArray(ids) || ids.length > 6 || !ids.every(uuid) || new Set(ids).size !== ids.length) throw new RequestError(400, 'Invalid photos');
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';
+    const vehicle = body.kind === 'listing' && clean.category === 'Cars & motorcycles';
     const rentalMonth = rental ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date()) : null;
     const result = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+      if (vehicle) {
+        const profile = await tx.profile.findUnique({ where: { userId: current.userId } });
+        if (profile?.verificationState !== 'VERIFIED') throw new RequestError(403, 'Vehicle listings require verified Madinaty residency');
+      }
       const pause = await tx.publicationPause.findFirst({ where: { category: { in: ['*', clean.category, ...(clean.offer ? ['Deals & promotions'] : [])] } } });
       const status = pause ? 'PENDING_REVIEW' : publicationStatus(clean);
       if (clean.offer) {

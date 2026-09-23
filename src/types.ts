@@ -15,6 +15,9 @@ export function listingConditionOptions(category?: string): ListingCondition[] {
     : generalListingConditions;
 }
 export type RentalFurnishing = 'Furnished' | 'Unfurnished';
+export const vehicleTypes = ['Cars', 'Motorcycles'] as const;
+export type VehicleType = typeof vehicleTypes[number];
+export const transportServiceTypes = ['Moving furniture', 'Private transportation'] as const;
 export const groceryActivities = ['Grocery store', 'Butcher', 'Poultry', 'Bakery', 'Fishmonger', 'Fruits & vegetables', 'Dairy & cheese'] as const;
 export type GroceryActivity = typeof groceryActivities[number];
 export const educationLevels = ['Before university', 'University'] as const;
@@ -58,6 +61,7 @@ export interface Listing extends BaseResult {
   price: number | null;
   condition: ListingCondition;
   furnishing?: RentalFurnishing;
+  vehicleType?: VehicleType;
   groceryActivity?: GroceryActivity;
   seller: string;
   sellerVerified?: boolean;

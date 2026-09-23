@@ -75,12 +75,23 @@ it('offers one structured promotion for every visible service category', () => {
   expect(screen.getByRole('link', { name: 'Need another promotion or an edit? Contact hello@madinatydeals.com' }).getAttribute('href')).toContain('mailto:hello@madinatydeals.com');
 });
 
+it('asks for residence verification before a vehicle listing can be previewed', () => {
+  const onVerify = vi.fn();
+  render(<LanguageContext.Provider value="en"><ListingForm onPublish={vi.fn()} onVerify={onVerify} residentVerified={false} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Cars & motorcycles' } });
+  expect(screen.getByLabelText('Vehicle type')).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Preview listing' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Verify residence' }));
+  expect(onVerify).toHaveBeenCalledOnce();
+  expect(submitPost).not.toHaveBeenCalled();
+});
+
 it('requires an explicit service category and offers every supported service type', () => {
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
   expect(category.value).toBe('');
   expect(Array.from(category.options).map(option => option.value)).toEqual([
-    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving',
+    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
   expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);

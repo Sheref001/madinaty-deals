@@ -17,7 +17,7 @@ export default function VerificationForm({ onSubmitted, onSkip }: { onSubmitted:
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
     finally { setBusy(false); }
   }}>
-    <p>{t('Residency verification is optional. You can browse now and verify later.')}</p>
+    <p>{t('You can browse without verification. Posting a car, motorcycle or apartment rental requires verified Madinaty residency.')}</p>
     <button type="button" className="button button-outline" onClick={onSkip} disabled={busy}>{t('Not now')}</button>
     <p>{t('One document is enough. Evidence is linked only to your verification request, never your public profile.')}</p>
     <label>{t('Document type')}<select value={type} onChange={event => setType(event.target.value)}>{types.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>

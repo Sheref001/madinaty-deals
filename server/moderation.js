@@ -3,7 +3,11 @@ import { RequestError } from './request.js';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export const contentTypes = new Set(['listing', 'service', 'business', 'offer']);
 export const contentActions = new Set(['HIDE', 'RESTORE', 'APPROVE', 'REMOVE']);
-export const publicationCategories = new Set(['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries', 'Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Deals & promotions']);
+export const publicationCategories = new Set(['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries', 'Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care', 'Deals & promotions']);
+
+export function vehicleResidenceAllowed(submission) {
+  return submission?.kind !== 'listing' || submission.payload?.category !== 'Cars & motorcycles' || submission.user?.profile?.verificationState === 'VERIFIED';
+}
 
 export function submissionId(contentId) {
   const id = typeof contentId === 'string' && contentId.startsWith('submission-') ? contentId.slice(11) : '';
@@ -13,8 +17,8 @@ export function submissionId(contentId) {
 export async function isContentVisible(prisma, contentType, contentId) {
   const id = submissionId(contentId);
   if (id) {
-    const submission = await prisma.submission.findUnique({ where: { id }, select: { kind: true, status: true, user: { select: { status: true } } } });
-    return submission?.kind === contentType && submission.status === 'PUBLISHED' && submission.user?.status === 'ACTIVE';
+    const submission = await prisma.submission.findUnique({ where: { id }, select: { kind: true, status: true, payload: true, user: { select: { status: true, profile: { select: { verificationState: true } } } } } });
+    return submission?.kind === contentType && submission.status === 'PUBLISHED' && submission.user?.status === 'ACTIVE' && vehicleResidenceAllowed(submission);
   }
   const control = await prisma.contentControl.findUnique({ where: { contentType_contentId: { contentType, contentId } }, select: { status: true } });
   return !control || control.status === 'PUBLISHED';
@@ -29,7 +33,7 @@ export async function setContentStatus(tx, { contentType, contentId, action, rea
   let before;
   let after;
   if (id) {
-    const item = await tx.submission.findUnique({ where: { id }, select: { id: true, kind: true, status: true, statusBeforeHide: true, payload: true } });
+    const item = await tx.submission.findUnique({ where: { id }, select: { id: true, kind: true, status: true, statusBeforeHide: true, payload: true, user: { select: { profile: { select: { verificationState: true } } } } } });
     if (!item || item.kind !== contentType) throw new RequestError(404, 'Ad not found');
     before = item.status;
     if (action === 'HIDE' && ['PUBLISHED', 'PENDING_REVIEW'].includes(before)) after = 'HIDDEN';
@@ -40,6 +44,7 @@ export async function setContentStatus(tx, { contentType, contentId, action, rea
       after = 'PUBLISHED';
     } else if (action === 'REMOVE' && before !== 'REMOVED') after = 'REMOVED';
     else throw new RequestError(409, 'This ad cannot be changed from its current state');
+    if (after === 'PUBLISHED' && !vehicleResidenceAllowed(item)) throw new RequestError(403, 'Vehicle listings require verified Madinaty residency');
     const changed = await tx.submission.updateMany({ where: { id, status: before }, data: { status: after, statusBeforeHide: action === 'HIDE' ? before : action === 'RESTORE' ? null : item.statusBeforeHide } });
     if (!changed.count) throw new RequestError(409, 'This ad changed while you were reviewing it');
   } else {

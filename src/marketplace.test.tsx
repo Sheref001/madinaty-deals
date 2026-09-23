@@ -47,6 +47,18 @@ it('persists favouriting a homepage item on this browser', async () => {
   expect(screen.getByRole('heading', { name: 'Solid oak dining table' })).toBeTruthy();
 });
 
+it('shows vehicle and transport choices within the Cars & motorcycles collection', async () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  await renderReady();
+  fireEvent.click(screen.getByRole('button', { name: /Cars & motorcycles\s*Explore/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
+  const filter = screen.getByLabelText('Vehicle & transport') as HTMLSelectElement;
+  expect(Array.from(filter.options).map(option => option.value)).toEqual(['', 'Cars', 'Motorcycles', 'Moving furniture', 'Private transportation']);
+  fireEvent.change(filter, { target: { value: 'Moving furniture' } });
+  expect(screen.getByRole('heading', { name: 'Madinaty Move' })).toBeTruthy();
+  expect(screen.queryByLabelText('Condition')).toBeNull();
+});
+
 it('orders prices with unknown values last and applies inclusive price limits', () => {
   const fixtures = listings.slice(0,3).map((item,index) => ({ ...item, price: [100,200,null][index] }));
   const base = { query:'', zone:'All zones', verifiedOnly:false, sort:'price-high' as const };

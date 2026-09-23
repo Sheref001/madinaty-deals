@@ -25,6 +25,7 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   return { prisma, auth, send, call };
 }
 const rental = { kind: 'listing', payload: { ...payload, category: 'Apartment rentals', furnishing: 'Unfurnished' } };
+const vehicle = { kind: 'listing', payload: { ...payload, category: 'Cars & motorcycles', vehicleType: 'Cars', condition: 'Good' } };
 const review = `api/admin/verifications/${verificationId}/review`;
 afterEach(() => vi.useRealTimers());
 
@@ -50,6 +51,12 @@ describe('marketplace submission boundaries', () => {
     expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } });
     expect(f.send.mock.calls[0][2].submissions[0]).toMatchObject({ id: 'published-id', kind: 'listing', seller: 'Neighbour', verified: true });
     expect(f.send.mock.calls[0][2].submissions[0].payload.feeStatus).toBeUndefined();
+  });
+  it('keeps an older vehicle ad out of the public feed if its owner is unverified', async () => {
+    const f = fixture();
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'old-vehicle', kind: 'listing', payload: vehicle.payload, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Neighbour', verificationState: 'UNVERIFIED' } } }]);
+    await f.call({}, 'api/public-submissions', 'GET');
+    expect(f.send.mock.calls[0][2].submissions).toEqual([]);
   });
   it('publishes ordinary listings immediately and ignores client-supplied ownership and approval', async () => {
     const f = fixture();
@@ -109,6 +116,27 @@ describe('marketplace submission boundaries', () => {
     const f = fixture(options);
     await expect(f.call(rental)).rejects.toMatchObject({ status: 403 });
     expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it('requires approved Madinaty residency for car and motorcycle ads, ignoring client claims', async () => {
+    const unverified = fixture();
+    await expect(unverified.call({ ...vehicle, payload: { ...vehicle.payload, residentVerified: true, verificationState: 'VERIFIED' } })).rejects.toMatchObject({ status: 403 });
+    await expect(unverified.call({ ...vehicle, payload: { ...vehicle.payload, vehicleType: 'Motorcycles' } })).rejects.toMatchObject({ status: 403 });
+    expect(unverified.prisma.submission.create).not.toHaveBeenCalled();
+    const verified = fixture({ verified: true });
+    await verified.call(vehicle);
+    expect(verified.prisma.submission.create.mock.calls[0][0].data.payload.vehicleType).toBe('Cars');
+    expect(verified.send.mock.calls[0][2].published).toBe(true);
+  });
+  it('rejects missing or invented vehicle types', async () => {
+    const f = fixture({ verified: true });
+    await expect(f.call({ ...vehicle, payload: { ...vehicle.payload, vehicleType: undefined } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ ...vehicle, payload: { ...vehicle.payload, vehicleType: 'Moving furniture' } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it('accepts private transportation as a service rather than a vehicle sale', async () => {
+    const f = fixture();
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Private transportation', whatsapp: '+201001234567' } });
+    expect(f.prisma.submission.create.mock.calls[0][0].data.kind).toBe('service');
   });
   it('uses the Cairo calendar month and blocks a second rental', async () => {
     vi.useFakeTimers();

@@ -10,6 +10,7 @@ export interface BrowseFilters {
   advertiserType?: 'individual' | 'small_business';
   condition?: string;
   furnishing?: string;
+  vehicleType?: string;
   minPrice?: number;
   maxPrice?: number;
   educationLevel?: string;
@@ -33,9 +34,10 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const zoneMatches = filters.zone === 'All zones' || result.zone === filters.zone || result.zone === 'All zones';
     const verifiedMatches = !filters.verifiedOnly || result.verified === true || ('sellerVerified' in result && result.sellerVerified === true);
     const audienceMatches = !filters.advertiserType || (result.advertiserType || (result.type === 'business' ? 'small_business' : 'individual')) === filters.advertiserType;
-    const categoryMatches = !filters.category || result.category === filters.category;
+    const categoryMatches = !filters.category || result.category === filters.category || (filters.category === 'Cars & motorcycles' && result.type === 'service' && ['Moving', 'Private transportation'].includes(result.category));
     const conditionMatches = !filters.condition || (result.type === 'listing' && result.condition === filters.condition);
     const furnishingMatches = !filters.furnishing || (result.type === 'listing' && result.furnishing === filters.furnishing);
+    const vehicleTypeMatches = !filters.vehicleType || (result.type === 'listing' && result.category === 'Cars & motorcycles' && result.vehicleType === filters.vehicleType) || (result.type === 'service' && ((filters.vehicleType === 'Moving furniture' && result.category === 'Moving') || (filters.vehicleType === 'Private transportation' && result.category === 'Private transportation')));
     const hasPriceFilter = filters.minPrice !== undefined || filters.maxPrice !== undefined;
     const priceMatches = !hasPriceFilter || (result.type === 'listing' && result.price !== null && result.price >= (filters.minPrice ?? 0) && result.price <= (filters.maxPrice ?? Infinity));
     const educationLevelMatches = !filters.educationLevel || (result.type === 'service' && result.educationLevel === filters.educationLevel);
@@ -45,7 +47,7 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const housekeepingTypeMatches = !filters.housekeepingType || (result.type === 'service' && result.housekeepingType === filters.housekeepingType);
     const fitnessProviderTypeMatches = !filters.fitnessProviderType || (result.type === 'business' && result.fitnessProviderType === filters.fitnessProviderType);
     const petBusinessTypeMatches = !filters.petBusinessType || ((result.type === 'business' || result.type === 'service') && result.petBusinessType === filters.petBusinessType);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && matchesQuery(result, filters.query);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && vehicleTypeMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

@@ -33,6 +33,9 @@ describe('upload boundaries', () => {
     await expect(uploads.handle(req, {}, parts, vi.fn())).rejects.toMatchObject({ status: 404 });
     expect(storage.get).not.toHaveBeenCalled();
     record.submission.user.status = 'ACTIVE';
+    record.submission.kind = 'listing'; record.submission.payload = { category: 'Cars & motorcycles' }; record.submission.user.profile = { verificationState: 'UNVERIFIED' };
+    await expect(uploads.handle(req, {}, parts, vi.fn())).rejects.toMatchObject({ status: 404 });
+    record.submission.user.profile.verificationState = 'VERIFIED';
     const headers = {};
     await uploads.handle(req, { writeHead: (_status, values) => Object.assign(headers, values), end: vi.fn() }, parts, vi.fn());
     expect(headers['cache-control']).toBe('private, no-store');

@@ -26,4 +26,17 @@ describe('discovery domain rules', () => {
     const sorted = filterResults(pricedListings, { query: '', zone: 'All zones', verifiedOnly: false, sort: 'price-low' });
     expect(sorted.map((result) => result.type === 'listing' ? result.price : 0)).toEqual([1800, 3500, 9800, 18500, 22000]);
   });
+
+  it('separates vehicles for sale from moving and private transport services', () => {
+    const car = { ...listings[0], id: 'car', category: 'Cars & motorcycles', vehicleType: 'Cars' as const };
+    const motorcycle = { ...listings[0], id: 'motorcycle', category: 'Cars & motorcycles', vehicleType: 'Motorcycles' as const };
+    const moving = { ...allResults.find(result => result.id === 'service-2')! };
+    const privateRide = { ...moving, id: 'private-ride', category: 'Private transportation' };
+    const results = [car, motorcycle, moving, privateRide];
+    const base = { query: '', zone: 'All zones', verifiedOnly: false, sort: 'recommended' as const, category: 'Cars & motorcycles' };
+    expect(filterResults(results, { ...base, vehicleType: 'Cars' }).map(result => result.id)).toEqual(['car']);
+    expect(filterResults(results, { ...base, vehicleType: 'Motorcycles' }).map(result => result.id)).toEqual(['motorcycle']);
+    expect(filterResults(results, { ...base, vehicleType: 'Moving furniture' }).map(result => result.id)).toEqual(['service-2']);
+    expect(filterResults(results, { ...base, vehicleType: 'Private transportation' }).map(result => result.id)).toEqual(['private-ride']);
+  });
 });

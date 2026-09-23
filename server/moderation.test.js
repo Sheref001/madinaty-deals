@@ -45,4 +45,12 @@ describe('emergency content moderation', () => {
     expect(await isContentVisible(prisma, 'listing', contentId)).toBe(false);
     expect(await isContentVisible(prisma, 'service', 'service-1')).toBe(false);
   });
+  it('does not let an administrator publish an old vehicle ad from an unverified account', async () => {
+    const { tx } = fixture('PENDING_REVIEW');
+    tx.submission.findUnique.mockResolvedValue({ id, kind: 'listing', status: 'PENDING_REVIEW', payload: { category: 'Cars & motorcycles', vehicleType: 'Cars' }, user: { profile: { verificationState: 'UNVERIFIED' } } });
+    await expect(setContentStatus(tx, { contentType: 'listing', contentId, action: 'APPROVE', actorId: id, admin: true })).rejects.toMatchObject({ status: 403 });
+    expect(tx.submission.updateMany).not.toHaveBeenCalled();
+    const prisma = { submission: { findUnique: vi.fn().mockResolvedValue({ kind: 'listing', status: 'PUBLISHED', payload: { category: 'Cars & motorcycles' }, user: { status: 'ACTIVE', profile: { verificationState: 'UNVERIFIED' } } }) } };
+    expect(await isContentVisible(prisma, 'listing', contentId)).toBe(false);
+  });
 });

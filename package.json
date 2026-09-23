@@ -17,6 +17,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "test:integration": "node scripts/integration.mjs",
+    "test:publishing": "node scripts/test-publishing.mjs",
     "maintenance:cleanup": "node scripts/cleanup.mjs"
   },
   "dependencies": {

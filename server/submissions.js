@@ -157,7 +157,8 @@ export function createSubmissions({ prisma, auth }) {
     // the transaction.
     const submissionPayload = JSON.parse(JSON.stringify(clean));
     const result = await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+      // PostgreSQL returns void; Prisma needs a supported result type even when ignored.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))::text`;
       if (vehicle) {
         const profile = await tx.profile.findUnique({ where: { userId: current.userId } });
         if (profile?.verificationState !== 'VERIFIED') throw new RequestError(403, 'Vehicle listings require verified Madinaty residency');

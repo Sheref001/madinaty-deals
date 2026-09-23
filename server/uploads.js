@@ -66,7 +66,8 @@ export function createUploads({ prisma, config, auth, storage }) {
         const data = { id, userId: current.userId, purpose, documentType: purpose === 'verification' ? documentType : null, objectKey, originalFileName, mimeType: file.mimeType, byteSize: file.bytes.length, sha256: createHash('sha256').update(file.bytes).digest('hex') };
         // Reserve quota before storing bytes, including concurrent requests.
         await prisma.$transaction(async tx => {
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+          // Cast void to text so Prisma can read the result without aborting the transaction.
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))::text`;
           const total = await tx.upload.aggregate({ where: { userId: current.userId }, _sum: { byteSize: true } });
           if ((total._sum.byteSize || 0) + data.byteSize > 200 * 1024 * 1024) throw new RequestError(413, 'Your upload storage limit has been reached');
           await tx.upload.create({ data });
@@ -98,7 +99,7 @@ export function createUploads({ prisma, config, auth, storage }) {
       }
       if (request.method === 'DELETE') {
         await prisma.$transaction(async tx => {
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))::text`;
           const latest = await tx.upload.findUnique({ where: { id: upload.id } });
           if (!latest || latest.userId !== current.userId || latest.submissionId || latest.verificationId) throw new RequestError(409, 'Submitted evidence cannot be deleted here');
           await storage.remove(latest.objectKey);
@@ -114,7 +115,7 @@ export function createUploads({ prisma, config, auth, storage }) {
       const body = await readJson(request);
       if (!Array.isArray(body.uploadIds) || !body.uploadIds.length || body.uploadIds.length > 6 || !body.uploadIds.every(uuid) || new Set(body.uploadIds).size !== body.uploadIds.length) throw new RequestError(400, 'Select one to six verification documents');
       const result = await prisma.$transaction(async tx => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))::text`;
         if (await tx.residentVerification.findFirst({ where: { userId: current.userId, status: 'PENDING' } })) throw new RequestError(409, 'You already have a verification request awaiting review');
         const uploads = await tx.upload.findMany({ where: { id: { in: body.uploadIds }, userId: current.userId, purpose: 'verification', verificationId: null, status: 'READY' } });
         if (uploads.length !== body.uploadIds.length) throw new RequestError(400, 'Invalid verification documents');

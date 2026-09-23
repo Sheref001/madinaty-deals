@@ -255,6 +255,10 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .share-menu { position: absolute; z-index: 5; inset-inline-end: 0; bottom: calc(100% + 7px); min-width: 190px; padding: 6px; display: grid; gap: 2px; background: var(--white); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px rgba(31,69,64,.14); }
 .share-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 8px; padding: 8px 9px; background: transparent; color: var(--ink); text-align: start; font: inherit; font-size: 11px; cursor: pointer; }
 .share-menu button:hover { background: var(--paper-deep); color: var(--teal); }
+.maintenance-banner { position: fixed; z-index: 11; inset-inline: 18px; bottom: 18px; max-width: 430px; margin-inline: auto; display: flex; gap: 10px; align-items: flex-start; padding: 13px 15px; border: 1px solid #cfe4d1; border-radius: 12px; background: #f2f8ef; color: var(--teal); box-shadow: 0 12px 30px rgba(31,69,64,.16); }
+.maintenance-banner span { display: grid; gap: 4px; }
+.maintenance-banner b { font-size: 11px; }
+.maintenance-banner small { color: var(--ink-soft); font-size: 10px; line-height: 1.45; }
 .share-menu-icon { width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: var(--white); font-size: 12px; font-weight: 800; }
 .share-menu-icon.whatsapp { background: #25d366; }.share-menu-icon.messenger { background: #168aff; }.share-menu-icon.facebook { background: #1877f2; font-family: Arial, sans-serif; font-size: 17px; }.share-menu-icon.telegram { background: #229ed9; font-size: 13px; }.share-menu-icon.copy, .share-menu-icon.device { background: var(--teal); }
 .subject-options { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 7px 12px; align-content: start; }

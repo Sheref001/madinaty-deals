@@ -128,6 +128,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [cognitoEnabled, setCognitoEnabled] = useState(false);
   const [translationEnabled, setTranslationEnabled] = useState(false);
   const [signInError, setSignInError] = useState('');
@@ -143,7 +144,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     getSession().then(user => { if (!cancelled) setAccount(user); }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
     return () => { cancelled = true; };
   }, []);
-  useEffect(() => { getPublicConfig().then(value => { setRegistrationEnabled(value.registrationEnabled); setCognitoEnabled(value.cognitoEnabled); setTranslationEnabled(value.translationEnabled === true); }).catch(() => { setRegistrationEnabled(false); setCognitoEnabled(false); setTranslationEnabled(false); }); }, []);
+  useEffect(() => { const load = () => getPublicConfig().then(value => { setRegistrationEnabled(value.registrationEnabled); setMaintenanceMode(value.maintenanceMode === true); setCognitoEnabled(value.cognitoEnabled); setTranslationEnabled(value.translationEnabled === true); }).catch(() => { setRegistrationEnabled(false); setMaintenanceMode(false); setCognitoEnabled(false); setTranslationEnabled(false); }); load(); window.addEventListener('madinaty-config-refresh', load); return () => window.removeEventListener('madinaty-config-refresh', load); }, []);
   useEffect(() => {
     let active = true;
     let latest = 0;
@@ -349,7 +350,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="header-contact" onClick={() => document.getElementById('contact-us')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle size={16} />{t('Contact us')}</button>
           <button className="header-saved" aria-label={t('Saved')} onClick={() => goTo('saved')}><Heart size={19} /><span>{t('Saved')}</span></button>
           <button className="button button-accent header-post" onClick={openPost}><Plus size={18} />{t('Post ad')}</button>
-          <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : registrationEnabled ? 'Sign in or create account' : 'Sign in')}</span></button>{registered && <button className="text-link" onClick={async () => { try { await signOut(cognitoEnabled); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
+          {maintenanceMode && !registered ? <button className="account-link maintenance-account-link" onClick={() => setModal('register')}><ShieldCheck size={17} /><span>{t('Administrator sign-in')}</span></button> : <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : registrationEnabled ? 'Sign in or create account' : 'Sign in')}</span></button>}{registered && <button className="text-link" onClick={async () => { try { await signOut(cognitoEnabled); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
@@ -359,7 +360,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
-          {!registered && registrationEnabled && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
+          {!registered && registrationEnabled && !maintenanceMode && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
           <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
@@ -405,6 +406,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
       {showScrollTop && <button className="scroll-top-button" type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label={t('Back to top')} title={t('Back to top')}><ArrowUp size={19} /></button>}
 
+      {maintenanceMode && !registered && <div className="maintenance-banner" role="status"><ShieldCheck size={18} /><span><b>{t('Madinaty Deals is under maintenance')}</b><small>{t('Browsing remains available. Public sign-in and registration are temporarily paused.')}</small></span></div>}
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onVerify={() => setModal('verify')} onPublish={publishListing} onPublishService={publishService} accountId={account?.id ?? ''} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
       {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal('post'); track('account_signed_in'); }} />}

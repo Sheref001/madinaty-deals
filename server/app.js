@@ -6,6 +6,7 @@ import { readJson, routeParts, validContent, RequestError } from './request.js';
 import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
 import { isContentVisible } from './moderation.js';
+import { publicRegistrationEnabled } from './access.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, operations, translator, config = {} }) {
@@ -36,14 +37,17 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     request.clientIp = clientKey;
     if (!requestLimit.take(clientKey)) return send(response, 429, { error: 'Too many requests. Please try again later.' }, { 'retry-after': '60' });
     if (parts.length === 2 && parts[1] === 'health' && request.method === 'GET') return send(response, 200, { ok: true });
-    if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') return send(response, 200, { registrationEnabled: config.registrationEnabled === true, cognitoEnabled: config.cognitoEnabled === true, translationEnabled: config.translation?.enabled === true });
+    if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') {
+      const registrationEnabled = await publicRegistrationEnabled(prisma, config.registrationEnabled === true);
+      return send(response, 200, { registrationEnabled, maintenanceMode: !registrationEnabled, cognitoEnabled: config.cognitoEnabled === true, translationEnabled: config.translation?.enabled === true });
+    }
     if (parts[1] === 'auth' && parts[2] === 'cognito' && cognito) return cognito.handle(request, response, parts, send);
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
     if (parts[1] === 'reports' && reports) return reports.handle(request, response, parts, send);
     if (parts.length === 2 && parts[1] === 'submissions' && request.method === 'GET' && submissions) return submissions.handle(request, response, parts, send);
     if (['uploads', 'public-uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);
     if (parts[1] === 'admin' && parts[2] === 'reports' && reports) return reports.handle(request, response, parts, send);
-    if (parts[1] === 'admin' && ['operations', 'content', 'publication-pause'].includes(parts[2]) && operations) return operations.handle(request, response, parts, send);
+    if (parts[1] === 'admin' && ['operations', 'content', 'publication-pause', 'registration-access'].includes(parts[2]) && operations) return operations.handle(request, response, parts, send);
     if (parts[1] === 'admin' && parts[2] === 'verifications' && submissions) return submissions.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);
     if (parts[1] === 'public-submissions' && submissions) return submissions.handle(request, response, parts, send);

@@ -744,6 +744,12 @@ model TranslationCache {
   @@index([sourceLanguage, targetLanguage])
 }
 
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model PushSubscription {
   id                   String   @id @default(uuid()) @db.Uuid
   endpoint             String   @unique

@@ -13,6 +13,7 @@ function fixture(user = moderator) {
     contentReport: { count: vi.fn().mockResolvedValue(0) },
     contentView: { count: vi.fn().mockResolvedValue(0) },
     publicationPause: { findMany: vi.fn().mockResolvedValue([]), upsert: vi.fn(), deleteMany: vi.fn() },
+    systemSetting: { findUnique: vi.fn().mockResolvedValue({ value: 'true' }), upsert: vi.fn() },
     auditLog: { create: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
   };
   prisma.$transaction = callback => callback(prisma);
@@ -40,5 +41,15 @@ describe('owner operations permissions', () => {
     await f.operations.handle(request('GET'), {}, ['api', 'admin', 'operations'], f.send);
     expect(f.send.mock.calls[0][2].recent).toEqual([]);
     expect(f.prisma.auditLog.findMany).not.toHaveBeenCalled();
+  });
+  it('lets only the administrator pause public sign-in and registration', async () => {
+    const f = fixture({ role: 'ADMIN' });
+    await f.operations.handle(request('GET'), {}, ['api', 'admin', 'registration-access'], f.send);
+    expect(f.send.mock.calls[0][2]).toEqual({ enabled: true });
+    await f.operations.handle(request('POST', { enabled: false, reason: 'Scheduled maintenance' }), {}, ['api', 'admin', 'registration-access'], f.send);
+    expect(f.prisma.systemSetting.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { key: 'public_registration_enabled' }, update: { value: 'false' } }));
+    expect(f.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'registration.paused' }) }));
+    const moderator = fixture();
+    await expect(moderator.operations.handle(request('POST', { enabled: false, reason: 'Scheduled maintenance' }), {}, ['api', 'admin', 'registration-access'], moderator.send)).rejects.toMatchObject({ status: 403 });
   });
 });

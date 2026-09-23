@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import { RequestError, readJson } from './request.js';
+import { maintenanceModeEnabled, publicRegistrationEnabled, staffMayAccessDuringMaintenance } from './access.js';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -65,6 +66,10 @@ export function createAuth({ prisma, config, mailer }) {
       if (!required) return null;
       throw new RequestError(401, 'Please sign in to continue');
     }
+    if ((await maintenanceModeEnabled(prisma)) && !staffMayAccessDuringMaintenance(record.user)) {
+      if (!required) return null;
+      throw new RequestError(503, 'The website is temporarily under maintenance. Public sign-in is paused.');
+    }
     return { ...record, token, csrfToken: csrf(token), publicUser: publicUser(record.user) };
   }
   async function protect(request) {
@@ -101,8 +106,10 @@ export function createAuth({ prisma, config, mailer }) {
       const requestedChannel = 'email';
       const destination = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination) || destination.length > 254) throw new RequestError(400, 'Enter a valid email address');
-      const existingUser = config.registrationEnabled ? null : await prisma.user.findUnique({ where: { email: destination }, select: { id: true } });
-      if (!config.registrationEnabled && !existingUser) throw new RequestError(403, 'Account creation is temporarily paused. Please try again later.');
+      const publicAccess = await publicRegistrationEnabled(prisma, config.registrationEnabled);
+      const existingUser = !publicAccess ? await prisma.user.findUnique({ where: { email: destination }, select: { id: true, role: true } }) : null;
+      if ((await maintenanceModeEnabled(prisma)) && existingUser && !staffMayAccessDuringMaintenance(existingUser)) throw new RequestError(503, 'The website is temporarily under maintenance. Public sign-in is paused.');
+      if (!publicAccess && !existingUser) throw new RequestError(403, 'Account creation is temporarily paused. Please try again later.');
       const name = typeof body.name === 'string' ? body.name.trim() : '';
       if (config.registrationEnabled && (name.length < 2 || name.length > 80)) throw new RequestError(400, 'Enter a valid name');
       await consumeLimit(prisma, 'login-ip', peer, 20, 3600000);

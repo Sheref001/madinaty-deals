@@ -4,6 +4,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import * as oidc from 'openid-client';
 import { RequestError } from './request.js';
 import { attachModeratorAssignment, normalizePhone } from './auth.js';
+import { maintenanceModeEnabled, publicRegistrationEnabled, staffMayAccessDuringMaintenance } from './access.js';
 
 const digestKey = secret => createHash('sha256').update('madinaty-deals:cognito-state:').update(secret).digest();
 
@@ -114,8 +115,9 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
       if (!claims?.sub || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return callbackError(response, language, 'invalid_identity');
       if (claims.email_verified !== true) return callbackError(response, language, 'email_not_verified');
 
-      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-      if (!existing && !config.registrationEnabled) return callbackError(response, language, 'registration_paused');
+      const publicAccess = await publicRegistrationEnabled(prisma, config.registrationEnabled);
+      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
+      if ((!publicAccess && !existing) || (await maintenanceModeEnabled(prisma) && (!existing || !staffMayAccessDuringMaintenance(existing)))) return callbackError(response, language, 'registration_paused');
 
       const profileName = typeof claims.name === 'string' ? claims.name.trim().slice(0, 80) : '';
       const displayName = profileName.length >= 2 ? profileName : email.split('@')[0].slice(0, 80);

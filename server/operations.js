@@ -1,6 +1,7 @@
 import { RequestError, readJson } from './request.js';
 import { canReview } from './auth.js';
 import { contentActions, contentTypes, publicationCategories, setContentStatus } from './moderation.js';
+import { PUBLIC_REGISTRATION_SETTING, publicRegistrationEnabled } from './access.js';
 
 const safeReason = value => typeof value === 'string' && value.trim().length >= 5 && value.length <= 500;
 
@@ -53,6 +54,21 @@ export function createOperations({ prisma, auth }) {
           await tx.auditLog.create({ data: { actorId: current.userId, action: body.paused ? 'publication.paused' : 'publication.resumed', targetType: 'Category', targetId: category, metadata: { reason: body.paused ? body.reason.trim() : null } } });
         });
         return send(response, 200, { pauses: await prisma.publicationPause.findMany({ orderBy: { createdAt: 'asc' } }) });
+      }
+    }
+    if (parts.length === 3 && parts[2] === 'registration-access') {
+      if (!admin) throw new RequestError(403, 'Administrator access required');
+      if (request.method === 'GET') return send(response, 200, { enabled: await publicRegistrationEnabled(prisma, true) });
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        if (typeof body.enabled !== 'boolean') throw new RequestError(400, 'Choose whether public access is enabled');
+        const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+        if (!body.enabled && reason.length < 5) throw new RequestError(400, 'Enter a reason of at least five characters');
+        await prisma.$transaction(async tx => {
+          await tx.systemSetting.upsert({ where: { key: PUBLIC_REGISTRATION_SETTING }, update: { value: String(body.enabled) }, create: { key: PUBLIC_REGISTRATION_SETTING, value: String(body.enabled) } });
+          await tx.auditLog.create({ data: { actorId: current.userId, action: body.enabled ? 'registration.resumed' : 'registration.paused', targetType: 'SystemSetting', targetId: PUBLIC_REGISTRATION_SETTING, metadata: { reason: reason || null } } });
+        });
+        return send(response, 200, { enabled: body.enabled });
       }
     }
     throw new RequestError(404, 'Not found');

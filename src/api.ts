@@ -44,7 +44,7 @@ export interface AdminUser extends Account { status: string; createdAt: string; 
 export type ModeratorPermission = 'DASHBOARD' | 'REPORTS' | 'RESIDENT_VERIFICATIONS' | 'CONTENT_REVIEW';
 export interface ModeratorAssignment { id: string; name: string; email?: string | null; phone?: string | null; permissions: ModeratorPermission[]; status: string; createdAt: string; matchedUser?: { id: string; name: string; email?: string | null; phone?: string | null } | null; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
-export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
+export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; maintenanceMode?: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
 export interface PublicSubmission { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
 export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }>;
 export const checkContentVisible = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/visible`, { signal: AbortSignal.timeout(8000) }) as Promise<{ visible: boolean }>;
@@ -97,6 +97,8 @@ export const getAdminContent = () => request('/admin/content') as Promise<{ subm
 export const moderateContent = (contentType: string, contentId: string, action: 'HIDE' | 'RESTORE' | 'APPROVE' | 'REMOVE', reason = '') => request('/admin/content/status', { method: 'POST', body: JSON.stringify({ contentType, contentId, action, reason }) }) as Promise<{ content: { status: string } }>;
 export const getPublicationPauses = () => request('/admin/publication-pause') as Promise<{ pauses: PublicationPause[] }>;
 export const setPublicationPause = (category: string, paused: boolean, reason = '') => request('/admin/publication-pause', { method: 'POST', body: JSON.stringify({ category, paused, reason }) }) as Promise<{ pauses: PublicationPause[] }>;
+export const getRegistrationAccess = () => request('/admin/registration-access') as Promise<{ enabled: boolean }>;
+export const setRegistrationAccess = (enabled: boolean, reason = '') => request('/admin/registration-access', { method: 'POST', body: JSON.stringify({ enabled, reason }) }) as Promise<{ enabled: boolean }>;
 export async function openPrivateUpload(id: string) {
   const response = await fetch(`${apiBase}/uploads/${encodeURIComponent(id)}`, { credentials: 'include' });
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Could not open the private document');

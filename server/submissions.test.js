@@ -61,7 +61,7 @@ describe('marketplace submission boundaries', () => {
   it('publishes ordinary listings immediately and ignores client-supplied ownership and approval', async () => {
     const f = fixture();
     await f.call({ kind: 'listing', payload: { ...payload, status: 'PUBLISHED', userId: 'attacker' }, userId: 'attacker', status: 'PUBLISHED' });
-    expect(f.prisma.submission.create.mock.calls[0][0].data).toEqual({ userId: 'owner', kind: 'listing', payload, status: 'PUBLISHED', rentalMonth: null });
+    expect(f.prisma.submission.create.mock.calls[0][0].data).toEqual({ userId: 'owner', kind: 'listing', payload, status: 'PUBLISHED' });
     expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PUBLISHED', published: true });
   });
   it('holds new ads while publication is paused', async () => {
@@ -106,6 +106,24 @@ describe('marketplace submission boundaries', () => {
     await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567' } });
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
+  });
+  it('accepts a complete tutoring service submission as an individual', async () => {
+    const f = fixture();
+    await f.call({ kind: 'service', payload: {
+      title: 'Math tutoring for students',
+      subtitle: 'Private lessons for school students and exam preparation.',
+      category: 'Tutoring & education',
+      zone: 'B1',
+      advertiserType: 'individual',
+      educationLevel: 'Before university',
+      subjects: ['Quran', 'Mathematics'],
+      serviceArea: 'Madinaty-wide',
+      whatsapp: '+20 100 000 0000',
+      pricing: 'EGP 250 per hour',
+      availability: 'Weekdays after 4pm',
+    } });
+    expect(f.prisma.submission.create).toHaveBeenCalledOnce();
+    expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PUBLISHED', published: true });
   });
   it('allows one structured promotion per month and rejects a second one', async () => {
     const f = fixture();

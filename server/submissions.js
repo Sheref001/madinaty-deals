@@ -152,6 +152,10 @@ export function createSubmissions({ prisma, auth }) {
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';
     const vehicle = body.kind === 'listing' && clean.category === 'Cars & motorcycles';
     const rentalMonth = rental ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date()) : null;
+    // Prisma JSON columns must receive a plain JSON value. This also keeps
+    // legacy clients with omitted optional fields from passing undefined into
+    // the transaction.
+    const submissionPayload = JSON.parse(JSON.stringify(clean));
     const result = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
       if (vehicle) {
@@ -174,7 +178,7 @@ export function createSubmissions({ prisma, auth }) {
       }
       const photos = await tx.upload.findMany({ where: { id: { in: ids }, userId: current.userId, purpose: 'photo', submissionId: null, status: 'READY' } });
       if (photos.length !== ids.length || photos.reduce((sum, item) => sum + item.byteSize, 0) > 20 * 1024 * 1024) throw new RequestError(400, 'Invalid photos');
-      const submission = await tx.submission.create({ data: { userId: current.userId, kind: body.kind, payload: clean, status, rentalMonth } });
+      const submission = await tx.submission.create({ data: { userId: current.userId, kind: body.kind, payload: submissionPayload, status, ...(rentalMonth ? { rentalMonth } : {}) } });
       await tx.upload.updateMany({ where: { id: { in: ids } }, data: { submissionId: submission.id } });
       await tx.auditLog.create({ data: { actorId: current.userId, action: 'submission.created', targetType: 'Submission', targetId: submission.id } });
       return submission;

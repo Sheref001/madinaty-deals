@@ -37,6 +37,7 @@ export type BusinessRequest = 'posting' | 'authentication' | 'both';
 
 export interface BaseResult {
   publicAdId?: string;
+  imageUrl?: string;
   advertiserType?: AdvertiserType;
   businessRequest?: BusinessRequest;
   id: string;

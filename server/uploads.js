@@ -39,6 +39,13 @@ export function createUploads({ prisma, config, auth, storage }) {
   let active = 0;
   async function handle(request, response, parts, send) {
     const url = new URL(request.url, config.origin);
+    if (parts[1] === 'public-uploads' && parts.length === 3 && uuid(parts[2]) && request.method === 'GET') {
+      const upload = await prisma.upload.findUnique({ where: { id: parts[2] }, select: { mimeType: true, objectKey: true, status: true, submission: { select: { status: true } } } });
+      if (!upload || upload.status !== 'READY' || upload.submission?.status !== 'PUBLISHED') throw new RequestError(404, 'Not found');
+      const bytes = await storage.get(upload.objectKey);
+      response.writeHead(200, { 'content-type': upload.mimeType, 'content-disposition': 'inline', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff' });
+      return response.end(Buffer.from(bytes));
+    }
     if (parts[1] === 'uploads' && request.method === 'POST' && parts.length === 2) {
       const current = await auth.protect(request);
       await consumeLimit(prisma, 'upload', current.userId, 30, 3600000);

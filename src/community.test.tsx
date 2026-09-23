@@ -60,7 +60,7 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' }), true));
 });
 
@@ -80,7 +80,7 @@ it('requires an explicit service category and offers every supported service typ
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
   expect(category.value).toBe('');
   expect(Array.from(category.options).map(option => option.value)).toEqual([
-    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Other local services',
+    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
   expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);
@@ -169,6 +169,6 @@ it('preserves a small business authentication request through preview and submis
   fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
   expect((screen.getByLabelText('Business request') as HTMLSelectElement).value).toBe('both');
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false }), false));
 });

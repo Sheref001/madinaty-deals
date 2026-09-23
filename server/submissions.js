@@ -16,15 +16,15 @@ function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity']
-    : [...common, 'whatsapp', 'pricing', 'availability', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
+    : [...common, 'whatsapp', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
 }
 
 export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
     if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
-      const records = await prisma.submission.findMany({ where: { status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } });
-      return send(response, 200, { submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
+      const records = await prisma.submission.findMany({ where: { status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } });
+      return send(response, 200, { submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
@@ -80,7 +80,7 @@ export function createSubmissions({ prisma, auth }) {
         clean.furnishing = payload.furnishing;
       }
     } else {
-      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care', 'Other local services', 'Other services'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
+      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
       Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });

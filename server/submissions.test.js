@@ -43,7 +43,7 @@ describe('marketplace submission boundaries', () => {
   });
   it('exposes only published submissions through the public feed', async () => {
     const f = fixture();
-    f.prisma.submission.findMany.mockResolvedValue([{ id: 'published-id', kind: 'listing', payload: { ...payload, feeStatus: 'AWAITING_AGREEMENT', businessAuthenticationStatus: 'PENDING_REVIEW' }, createdAt: new Date('2026-09-23T10:00:00Z'), user: { profile: { displayName: 'Neighbour', verificationState: 'VERIFIED' } } }]);
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'published-id', kind: 'listing', payload: { ...payload, feeStatus: 'AWAITING_AGREEMENT', businessAuthenticationStatus: 'PENDING_REVIEW' }, uploads: [], createdAt: new Date('2026-09-23T10:00:00Z'), user: { profile: { displayName: 'Neighbour', verificationState: 'VERIFIED' } } }]);
     await f.call({}, 'api/public-submissions', 'GET');
     expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ status: 'PUBLISHED' });
     expect(f.send.mock.calls[0][2].submissions[0]).toMatchObject({ id: 'published-id', kind: 'listing', seller: 'Neighbour', verified: true });

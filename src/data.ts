@@ -27,7 +27,6 @@ export const categories = [
   { label: 'Housekeeping & cleaning', icon: 'sparkles', count: 1, photo: 'https://plus.unsplash.com/premium_photo-1723572010850-e6551746f4de?auto=format&fit=crop&w=1200&q=88' },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Local delivery riders', icon: 'bike', count: 1, photo: 'https://images.unsplash.com/photo-1659493000588-c3f35d630905?auto=format&fit=crop&w=1200&q=88' },
-  { label: 'Other local services', icon: 'circle-help', count: 0 },
   // Photo: Unsplash contributor, from the user-provided reference photo.
   { label: 'Tutoring & education', icon: 'graduation-cap', count: 24, photo: 'https://plus.unsplash.com/premium_photo-1681248156475-be7454b5d54b?auto=format&fit=crop&w=1200&q=88' },
   // Demo image requested from Food Business Middle East & Africa; confirm permission before production use.

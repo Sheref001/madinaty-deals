@@ -260,6 +260,11 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .subject-options { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 7px 12px; align-content: start; }
 .subject-options legend { width: 100%; padding: 0; font-size: 11px; font-weight: 700; color: var(--ink); }
 .subject-options label { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-soft); }
+.service-education-fields { display: grid; align-items: start; gap: 16px; }
+.modal-form .education-stage-picker { inline-size: min(100%, 260px); align-self: start; }
+.modal-form .education-stage-picker select { appearance: auto; block-size: 46px; padding-inline: 12px; font-size: 16px; cursor: pointer; }
+.modal-form .subject-options label { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; font-size: 12px; }
+.modal-form .subject-options input { width: 18px; height: 18px; min-height: 18px; padding: 0; flex: 0 0 18px; accent-color: var(--teal); }
 .scroll-top-button { position: fixed; z-index: 12; right: 24px; bottom: 24px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.8); border-radius: 50%; background: var(--teal); color: var(--white); box-shadow: 0 10px 24px rgba(8, 46, 40, .22); cursor: pointer; animation: scroll-top-in .2s ease both; }
 .scroll-top-button:hover { background: var(--orange); transform: translateY(-2px); }
 @keyframes scroll-top-in { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }

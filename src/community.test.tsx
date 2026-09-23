@@ -57,16 +57,20 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
   expect(screen.getByText('No residency verification required')).toBeTruthy();
-  fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Math tutoring for students' } });
+  expect(screen.queryByLabelText('What service are you offering?')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Education stage'), { target: { value: 'University' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Private lessons for school students and exam preparation.' } });
   const area = screen.getByLabelText('Service area') as HTMLSelectElement;
   expect(Array.from(area.options).some(option => option.text === 'All of Madinaty')).toBe(true);
   fireEvent.change(area, { target: { value: 'All zones' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+20 100 000 0000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
-  expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Tutoring & education · Mathematics · University' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+  expect((screen.getByLabelText('Education stage') as HTMLSelectElement).value).toBe('University');
+  fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
-  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' }), true));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Tutoring & education · Mathematics · University', educationLevel: 'University', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' }), true));
 });
 
 it('offers one structured promotion for every visible service category', () => {
@@ -199,7 +203,7 @@ it('preserves a small business authentication request through preview and submis
   fireEvent.click(screen.getByRole('radio', { name: /I represent a business/ }));
   fireEvent.change(screen.getByLabelText('Business request'), { target: { value: 'both' } });
   fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
-  fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Neighbourhood fitness studio' } });
+  expect(screen.queryByLabelText('What service are you offering?')).toBeNull();
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Group fitness classes and personal training.' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));

@@ -131,6 +131,8 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [authLoading, setAuthLoading] = useState(true);
   const registered = Boolean(account);
   const isAdmin = account?.role === 'ADMIN';
+  const moderatorPermissions = account?.permissions || [];
+  const canAccessAdmin = isAdmin || (account?.role === 'MODERATOR' && moderatorPermissions.length > 0);
   const residentVerified = account?.residentVerified || false;
   const rentalPostsThisMonth = 0;
   useEffect(() => {
@@ -185,7 +187,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
   const goTo = (nextView: View) => {
     if (nextView === 'offers' && !featureFlags.offers) return;
-    if (nextView === 'admin' && !isAdmin) {
+    if (nextView === 'admin' && !canAccessAdmin) {
       setToast('Admin access required');
       return;
     }
@@ -323,14 +325,14 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
-      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={isAdmin} onAdmin={() => goTo('admin')} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
+      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => goTo('admin')} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
 
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
           {!registered && registrationEnabled && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
-          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={isAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
+          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
 
@@ -338,7 +340,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         {view === 'home' ? (
           <HomeView isAdmin={isAdmin} residentVerified={residentVerified} translationEnabled={translationEnabled} results={visibleResults} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
-          isAdmin ? <AdminView onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
+          canAccessAdmin ? <AdminView isAdmin={isAdmin} permissions={moderatorPermissions} onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (
           <BrowseView key={`${view}-${selectedCategory}`} selectedCategory={selectedCategory}
             view={view}
@@ -639,7 +641,7 @@ function AdminAccessDenied({ onBack }: { onBack: () => void }) {
   return <div className="empty-state admin-access-denied"><span className="empty-icon"><ShieldCheck size={23} /></span><h2>{t('Admin access required')}</h2><p>{t('This dashboard is restricted to the Madinaty Deals administrator account.')}</p><button className="button button-outline" onClick={onBack}>{t('Back to app')}</button></div>;
 }
 
-function AdminView({ onBack }: { onBack: () => void }) {
+function AdminView({ isAdmin, permissions, onBack }: { isAdmin: boolean; permissions: string[]; onBack: () => void }) {
   const { t, language } = useTranslation();
   const [, setRefresh] = useState(0);
   const events = getTrackedEvents();
@@ -653,10 +655,13 @@ function AdminView({ onBack }: { onBack: () => void }) {
   const recentEvents = [...events].reverse().slice(0, 8);
   const eventName = (name: string) => ({ search_performed: 'Search', favorite_added: 'Saved item', whatsapp_clicked: 'WhatsApp contact', phone_clicked: 'Phone contact', quote_requested: 'Quote request', listing_submitted: 'Listing submitted for review', service_submitted: 'Service submitted for review', report_submitted: 'Report attempt' }[name] ?? name);
   const eventIcon = (name: string) => name === 'search_performed' ? <Eye size={15} /> : name.endsWith('_clicked') || name === 'quote_requested' ? <MessageCircle size={15} /> : name.endsWith('_submitted') ? <Plus size={15} /> : <Activity size={15} />;
+  const canViewDashboard = isAdmin || permissions.includes('DASHBOARD');
+  const canViewReports = isAdmin || permissions.includes('REPORTS');
+  const canViewVerifications = isAdmin || permissions.includes('RESIDENT_VERIFICATIONS');
   return <div className="admin-view operations-dashboard"><div className="page-intro"><div><span className="eyebrow">{t('OWNER DASHBOARD · OPERATIONS')}</span><h1>{t('Understand what is happening.')}</h1><p>{t('Track marketplace activity, demand and the actions that need your attention.')}</p></div><div className="dashboard-actions"><span className="demo-status"><span /> {t('Demo analytics')}</span><button className="button button-outline" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} /> {t('Refresh')}</button><button className="button button-dark" onClick={onBack}>{t('Back to app')}</button></div></div>
-    <div className="admin-stats dashboard-stats"><div><span className="admin-stat-icon blue"><BarChart3 size={17} /></span><span><b>{totalListings}</b><small>{t('Listing submissions this session')}</small></span></div><div><span className="admin-stat-icon mint"><Wrench size={17} /></span><span><b>{totalServices}</b><small>{t('Service submissions this session')}</small></span></div><div><span className="admin-stat-icon amber"><MessageCircle size={17} /></span><span><b>{contacts}</b><small>{t('Contact actions')}</small></span></div><div><span className="admin-stat-icon plum"><Eye size={17} /></span><span><b>{searches}</b><small>{t('Searches')}</small></span></div><div><span className="admin-stat-icon blue"><Bookmark size={17} /></span><span><b>{saves}</b><small>{t('Saved items')}</small></span></div><div><span className="admin-stat-icon amber"><Flag size={17} /></span><span><b>{reports}</b><small>{t('Report attempts this session')}</small></span></div></div>
+    {canViewDashboard && <><div className="admin-stats dashboard-stats"><div><span className="admin-stat-icon blue"><BarChart3 size={17} /></span><span><b>{totalListings}</b><small>{t('Listing submissions this session')}</small></span></div><div><span className="admin-stat-icon mint"><Wrench size={17} /></span><span><b>{totalServices}</b><small>{t('Service submissions this session')}</small></span></div><div><span className="admin-stat-icon amber"><MessageCircle size={17} /></span><span><b>{contacts}</b><small>{t('Contact actions')}</small></span></div><div><span className="admin-stat-icon plum"><Eye size={17} /></span><span><b>{searches}</b><small>{t('Searches')}</small></span></div><div><span className="admin-stat-icon blue"><Bookmark size={17} /></span><span><b>{saves}</b><small>{t('Saved items')}</small></span></div><div><span className="admin-stat-icon amber"><Flag size={17} /></span><span><b>{reports}</b><small>{t('Report attempts this session')}</small></span></div></div>
     <div className="dashboard-grid"><section className="admin-panel activity-panel"><div className="panel-heading"><div><span className="eyebrow">{t('LIVE SESSION')}</span><h2>{t('Recent activity')}</h2></div><span className="live-pill light-live"><span /> {t('Tracking')}</span></div>{recentEvents.length ? <div className="activity-list">{recentEvents.map((event, index) => <div className="activity-row" key={`${event.occurredAt}-${index}`}><span className="activity-icon">{eventIcon(event.name)}</span><span><b>{t(eventName(event.name))}</b><small>{new Date(event.occurredAt).toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-EG', { hour: 'numeric', minute: '2-digit' })}{event.properties?.result_type ? ` · ${event.properties.result_type}` : ''}</small></span><strong>{event.properties?.category ? String(event.properties.category) : ''}</strong></div>)}</div> : <div className="dashboard-empty"><Activity size={21} /><p>{t('Activity will appear here as people browse, save, contact and post.')}</p></div>}</section><section className="admin-panel channel-panel"><div className="panel-heading"><div><span className="eyebrow">{t('DEMAND SIGNALS')}</span><h2>{t('What people do')}</h2></div><BarChart3 size={18} className="panel-icon" /></div><div className="channel-row"><span>{t('Searches')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, searches * 18 + 12)}%` }} /></div><b>{searches}</b></div><div className="channel-row"><span>{t('Contact actions')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, contacts * 20 + 8)}%` }} /></div><b>{contacts}</b></div><div className="channel-row"><span>{t('Saved items')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, saves * 20 + 8)}%` }} /></div><b>{saves}</b></div><div className="channel-insight"><TrendingUp size={16} /><span><b>{t('Next insight')}</b><small>{t('Watch which service categories get searches but few contact actions.')}</small></span></div></section></div>
-    <div className="dashboard-note"><ShieldCheck size={18} /><p><b>{t('Analytics status')}</b><br />{t('These analytics are local to this browser session and are not marketplace-wide or persistent.')}</p></div><AdminUsers /><AdminReviewQueue /><AdminReports /><RevenueDesk />
+    <div className="dashboard-note"><ShieldCheck size={18} /><p><b>{t('Analytics status')}</b><br />{t('These analytics are local to this browser session and are not marketplace-wide or persistent.')}</p></div></>}{isAdmin && <AdminUsers />}{canViewVerifications && <AdminReviewQueue />}{canViewReports && <AdminReports />}{isAdmin && <RevenueDesk />}
   </div>;
 }
 

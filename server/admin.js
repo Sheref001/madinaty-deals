@@ -1,9 +1,11 @@
 import { RequestError, readJson } from './request.js';
+import { moderatorPermissions, normalizePhone } from './auth.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 const roles = new Set(['RESIDENT', 'SERVICE_PROVIDER', 'BUSINESS_OWNER', 'MODERATOR', 'ADMIN']);
 const statuses = new Set(['ACTIVE', 'SUSPENDED']);
 const publicUser = user => ({ id: user.id, email: user.email, phone: user.phone, role: user.role, status: user.status, name: user.profile?.displayName || 'Neighbour', residentVerified: user.profile?.verificationState === 'VERIFIED', createdAt: user.createdAt });
+const publicAssignment = assignment => ({ id: assignment.id, name: assignment.name, email: assignment.email, phone: assignment.phone, permissions: Array.isArray(assignment.permissions) ? assignment.permissions : [], status: assignment.status, createdAt: assignment.createdAt, matchedUser: assignment.matchedUser ? { id: assignment.matchedUser.id, name: assignment.matchedUser.profile?.displayName || 'Neighbour', email: assignment.matchedUser.email, phone: assignment.matchedUser.phone } : null });
 
 export function createAdmin({ prisma, auth }) {
   async function requireAdmin(request) {
@@ -22,6 +24,42 @@ export function createAdmin({ prisma, auth }) {
 
   async function handle(request, response, parts, send) {
     const current = await requireAdmin(request);
+    if (parts.length === 3 && parts[2] === 'moderators' && request.method === 'GET') {
+      const assignments = await prisma.moderatorAssignment.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { matchedUser: { include: { profile: { select: { displayName: true } } } } } });
+      return send(response, 200, { moderators: assignments.map(publicAssignment) });
+    }
+    if (parts.length === 3 && parts[2] === 'moderators' && request.method === 'POST') {
+      const body = await readJson(request);
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      const email = typeof body.email === 'string' && body.email.trim() ? body.email.trim().toLowerCase() : null;
+      let phone = null;
+      if (typeof body.phone === 'string' && body.phone.trim()) phone = normalizePhone(body.phone);
+      if (name.length < 2 || name.length > 80) throw new RequestError(400, 'Enter a valid moderator name');
+      if (!email && !phone) throw new RequestError(400, 'Enter an email address or phone number');
+      if (email && (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254)) throw new RequestError(400, 'Enter a valid email address');
+      const permissions = Array.isArray(body.permissions) ? [...new Set(body.permissions)] : [];
+      if (!permissions.length || permissions.some(permission => !moderatorPermissions.has(permission))) throw new RequestError(400, 'Choose at least one moderator task');
+      const existing = await prisma.moderatorAssignment.findFirst({ where: { OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])], status: { in: ['PENDING', 'ACTIVE'] } } });
+      if (existing) throw new RequestError(409, 'A moderator assignment already exists for this contact');
+      const matchedUser = await prisma.user.findFirst({ where: { OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])], status: { not: 'DELETED' } } });
+      const assignment = await prisma.$transaction(async tx => {
+        const created = await tx.moderatorAssignment.create({ data: { name, email, phone, permissions, createdById: current.userId, ...(matchedUser ? { status: 'ACTIVE', matchedUserId: matchedUser.id } : {}) } });
+        if (matchedUser && matchedUser.role !== 'ADMIN' && matchedUser.role !== 'MODERATOR') await tx.user.update({ where: { id: matchedUser.id }, data: { role: 'MODERATOR' } });
+        await tx.auditLog.create({ data: { actorId: current.userId, action: 'admin.moderator_assigned', targetType: 'ModeratorAssignment', targetId: created.id, metadata: { permissions } } });
+        return tx.moderatorAssignment.findUnique({ where: { id: created.id }, include: { matchedUser: { include: { profile: { select: { displayName: true } } } } } });
+      });
+      return send(response, 201, { moderator: publicAssignment(assignment) });
+    }
+    if (parts.length === 5 && parts[2] === 'moderators' && parts[4] === 'revoke' && uuid(parts[3]) && request.method === 'POST') {
+      const assignment = await prisma.moderatorAssignment.findUnique({ where: { id: parts[3] } });
+      if (!assignment) throw new RequestError(404, 'Moderator assignment not found');
+      await prisma.$transaction(async tx => {
+        await tx.moderatorAssignment.update({ where: { id: assignment.id }, data: { status: 'REVOKED' } });
+        if (assignment.matchedUserId) await tx.user.updateMany({ where: { id: assignment.matchedUserId, role: 'MODERATOR' }, data: { role: 'RESIDENT' } });
+        await tx.auditLog.create({ data: { actorId: current.userId, action: 'admin.moderator_revoked', targetType: 'ModeratorAssignment', targetId: assignment.id } });
+      });
+      return send(response, 200, { ok: true });
+    }
     if (parts.length === 3 && parts[2] === 'users' && request.method === 'GET') {
       const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { profile: { select: { displayName: true, verificationState: true } } } });
       return send(response, 200, { users: users.map(publicUser) });

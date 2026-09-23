@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import * as oidc from 'openid-client';
 import { RequestError } from './request.js';
+import { attachModeratorAssignment, normalizePhone } from './auth.js';
 
 const digestKey = secret => createHash('sha256').update('madinaty-deals:cognito-state:').update(secret).digest();
 
@@ -118,6 +119,10 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
 
       const profileName = typeof claims.name === 'string' ? claims.name.trim().slice(0, 80) : '';
       const displayName = profileName.length >= 2 ? profileName : email.split('@')[0].slice(0, 80);
+      let phone = null;
+      if (typeof claims?.phone_number === 'string') {
+        try { phone = normalizePhone(claims.phone_number); } catch { phone = null; }
+      }
       let sessionCookie;
       await prisma.$transaction(async tx => {
         const user = await tx.user.upsert({
@@ -129,6 +134,7 @@ export function createCognitoAuth({ prisma, auth, config, oidcClient = oidc, log
         if (user.status !== 'ACTIVE') throw new RequestError(403, 'Account is unavailable');
         if (!user.emailVerifiedAt) await tx.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
         if (!user.profile) await tx.profile.create({ data: { userId: user.id, displayName } });
+        await attachModeratorAssignment(tx, user, { email, phone });
         sessionCookie = await auth.createLoginSession(tx, user.id);
       });
 

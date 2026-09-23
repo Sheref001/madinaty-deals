@@ -1,5 +1,5 @@
 import { RequestError, readJson } from './request.js';
-import { consumeLimit, isReviewer } from './auth.js';
+import { canReview, consumeLimit } from './auth.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 const riskyText = /(?:guaranteed\s+profit|send\s+otp|password|weapon|firearm| наркот|مخدر|سلاح|احصل على ربح مضمون)/i;
@@ -28,7 +28,7 @@ export function createSubmissions({ prisma, auth }) {
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
-      if (!isReviewer(current.user)) throw new RequestError(403, 'Reviewer access required');
+      if (!canReview(current.publicUser || current.user, 'RESIDENT_VERIFICATIONS')) throw new RequestError(403, 'Resident verification permission required');
       if (request.method === 'GET' && parts.join('/') === 'api/admin/verifications') {
         const requests = await prisma.residentVerification.findMany({ where: { status: 'PENDING' }, take: 50, orderBy: { submittedAt: 'asc' }, select: { id: true, userId: true, submittedAt: true, user: { select: { email: true, phone: true, profile: { select: { displayName: true } } } } } });
         const records = await prisma.upload.findMany({ where: { verificationId: { in: requests.map(item => item.id) } }, select: { id: true, verificationId: true, documentType: true } });

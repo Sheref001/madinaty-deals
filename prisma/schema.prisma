@@ -163,6 +163,24 @@ model User {
   submissions              Submission[]
   comments                 Comment[]
   contentReports           ContentReport[]       @relation("ContentReportReporter")
+  moderatorAssignmentsCreated ModeratorAssignment[] @relation("ModeratorAssignmentCreator")
+  moderatorAssignment       ModeratorAssignment? @relation("ModeratorAssignmentUser")
+}
+
+model ModeratorAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  email       String?  @unique
+  phone       String?  @unique
+  permissions Json
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String   @db.Uuid
+  matchedUserId String? @unique @db.Uuid
+  createdBy   User     @relation("ModeratorAssignmentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  matchedUser User?    @relation("ModeratorAssignmentUser", fields: [matchedUserId], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
 }
 
 model Session {

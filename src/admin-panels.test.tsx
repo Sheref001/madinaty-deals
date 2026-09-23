@@ -5,12 +5,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import AdminReviewQueue from './AdminReviewQueue';
 import AdminUsers from './AdminUsers';
 import { LanguageContext } from './i18n';
-import { getAdminUsers, getAdminVerifications, reviewAdminVerification, updateAdminUserRole, updateAdminUserStatus } from './api';
+import { getAdminUsers, getAdminVerifications, getModeratorAssignments, reviewAdminVerification, updateAdminUserRole, updateAdminUserStatus } from './api';
 
 vi.mock('./api', async importOriginal => ({
   ...await importOriginal<typeof import('./api')>(),
   getAdminUsers: vi.fn(), getAdminVerifications: vi.fn(), reviewAdminVerification: vi.fn(),
-  updateAdminUserRole: vi.fn(), updateAdminUserStatus: vi.fn(),
+  updateAdminUserRole: vi.fn(), updateAdminUserStatus: vi.fn(), getModeratorAssignments: vi.fn(),
 }));
 
 const user = { id: 'user-1', name: 'Neighbour', email: 'person@example.test', role: 'RESIDENT', status: 'ACTIVE', createdAt: '2026-09-20T00:00:00.000Z', residentVerified: false };
@@ -22,6 +22,7 @@ beforeEach(() => {
   vi.mocked(reviewAdminVerification).mockResolvedValue({ ok: true });
   vi.mocked(updateAdminUserRole).mockResolvedValue({ user: { ...user, role: 'MODERATOR' } });
   vi.mocked(updateAdminUserStatus).mockResolvedValue({ user: { ...user, status: 'SUSPENDED' } });
+  vi.mocked(getModeratorAssignments).mockResolvedValue({ moderators: [] });
   vi.stubGlobal('confirm', vi.fn(() => true));
   vi.stubGlobal('prompt', vi.fn(() => ''));
 });

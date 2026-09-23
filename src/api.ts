@@ -39,8 +39,10 @@ export const postComment = (type: string, id: string, body: string, language: st
 export const submitReport = (contentType: string, contentId: string, reason: string, details: string) => request('/reports', { method: 'POST', body: JSON.stringify({ contentType, contentId, reason, details }) }) as Promise<{ report: { id: string; status: string; createdAt: string } }>;
 export const translateText = (text: string, sourceLanguage: 'ar' | 'en', targetLanguage: 'ar' | 'en') => request('/translate', { method: 'POST', body: JSON.stringify({ text, sourceLanguage, targetLanguage }) }) as Promise<{ translation: string; cached: boolean; sourceLanguage: string; targetLanguage: string }>;
 
-export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; }
+export interface Account { id: string; email?: string | null; phone?: string | null; name: string; role: string; residentVerified: boolean; permissions?: ModeratorPermission[]; }
 export interface AdminUser extends Account { status: string; createdAt: string; }
+export type ModeratorPermission = 'DASHBOARD' | 'REPORTS' | 'RESIDENT_VERIFICATIONS' | 'CONTENT_REVIEW';
+export interface ModeratorAssignment { id: string; name: string; email?: string | null; phone?: string | null; permissions: ModeratorPermission[]; status: string; createdAt: string; matchedUser?: { id: string; name: string; email?: string | null; phone?: string | null } | null; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
 export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
 export interface PublicSubmission { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
@@ -77,6 +79,9 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
 export const getAdminUsers = () => request('/admin/users') as Promise<{ users: AdminUser[] }>;
 export const updateAdminUserRole = (id: string, role: string) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'POST', body: JSON.stringify({ role }) }) as Promise<{ user: AdminUser }>;
 export const updateAdminUserStatus = (id: string, status: string) => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ user: AdminUser }>;
+export const getModeratorAssignments = () => request('/admin/moderators') as Promise<{ moderators: ModeratorAssignment[] }>;
+export const createModeratorAssignment = (body: { name: string; email?: string; phone?: string; permissions: ModeratorPermission[] }) => request('/admin/moderators', { method: 'POST', body: JSON.stringify(body) }) as Promise<{ moderator: ModeratorAssignment }>;
+export const revokeModeratorAssignment = (id: string) => request(`/admin/moderators/${encodeURIComponent(id)}/revoke`, { method: 'POST', body: '{}' });
 export const getAdminVerifications = () => request('/admin/verifications') as Promise<{ requests: AdminVerificationRequest[] }>;
 export const reviewAdminVerification = (id: string, status: 'VERIFIED' | 'REJECTED', reason = '') => request(`/admin/verifications/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ status, reason }) });
 export interface AdminContentReport { id: string; contentType: string; contentId: string; reason: string; details?: string | null; status: string; createdAt: string; resolvedAt?: string | null; reporter?: { email?: string | null; phone?: string | null } | null; }

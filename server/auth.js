@@ -4,7 +4,7 @@ import { RequestError, readJson } from './request.js';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
-const publicUser = user => ({ id: user.id, email: user.email, phone: user.phone, role: user.role, name: user.profile?.displayName || 'Neighbour', residentVerified: user.profile?.verificationState === 'VERIFIED' });
+const publicUser = user => ({ id: user.id, email: user.email, phone: user.phone, role: user.role, name: user.profile?.displayName || 'Neighbour', residentVerified: user.profile?.verificationState === 'VERIFIED', permissions: Array.isArray(user.moderatorAssignment?.permissions) ? user.moderatorAssignment.permissions : [] });
 export function normalizePhone(value) {
   const raw = typeof value === 'string' ? value.trim().replace(/[\s().-]/g, '') : '';
   const candidate = raw.startsWith('00') ? `+${raw.slice(2)}` : raw.startsWith('01') ? `+20${raw.slice(1)}` : raw;
@@ -12,6 +12,25 @@ export function normalizePhone(value) {
   return candidate;
 }
 export const isReviewer = user => ['ADMIN', 'MODERATOR'].includes(user.role);
+export const moderatorPermissions = new Set(['DASHBOARD', 'REPORTS', 'RESIDENT_VERIFICATIONS', 'CONTENT_REVIEW']);
+export function canReview(user, permission) {
+  const permissions = Array.isArray(user?.permissions) ? user.permissions : user?.moderatorAssignment?.permissions;
+  return user?.role === 'ADMIN' || (user?.role === 'MODERATOR' && Array.isArray(permissions) && permissions.includes(permission));
+}
+
+export async function attachModeratorAssignment(tx, account, { email, phone } = {}) {
+  if (!tx.moderatorAssignment) return account;
+  const candidates = [
+    ...(typeof email === 'string' && email ? [{ email }] : []),
+    ...(typeof phone === 'string' && phone ? [{ phone }] : []),
+  ];
+  if (!candidates.length) return account;
+  const assignment = await tx.moderatorAssignment.findFirst({ where: { status: 'PENDING', OR: candidates }, orderBy: { createdAt: 'asc' } });
+  if (!assignment) return account;
+  await tx.moderatorAssignment.update({ where: { id: assignment.id }, data: { status: 'ACTIVE', matchedUserId: account.id } });
+  if (account.role !== 'ADMIN' && account.role !== 'MODERATOR') return tx.user.update({ where: { id: account.id }, data: { role: 'MODERATOR' } });
+  return account;
+}
 
 // Atomic PostgreSQL counters are shared by every application instance.
 export async function consumeLimit(prisma, namespace, identifier, limit, windowMs) {
@@ -41,7 +60,7 @@ export function createAuth({ prisma, config, mailer }) {
       if (!required) return null;
       throw new RequestError(401, 'Please sign in to continue');
     }
-    const record = await prisma.session.findUnique({ where: { tokenHash: digest(token) }, include: { user: { include: { profile: true } } } });
+    const record = await prisma.session.findUnique({ where: { tokenHash: digest(token) }, include: { user: { include: { profile: true, moderatorAssignment: true } } } });
     if (!record || record.expiresAt <= new Date() || record.user.status !== 'ACTIVE' || (!record.user.emailVerifiedAt && !record.user.phoneVerifiedAt)) {
       if (!required) return null;
       throw new RequestError(401, 'Please sign in to continue');
@@ -117,6 +136,7 @@ export function createAuth({ prisma, config, mailer }) {
           ? await tx.user.upsert({ where: { phone: challenge.destination }, update: {}, create: { phone: challenge.destination, phoneVerifiedAt: new Date(), profile: { create: { displayName: challenge.displayName } } }, include: { profile: true } })
           : await tx.user.upsert({ where: { email: challenge.destination }, update: {}, create: { email: challenge.destination, emailVerifiedAt: new Date(), profile: { create: { displayName: challenge.displayName } } }, include: { profile: true } });
         if (account.status !== 'ACTIVE') throw new RequestError(400, 'Invalid or expired code');
+        await attachModeratorAssignment(tx, account, challenge.channel === 'phone' ? { phone: challenge.destination } : { email: challenge.destination });
         await tx.user.update({ where: { id: account.id }, data: challenge.channel === 'phone' ? { phoneVerifiedAt: account.phoneVerifiedAt || new Date() } : { emailVerifiedAt: account.emailVerifiedAt || new Date() } });
         await tx.session.create({ data: { userId: account.id, tokenHash: digest(token), expiresAt: new Date(Date.now() + 604800000) } });
         await tx.auditLog.create({ data: { actorId: account.id, action: 'auth.login', targetType: 'User', targetId: account.id } });

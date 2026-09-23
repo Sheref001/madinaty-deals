@@ -6,7 +6,7 @@ const photoId = '11111111-1111-4111-8111-111111111111';
 const verificationId = '22222222-2222-4222-8222-222222222222';
 const payload = { title: 'Dining table', subtitle: 'Solid wood table in good condition.', category: 'Furniture & home', zone: 'B1', price: 1000, condition: 'Good' };
 function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
-  const current = { userId: 'owner', user: { role } };
+  const current = { userId: 'owner', user: { role, moderatorAssignment: role === 'MODERATOR' ? { permissions: ['RESIDENT_VERIFICATIONS'] } : null } };
   const prisma = {
     $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
     profile: { findUnique: vi.fn().mockResolvedValue({ verificationState: verified ? 'VERIFIED' : 'UNVERIFIED' }), update: vi.fn() },

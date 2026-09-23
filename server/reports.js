@@ -1,6 +1,6 @@
 /* global URL */
 import { RequestError, readJson } from './request.js';
-import { consumeLimit, isReviewer } from './auth.js';
+import { canReview, consumeLimit } from './auth.js';
 
 const contentTypes = new Set(['listing', 'service', 'business', 'offer']);
 const reasons = new Set(['Scam or fraud', 'Prohibited item or service', 'Duplicate or spam', 'Misleading information', 'Wrong category', 'Something else']);
@@ -28,7 +28,7 @@ export function createReports({ prisma, auth, origin }) {
     if (parts[1] === 'admin' && parts[2] === 'reports') {
       if (!auth) throw new RequestError(503, 'Authentication is not configured');
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
-      if (!isReviewer(current.publicUser || current.user)) throw new RequestError(403, 'Reviewer access required');
+      if (!canReview(current.publicUser || current.user, 'REPORTS')) throw new RequestError(403, 'Reports permission required');
       if (request.method === 'GET' && parts.length === 3) {
         const status = new URL(request.url, 'http://localhost').searchParams.get('status');
         const reports = await prisma.contentReport.findMany({ where: status && statuses.has(status) ? { status } : {}, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, contentType: true, contentId: true, reason: true, details: true, status: true, createdAt: true, resolvedAt: true, reporter: { select: { email: true, phone: true } } } });

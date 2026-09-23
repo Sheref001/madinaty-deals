@@ -88,5 +88,7 @@ it('shows gym providers without an individual and business audience panel', () =
   expect(screen.queryByRole('button', { name: 'Individuals' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Small businesses' })).toBeNull();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Refine results' }));
+  expect(screen.queryByLabelText('Provider type')).toBeNull();
   expect(screen.getByLabelText('Fitness provider')).toBeTruthy();
 });

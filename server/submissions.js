@@ -13,8 +13,24 @@ function publicationStatus(payload) {
   return 'PUBLISHED';
 }
 
+function applyAdvertiserPolicy(clean, payload) {
+  const individualOnly = clean.category === 'Apartment rentals';
+  const businessOnly = ['Groceries', 'Pet care'].includes(clean.category);
+  if ((individualOnly && payload.advertiserType !== undefined && payload.advertiserType !== 'individual') || (businessOnly && payload.advertiserType !== undefined && payload.advertiserType !== 'small_business')) throw new RequestError(400, 'Choose a valid advertiser type for this category');
+  const advertiserType = individualOnly ? 'individual' : businessOnly ? 'small_business' : payload.advertiserType;
+  if (!['individual', 'small_business'].includes(advertiserType)) throw new RequestError(400, 'Choose an advertiser type');
+  clean.advertiserType = advertiserType;
+  if (clean.category === 'Health & fitness') clean.feeStatus = 'AWAITING_AGREEMENT';
+  if (advertiserType !== 'small_business') return;
+  const tutoringCentre = ['Tutoring', 'Tutoring & education'].includes(clean.category);
+  if (!tutoringCentre && !businessOnly && !['posting', 'authentication', 'both'].includes(payload.businessRequest)) throw new RequestError(400, 'Choose a business request');
+  clean.businessRequest = tutoringCentre || businessOnly ? 'posting' : payload.businessRequest;
+  clean.feeStatus = 'AWAITING_AGREEMENT';
+  if (!tutoringCentre && !businessOnly && payload.businessRequest !== 'posting') clean.businessAuthenticationStatus = 'PENDING_REVIEW';
+}
+
 function publicPayload(kind, payload) {
-  const common = ['title', 'subtitle', 'category', 'zone'];
+  const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
     : [...common, 'whatsapp', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
@@ -130,18 +146,7 @@ export function createSubmissions({ prisma, auth }) {
         clean.offer = { kind: payload.offer.kind, discount: payload.offer.discount.trim(), validUntil: payload.offer.validUntil };
       }
     }
-    if (['Tutoring', 'Tutoring & education', 'Health & fitness', 'Electronics'].includes(clean.category)) {
-      if (!['individual', 'small_business'].includes(payload.advertiserType)) throw new RequestError(400, 'Choose an advertiser type');
-      clean.advertiserType = payload.advertiserType;
-      if (clean.category === 'Health & fitness') clean.feeStatus = 'AWAITING_AGREEMENT';
-      if (payload.advertiserType === 'small_business') {
-        const tutoringCentre = ['Tutoring', 'Tutoring & education'].includes(clean.category);
-        if (!tutoringCentre && !['posting', 'authentication', 'both'].includes(payload.businessRequest)) throw new RequestError(400, 'Choose a business request');
-        clean.businessRequest = tutoringCentre ? 'posting' : payload.businessRequest;
-        clean.feeStatus = 'AWAITING_AGREEMENT';
-        if (!tutoringCentre && payload.businessRequest !== 'posting') clean.businessAuthenticationStatus = 'PENDING_REVIEW';
-      }
-    }
+    applyAdvertiserPolicy(clean, payload);
     const ids = body.uploadIds || [];
     if (!Array.isArray(ids) || ids.length > 6 || !ids.every(uuid) || new Set(ids).size !== ids.length) throw new RequestError(400, 'Invalid photos');
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';

@@ -4,7 +4,7 @@ import { createSubmissions } from './submissions.js';
 
 const photoId = '11111111-1111-4111-8111-111111111111';
 const verificationId = '22222222-2222-4222-8222-222222222222';
-const payload = { title: 'Dining table', subtitle: 'Solid wood table in good condition.', category: 'Furniture & home', zone: 'B1', price: 1000, condition: 'Good' };
+const payload = { title: 'Dining table', subtitle: 'Solid wood table in good condition.', category: 'Furniture & home', zone: 'B1', price: 1000, condition: 'Good', advertiserType: 'individual' };
 function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   const current = { userId: 'owner', user: { role, moderatorAssignment: role === 'MODERATOR' ? { permissions: ['RESIDENT_VERIFICATIONS'] } : null } };
   const prisma = {
@@ -80,6 +80,27 @@ describe('marketplace submission boundaries', () => {
     await commercial.call({ kind: 'listing', payload: { ...payload, category: 'Electronics', advertiserType: 'small_business', businessRequest: 'posting' } });
     expect(commercial.prisma.submission.create.mock.calls[0][0].data.status).toBe('PENDING_REVIEW');
   });
+  it('requires an explicit poster type for categories that allow both individuals and businesses', async () => {
+    const f = fixture();
+    const withoutType = { ...payload };
+    delete withoutType.advertiserType;
+    await expect(f.call({ kind: 'listing', payload: withoutType })).rejects.toMatchObject({ status: 400, message: 'Choose an advertiser type' });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it('holds business services for a fee even outside the former split categories', async () => {
+    const f = fixture();
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'PAID' } });
+    const created = f.prisma.submission.create.mock.calls[0][0].data;
+    expect(created.status).toBe('PENDING_REVIEW');
+    expect(created.payload).toMatchObject({ advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'AWAITING_AGREEMENT' });
+  });
+  it('keeps shops commercial and apartment rentals individual regardless of client claims', async () => {
+    const f = fixture({ verified: true });
+    await expect(f.call({ kind: 'listing', payload: { ...payload, category: 'Groceries', groceryActivity: 'Bakery' } })).rejects.toMatchObject({ status: 400 });
+    await f.call({ kind: 'listing', payload: { ...payload, category: 'Groceries', groceryActivity: 'Bakery', advertiserType: 'small_business' } });
+    expect(f.prisma.submission.create.mock.calls[0][0].data).toMatchObject({ status: 'PENDING_REVIEW', payload: { advertiserType: 'small_business', feeStatus: 'AWAITING_AGREEMENT' } });
+    await expect(f.call({ ...rental, payload: { ...rental.payload, advertiserType: 'small_business' } })).rejects.toMatchObject({ status: 400 });
+  });
   it('allows service providers without resident verification', async () => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });
     await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567' } });
@@ -104,7 +125,7 @@ describe('marketplace submission boundaries', () => {
   });
   it('keeps pet-care research submissions restricted to administrators and validates the subtype', async () => {
     const resident = fixture();
-    const petCare = { ...payload, category: 'Pet care', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics' };
+    const petCare = { ...payload, category: 'Pet care', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics', advertiserType: 'small_business' };
     await expect(resident.call({ kind: 'service', payload: petCare })).rejects.toMatchObject({ status: 403 });
     expect(resident.prisma.submission.create).not.toHaveBeenCalled();
     const admin = fixture({ role: 'ADMIN' });

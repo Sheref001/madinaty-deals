@@ -41,9 +41,11 @@ describe('Arabic and English experience', () => {
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'أضف إعلانًا' }));
     fireEvent.click(screen.getByRole('button', { name: /بيع منتج/ }));
     const category = screen.getByLabelText('القسم') as HTMLSelectElement;
-    expect(category.value).toBe('Furniture & home');
+    expect(category.value).toBe('');
     fireEvent.change(category, { target: { value: 'Electronics' } });
     expect(category.value).toBe('Electronics');
+    fireEvent.click(screen.getByRole('radio', { name: /أنشر بصفتي فردًا/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'تابع إلى التفاصيل' }));
     const zone = screen.getByLabelText('المنطقة') as HTMLSelectElement;
     expect(zone.value).toBe('B1');
     expect(zone.selectedOptions[0].textContent).toBe('B1');

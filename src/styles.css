@@ -956,6 +956,15 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 .category-audiences p, .posting-audience p { margin-block: 14px 0; line-height: 1.7; }
 .posting-audience { padding: 16px; border-radius: 12px; background: #f2f5ea; }
 .posting-audience label { display: grid; gap: 8px; margin-block-start: 10px; }
+.posting-audience h3 { margin: 0; font-size: 16px; }
+.posting-audience-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-block-start: 12px; }
+.posting-audience-options label { display: flex; align-items: flex-start; gap: 10px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+.posting-audience-options label.selected { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
+.posting-audience-options input { flex: 0 0 auto; margin-block-start: 3px; accent-color: var(--teal); }
+.posting-audience-options span { display: grid; gap: 4px; min-width: 0; }
+.posting-audience-options small { color: var(--ink-soft); line-height: 1.4; }
+.draft-note { margin: 0; color: var(--teal); font-size: 13px; }
+@media (max-width: 480px) { .posting-audience-options { grid-template-columns: 1fr; } }
 
 #categories { scroll-margin-top: 110px; }
 

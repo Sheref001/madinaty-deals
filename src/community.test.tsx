@@ -31,6 +31,9 @@ it.each(['en', 'ar'])('keeps Cognito failures visible in the account dialog in %
 it('previews details without publishing and preserves them when editing', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ListingForm onPublish={publish} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Furniture & home' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
   fireEvent.change(screen.getByLabelText('What are you selling?'), { target: { value: 'Small oak desk' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'One year old, a small scratch on the top.' } });
   fireEvent.change(screen.getByLabelText('Price (EGP)'), { target: { value: '1450.50' } });
@@ -50,8 +53,10 @@ it('previews details without publishing and preserves them when editing', async 
 it('submits a service with area and WhatsApp contact for review', async () => {
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
-  expect(screen.getByText('No residency verification required')).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Tutoring & education' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
+  expect(screen.getByText('No residency verification required')).toBeTruthy();
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Math tutoring for students' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Private lessons for school students and exam preparation.' } });
   const area = screen.getByLabelText('Service area') as HTMLSelectElement;
@@ -68,6 +73,8 @@ it('offers one structured promotion for every visible service category', () => {
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   const category = screen.getByLabelText('Choose your service category');
   fireEvent.change(category, { target: { value: 'Moving' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
   expect(screen.getByText('One promotion per calendar month is free. Removing it later uses this month’s free slot. A change or additional promotion requires a quote from us.')).toBeTruthy();
   expect(screen.getByRole('checkbox', { name: 'Add one promotion to this service' })).toBeTruthy();
   fireEvent.click(screen.getByRole('checkbox', { name: 'Add one promotion to this service' }));
@@ -80,10 +87,26 @@ it('asks for residence verification before a vehicle listing can be previewed', 
   render(<LanguageContext.Provider value="en"><ListingForm onPublish={vi.fn()} onVerify={onVerify} residentVerified={false} /></LanguageContext.Provider>);
   fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Cars & motorcycles' } });
   expect(screen.getByLabelText('Vehicle type')).toBeTruthy();
-  expect((screen.getByRole('button', { name: 'Preview listing' }) as HTMLButtonElement).disabled).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Verify residence' }));
+  expect((screen.getByRole('button', { name: 'Continue to details' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft and verify residence' }));
   expect(onVerify).toHaveBeenCalledOnce();
   expect(submitPost).not.toHaveBeenCalled();
+});
+
+it('restores a resident-only listing draft after verification without sharing it across accounts', () => {
+  const onVerify = vi.fn();
+  const first = render(<LanguageContext.Provider value="en"><ListingForm onPublish={vi.fn()} onVerify={onVerify} accountId="resident-a" residentVerified={false} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Cars & motorcycles' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft and verify residence' }));
+  expect(onVerify).toHaveBeenCalledOnce();
+  first.unmount();
+  const other = render(<LanguageContext.Provider value="en"><ListingForm onPublish={vi.fn()} accountId="resident-b" residentVerified /></LanguageContext.Provider>);
+  expect((screen.getByLabelText('Category') as HTMLSelectElement).value).toBe('');
+  other.unmount();
+  render(<LanguageContext.Provider value="en"><ListingForm onPublish={vi.fn()} accountId="resident-a" residentVerified /></LanguageContext.Provider>);
+  expect((screen.getByLabelText('Category') as HTMLSelectElement).value).toBe('Cars & motorcycles');
+  expect((screen.getByRole('button', { name: 'Continue to details' }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 it('requires an explicit service category and offers every supported service type', () => {
@@ -94,7 +117,7 @@ it('requires an explicit service category and offers every supported service typ
     '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
-  expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole('button', { name: 'Continue to details' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it('keeps the pet-care research category and its subcategories admin-only', async () => {
@@ -137,6 +160,9 @@ it('opens the posting form for a server-authenticated user', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'عندك حاجة للبيع؟' }));
   expect(screen.getByRole('dialog')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /بيع منتج/ }));
+  fireEvent.change(screen.getByLabelText('القسم'), { target: { value: 'Furniture & home' } });
+  fireEvent.click(screen.getByRole('radio', { name: /أنشر بصفتي فردًا/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'تابع إلى التفاصيل' }));
   expect(screen.getByLabelText('الوصف')).toBeTruthy();
 });
 
@@ -168,17 +194,20 @@ it('preserves a small business authentication request through preview and submis
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
   fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Health & fitness' } });
-  expect(screen.getByLabelText('Advertiser type')).toBeTruthy();
+  expect(screen.getByRole('radiogroup', { name: 'Who is posting?' })).toBeTruthy();
   expect(screen.queryByText('Individual ads are free.')).toBeNull();
-  fireEvent.change(screen.getByLabelText('Advertiser type'), { target: { value: 'small_business' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I represent a business/ }));
   fireEvent.change(screen.getByLabelText('Business request'), { target: { value: 'both' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
   fireEvent.change(screen.getByLabelText('What service are you offering?'), { target: { value: 'Neighbourhood fitness studio' } });
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Group fitness classes and personal training.' } });
   fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
-  expect(screen.getByText(/Small business fees are agreed/)).toBeTruthy();
+  expect(screen.getByText('Business posts wait for fee agreement and review.')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Back to category' }));
   expect((screen.getByLabelText('Business request') as HTMLSelectElement).value).toBe('both');
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false }), false));

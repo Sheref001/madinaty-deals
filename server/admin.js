@@ -1,3 +1,4 @@
+/* global URL */
 import { RequestError, readJson } from './request.js';
 import { moderatorPermissions, normalizePhone } from './auth.js';
 
@@ -61,7 +62,8 @@ export function createAdmin({ prisma, auth }) {
       return send(response, 200, { ok: true });
     }
     if (parts.length === 3 && parts[2] === 'users' && request.method === 'GET') {
-      const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { profile: { select: { displayName: true, verificationState: true } } } });
+      const query = new URL(request.url, 'http://localhost').searchParams.get('query')?.trim().slice(0, 100) || '';
+      const users = await prisma.user.findMany({ ...(query ? { where: { OR: [{ email: { contains: query, mode: 'insensitive' } }, { phone: { contains: query } }, { profile: { is: { displayName: { contains: query, mode: 'insensitive' } } } }] } } : {}), orderBy: { createdAt: 'desc' }, take: 200, include: { profile: { select: { displayName: true, verificationState: true } } } });
       return send(response, 200, { users: users.map(publicUser) });
     }
     if (parts.length !== 5 || parts[2] !== 'users' || !uuid(parts[3]) || request.method !== 'POST') throw new RequestError(404, 'Not found');
@@ -73,10 +75,13 @@ export function createAdmin({ prisma, auth }) {
     const change = action === 'role' ? { role: body.role } : { status: body.status };
     if (action === 'role' && !roles.has(body.role)) throw new RequestError(400, 'Invalid role');
     if (action === 'status' && !statuses.has(body.status)) throw new RequestError(400, 'Invalid account status');
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (action === 'status' && body.status === 'SUSPENDED' && (reason.length < 5 || reason.length > 500)) throw new RequestError(400, 'Enter a reason of at least five characters');
     await prisma.$transaction(async tx => {
       await ensureAdminRemains(tx, target, current, change);
       await tx.user.update({ where: { id: target.id }, data: change });
-      await tx.auditLog.create({ data: { actorId: current.userId, action: `admin.user_${action}_changed`, targetType: 'User', targetId: target.id, metadata: { from: action === 'role' ? target.role : target.status, to: action === 'role' ? body.role : body.status } } });
+      if (action === 'status' && body.status === 'SUSPENDED') await tx.session.deleteMany({ where: { userId: target.id } });
+      await tx.auditLog.create({ data: { actorId: current.userId, action: `admin.user_${action}_changed`, targetType: 'User', targetId: target.id, metadata: { from: action === 'role' ? target.role : target.status, to: action === 'role' ? body.role : body.status, reason: reason || null } } });
     });
     const updated = await prisma.user.findUnique({ where: { id: target.id }, include: { profile: { select: { displayName: true, verificationState: true } } } });
     return send(response, 200, { user: publicUser(updated) });

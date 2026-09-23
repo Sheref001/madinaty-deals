@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { RequestError, readJson } from './request.js';
-import { consumeLimit, isReviewer } from './auth.js';
+import { consumeLimit, canReview } from './auth.js';
 
 export async function readUpload(request, maxBytes) {
   const chunks = [];
@@ -40,10 +40,10 @@ export function createUploads({ prisma, config, auth, storage }) {
   async function handle(request, response, parts, send) {
     const url = new URL(request.url, config.origin);
     if (parts[1] === 'public-uploads' && parts.length === 3 && uuid(parts[2]) && request.method === 'GET') {
-      const upload = await prisma.upload.findUnique({ where: { id: parts[2] }, select: { mimeType: true, objectKey: true, status: true, submission: { select: { status: true } } } });
-      if (!upload || upload.status !== 'READY' || upload.submission?.status !== 'PUBLISHED') throw new RequestError(404, 'Not found');
+      const upload = await prisma.upload.findUnique({ where: { id: parts[2] }, select: { mimeType: true, objectKey: true, purpose: true, status: true, submission: { select: { status: true, user: { select: { status: true } } } } } });
+      if (!upload || upload.purpose !== 'photo' || upload.status !== 'READY' || upload.submission?.status !== 'PUBLISHED' || upload.submission.user.status !== 'ACTIVE') throw new RequestError(404, 'Not found');
       const bytes = await storage.get(upload.objectKey);
-      response.writeHead(200, { 'content-type': upload.mimeType, 'content-disposition': 'inline', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff' });
+      response.writeHead(200, { 'content-type': upload.mimeType, 'content-disposition': 'inline', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' });
       return response.end(Buffer.from(bytes));
     }
     if (parts[1] === 'uploads' && request.method === 'POST' && parts.length === 2) {
@@ -86,7 +86,9 @@ export function createUploads({ prisma, config, auth, storage }) {
     if (parts[1] === 'uploads' && parts.length === 3 && uuid(parts[2])) {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
       const upload = await prisma.upload.findUnique({ where: { id: parts[2] } });
-      if (!upload || upload.status !== 'READY' || (upload.userId !== current.userId && !isReviewer(current.user))) throw new RequestError(404, 'Not found');
+      const permission = upload?.purpose === 'verification' ? 'RESIDENT_VERIFICATIONS' : 'CONTENT_REVIEW';
+      const reviewerAccess = upload?.purpose === 'verification' ? Boolean(upload.verificationId) : upload?.purpose === 'photo' ? Boolean(upload.submissionId) : false;
+      if (!upload || upload.status !== 'READY' || (upload.userId !== current.userId && !(reviewerAccess && canReview(current.publicUser || current.user, permission)))) throw new RequestError(404, 'Not found');
       if (request.method === 'GET') {
         await prisma.auditLog.create({ data: { actorId: current.userId, action: 'upload.read', targetType: 'Upload', targetId: upload.id } });
         const bytes = await storage.get(upload.objectKey);

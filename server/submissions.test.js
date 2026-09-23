@@ -11,6 +11,8 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
     $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
     profile: { findUnique: vi.fn().mockResolvedValue({ verificationState: verified ? 'VERIFIED' : 'UNVERIFIED' }), update: vi.fn() },
     submission: { findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED' }) },
+    publicationPause: { findFirst: vi.fn().mockResolvedValue(null) },
+    contentControl: { findMany: vi.fn().mockResolvedValue([]) },
     upload: { findMany: vi.fn(async ({ where }) => photos.filter(photo => where.id.in.includes(photo.id) && photo.userId === where.userId && photo.purpose === where.purpose && photo.status === where.status && photo.submissionId === null)), updateMany: vi.fn() },
     residentVerification: { findMany: vi.fn().mockResolvedValue([]), findUnique: vi.fn().mockResolvedValue({ id: verificationId, userId: 'resident' }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     auditLog: { create: vi.fn() },
@@ -45,7 +47,7 @@ describe('marketplace submission boundaries', () => {
     const f = fixture();
     f.prisma.submission.findMany.mockResolvedValue([{ id: 'published-id', kind: 'listing', payload: { ...payload, feeStatus: 'AWAITING_AGREEMENT', businessAuthenticationStatus: 'PENDING_REVIEW' }, uploads: [], createdAt: new Date('2026-09-23T10:00:00Z'), user: { profile: { displayName: 'Neighbour', verificationState: 'VERIFIED' } } }]);
     await f.call({}, 'api/public-submissions', 'GET');
-    expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ status: 'PUBLISHED' });
+    expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } });
     expect(f.send.mock.calls[0][2].submissions[0]).toMatchObject({ id: 'published-id', kind: 'listing', seller: 'Neighbour', verified: true });
     expect(f.send.mock.calls[0][2].submissions[0].payload.feeStatus).toBeUndefined();
   });
@@ -54,6 +56,14 @@ describe('marketplace submission boundaries', () => {
     await f.call({ kind: 'listing', payload: { ...payload, status: 'PUBLISHED', userId: 'attacker' }, userId: 'attacker', status: 'PUBLISHED' });
     expect(f.prisma.submission.create.mock.calls[0][0].data).toEqual({ userId: 'owner', kind: 'listing', payload, status: 'PUBLISHED', rentalMonth: null });
     expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PUBLISHED', published: true });
+  });
+  it('holds new ads while publication is paused', async () => {
+    const f = fixture();
+    f.prisma.publicationPause.findFirst.mockResolvedValue({ category: '*' });
+    f.prisma.submission.create.mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' });
+    await f.call({ kind: 'listing', payload });
+    expect(f.prisma.submission.create.mock.calls[0][0].data.status).toBe('PENDING_REVIEW');
+    expect(f.send.mock.calls[0][2].published).toBe(false);
   });
   it('holds risky and commercial submissions for review', async () => {
     const risky = fixture();

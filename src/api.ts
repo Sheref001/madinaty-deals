@@ -46,7 +46,8 @@ export interface ModeratorAssignment { id: string; name: string; email?: string 
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
 export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
 export interface PublicSubmission { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
-export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[] }>;
+export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }>;
+export const checkContentVisible = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/visible`, { signal: AbortSignal.timeout(8000) }) as Promise<{ visible: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');
@@ -76,9 +77,9 @@ export async function submitPost(kind: 'listing' | 'service', payload: unknown, 
   for (const file of files) uploadIds.push((await uploadFile(file, 'photo')).id);
   return request('/submissions', { method: 'POST', body: JSON.stringify({ kind, payload, uploadIds }) });
 }
-export const getAdminUsers = () => request('/admin/users') as Promise<{ users: AdminUser[] }>;
+export const getAdminUsers = (query = '') => request(`/admin/users${query ? `?query=${encodeURIComponent(query)}` : ''}`) as Promise<{ users: AdminUser[] }>;
 export const updateAdminUserRole = (id: string, role: string) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'POST', body: JSON.stringify({ role }) }) as Promise<{ user: AdminUser }>;
-export const updateAdminUserStatus = (id: string, status: string) => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ user: AdminUser }>;
+export const updateAdminUserStatus = (id: string, status: string, reason = '') => request(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status, reason }) }) as Promise<{ user: AdminUser }>;
 export const getModeratorAssignments = () => request('/admin/moderators') as Promise<{ moderators: ModeratorAssignment[] }>;
 export const createModeratorAssignment = (body: { name: string; email?: string; phone?: string; permissions: ModeratorPermission[] }) => request('/admin/moderators', { method: 'POST', body: JSON.stringify(body) }) as Promise<{ moderator: ModeratorAssignment }>;
 export const revokeModeratorAssignment = (id: string) => request(`/admin/moderators/${encodeURIComponent(id)}/revoke`, { method: 'POST', body: '{}' });
@@ -86,7 +87,16 @@ export const getAdminVerifications = () => request('/admin/verifications') as Pr
 export const reviewAdminVerification = (id: string, status: 'VERIFIED' | 'REJECTED', reason = '') => request(`/admin/verifications/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ status, reason }) });
 export interface AdminContentReport { id: string; contentType: string; contentId: string; reason: string; details?: string | null; status: string; createdAt: string; resolvedAt?: string | null; reporter?: { email?: string | null; phone?: string | null } | null; }
 export const getAdminReports = () => request('/admin/reports') as Promise<{ reports: AdminContentReport[] }>;
-export const reviewAdminReport = (id: string, status: 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED') => request(`/admin/reports/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ status }) }) as Promise<{ report: AdminContentReport }>;
+export const reviewAdminReport = (id: string, status: 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED', action?: 'HIDE', reason?: string) => request(`/admin/reports/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ status, action, reason }) }) as Promise<{ report: AdminContentReport }>;
+export interface ModeratedContent { id: string; kind: string; status: string; createdAt: string; title: string; description: string; category: string; commercial: boolean; owner: { id: string; name: string; email?: string | null; phone?: string | null; status: string }; uploadIds: string[]; }
+export interface ContentControl { contentType: string; contentId: string; status: string; reason?: string | null; updatedAt: string; }
+export interface PublicationPause { category: string; reason: string; createdAt: string; }
+export interface OperationAction { id: string; action: string; targetType: string; targetId?: string | null; metadata?: { reason?: string; from?: string; to?: string } | null; createdAt: string; actor: string; }
+export const getAdminOperations = () => request('/admin/operations') as Promise<{ counts: { users: number; published: number; pending: number; hidden: number; services: number; reports: number; views: number }; recent: OperationAction[] }>;
+export const getAdminContent = () => request('/admin/content') as Promise<{ submissions: ModeratedContent[]; controls: ContentControl[] }>;
+export const moderateContent = (contentType: string, contentId: string, action: 'HIDE' | 'RESTORE' | 'APPROVE' | 'REMOVE', reason = '') => request('/admin/content/status', { method: 'POST', body: JSON.stringify({ contentType, contentId, action, reason }) }) as Promise<{ content: { status: string } }>;
+export const getPublicationPauses = () => request('/admin/publication-pause') as Promise<{ pauses: PublicationPause[] }>;
+export const setPublicationPause = (category: string, paused: boolean, reason = '') => request('/admin/publication-pause', { method: 'POST', body: JSON.stringify({ category, paused, reason }) }) as Promise<{ pauses: PublicationPause[] }>;
 export async function openPrivateUpload(id: string) {
   const response = await fetch(`${apiBase}/uploads/${encodeURIComponent(id)}`, { credentials: 'include' });
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Could not open the private document');

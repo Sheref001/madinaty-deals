@@ -18,24 +18,29 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
+  const [search, setSearch] = useState('');
   const [moderators, setModerators] = useState<ModeratorAssignment[]>([]);
   const [showModeratorForm, setShowModeratorForm] = useState(false);
   const [moderatorName, setModeratorName] = useState('');
   const [moderatorEmail, setModeratorEmail] = useState('');
   const [moderatorPhone, setModeratorPhone] = useState('');
   const [moderatorPermissions, setModeratorPermissions] = useState<ModeratorPermission[]>(['REPORTS']);
-  const fetchUsers = () => Promise.all([getAdminUsers(), getModeratorAssignments()]).then(([userResult, moderatorResult]) => { setUsers(userResult.users); setModerators(moderatorResult.moderators); setError(''); }).catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load users')).finally(() => setLoading(false));
-  const refresh = () => { setLoading(true); void fetchUsers(); };
+  const fetchUsers = (query = '') => Promise.all([getAdminUsers(query), getModeratorAssignments()]).then(([userResult, moderatorResult]) => { setUsers(userResult.users); setModerators(moderatorResult.moderators); setError(''); }).catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load users')).finally(() => setLoading(false));
+  const refresh = () => { setLoading(true); void fetchUsers(search); };
   useEffect(() => { void fetchUsers(); }, []);
   const change = async (user: AdminUser, action: 'role' | 'status', value: string) => {
     const prompt = action === 'role'
       ? value === 'ADMIN' ? t('Give this user administrator access?') : t('Change this user’s role?')
       : value === 'SUSPENDED' ? t('Suspend this account?') : t('Reactivate this account?');
     if (!window.confirm(prompt)) return;
+    const reason = action === 'status' && value === 'SUSPENDED' ? window.prompt(t('Why are you suspending this account? This reason is kept in the action history.'))?.trim() : '';
+    if (action === 'status' && value === 'SUSPENDED' && (!reason || reason.length < 5)) { setError(t('Enter a reason of at least five characters')); return; }
     setBusy(`${action}:${user.id}`); setError('');
     try {
-      const result = action === 'role' ? await updateAdminUserRole(user.id, value) : await updateAdminUserStatus(user.id, value);
+      const result = action === 'role' ? await updateAdminUserRole(user.id, value) : await updateAdminUserStatus(user.id, value, reason || '');
       setUsers(current => current.map(item => item.id === user.id ? result.user : item));
+      window.dispatchEvent(new Event('madinaty-operations-refresh'));
+      if (action === 'status') window.dispatchEvent(new Event('madinaty-feed-refresh'));
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update user'); }
     finally { setBusy(''); }
   };
@@ -57,6 +62,7 @@ export default function AdminUsers() {
     finally { setBusy(''); }
   };
   return <section className="admin-panel admin-users-panel">
+    <form className="admin-user-search" onSubmit={event => { event.preventDefault(); refresh(); }}><label>{t('Find an account by name, email or phone')}<input value={search} onChange={event => setSearch(event.target.value)} maxLength={100} /></label><button className="button button-outline" type="submit">{t('Search')}</button></form>
     <div className="panel-heading"><div><span className="eyebrow">{t('ACCESS · COLLABORATORS')}</span><h2>{t('Users and collaborators')}</h2><p className="admin-panel-copy">{t('Manage accounts and assign limited moderator tasks. A moderator receives access after signing in with the assigned email or phone.')}</p></div><div className="dashboard-actions"><button className="button button-outline" onClick={() => setShowModeratorForm(value => !value)}><UserPlus size={15} />{t('Add a moderator')}</button><button className="button button-outline" onClick={refresh} disabled={loading}>{t('Refresh')}</button></div></div>
     {error && <p className="form-error" role="alert">{t(error)}</p>}
     {showModeratorForm && <form className="moderator-assignment-form" onSubmit={addModerator}><h3>{t('Assign a moderator')}</h3><p>{t('Use one verified contact method. No invitation is sent; the assignment activates when the person signs in.')}</p><label>{t('Name')}<input value={moderatorName} onChange={event => setModeratorName(event.target.value)} minLength={2} maxLength={80} required /></label><div className="form-row"><label>{t('Email or Gmail')}<input type="email" value={moderatorEmail} onChange={event => setModeratorEmail(event.target.value)} placeholder="name@gmail.com" /></label><label>{t('Telephone number')}<input type="tel" value={moderatorPhone} onChange={event => setModeratorPhone(event.target.value)} placeholder="+20 1X XXX XXXX" /></label></div><fieldset><legend>{t('Assigned tasks')}</legend>{permissionOptions.map(option => <label key={option.value}><input type="checkbox" checked={moderatorPermissions.includes(option.value)} onChange={event => setModeratorPermissions(current => event.target.checked ? [...new Set([...current, option.value])] : current.filter(item => item !== option.value))} />{t(option.label)}</label>)}</fieldset><div className="modal-foot"><button type="button" className="button button-outline" onClick={() => setShowModeratorForm(false)}>{t('Cancel')}</button><button className="button button-accent" type="submit" disabled={busy === 'moderator' || !moderatorPermissions.length}>{t(busy === 'moderator' ? 'Please wait…' : 'Assign moderator')}<Check size={15} /></button></div></form>}

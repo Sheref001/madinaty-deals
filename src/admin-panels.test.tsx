@@ -24,7 +24,7 @@ beforeEach(() => {
   vi.mocked(updateAdminUserStatus).mockResolvedValue({ user: { ...user, status: 'SUSPENDED' } });
   vi.mocked(getModeratorAssignments).mockResolvedValue({ moderators: [] });
   vi.stubGlobal('confirm', vi.fn(() => true));
-  vi.stubGlobal('prompt', vi.fn(() => ''));
+  vi.stubGlobal('prompt', vi.fn(() => 'Policy violation'));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
@@ -45,6 +45,6 @@ describe('admin board controls', () => {
     fireEvent.change(role, { target: { value: 'MODERATOR' } });
     await waitFor(() => expect(updateAdminUserRole).toHaveBeenCalledWith('user-1', 'MODERATOR'));
     fireEvent.click(screen.getByRole('button', { name: 'Suspend account Neighbour' }));
-    await waitFor(() => expect(updateAdminUserStatus).toHaveBeenCalledWith('user-1', 'SUSPENDED'));
+    await waitFor(() => expect(updateAdminUserStatus).toHaveBeenCalledWith('user-1', 'SUSPENDED', 'Policy violation'));
   });
 });

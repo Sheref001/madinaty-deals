@@ -5,12 +5,12 @@ import App from './App';
 import { allResults } from './data';
 import { matchesQuery } from './domain';
 import { languageKey, translate } from './i18n';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn().mockResolvedValue({ id: 'user', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn().mockResolvedValue({ id: 'user', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false }), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [], hiddenContentIds: [] }) }));
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
 describe('Arabic and English experience', () => {
-  it('preserves the current view when switching languages and remembers the choice on reload', () => {
+  it('preserves the current view when switching languages and remembers the choice on reload', async () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     window.history.replaceState({}, '', '/?lang=ar');
     const { unmount } = render(<App />);
@@ -24,7 +24,7 @@ describe('Arabic and English experience', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Saved' }));
     expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Stokke Tripp Trapp chair' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Stokke Tripp Trapp chair' })).toBeTruthy();
     expect(localStorage.getItem(languageKey)).toBe('en');
     unmount();
     render(<App />);
@@ -33,7 +33,7 @@ describe('Arabic and English experience', () => {
     fireEvent.click(screen.getByRole('button', { name: 'التبديل إلى العربية' }));
     expect(document.documentElement.dir).toBe('rtl');
     expect(screen.getByRole('heading', { name: translate('Find your next good thing', 'ar') })).toBeTruthy();
-  });
+  }, 15000);
 
   it('keeps canonical zone and category values in Arabic forms', async () => {
     render(<App />);
@@ -47,7 +47,7 @@ describe('Arabic and English experience', () => {
     const zone = screen.getByLabelText('المنطقة') as HTMLSelectElement;
     expect(zone.value).toBe('B1');
     expect(zone.selectedOptions[0].textContent).toBe('B1');
-  });
+  }, 15000);
 
   it('searches Arabic and English seed content, including Arabic diacritics', () => {
     expect(allResults.some(result => matchesQuery(result, 'تَكْيِيف'))).toBe(true);

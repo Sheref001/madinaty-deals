@@ -3,18 +3,18 @@ import type { FormEvent, ReactNode } from 'react';
 import {
   Sofa, Monitor, Baby, Utensils, HeartPulse, ArrowLeft, ArrowRight, ArrowUp, BadgeCheck, Bookmark, Building2, ChevronDown, ChevronRight, CircleCheck,
   Flag, Grid2X2, Heart, Home, ListFilter, MapPin, Menu, Package, CarFront, ShoppingBasket,
-  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, TrendingUp, GraduationCap, Share2, CircleHelp,
-  Wrench, X, Zap, Activity, BarChart3, Eye, MessageCircle, RefreshCw, Sparkles, Bike, UserRound, PawPrint,
+  Plus, Search, ShieldCheck, SlidersHorizontal, Star, Store, Tag, GraduationCap, Share2, CircleHelp,
+  Wrench, X, Zap, BarChart3, Eye, MessageCircle, Sparkles, Bike, UserRound, PawPrint,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { allResults, categories, formatPrice, zones } from './data';
-import { getTrackedEvents, track } from './analytics';
+import { track } from './analytics';
 import { filterResults, getViewResults, type BrowseFilters } from './domain';
 import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
-import { getComments, getPublishedSubmissions, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment, type PublicSubmission } from './api';
+import { checkContentVisible, getComments, getPublishedSubmissions, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment, type PublicSubmission } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -24,6 +24,8 @@ import RevenueDesk from './RevenueDesk';
 import AdminUsers from './AdminUsers';
 import AdminReviewQueue from './AdminReviewQueue';
 import AdminReports from './AdminReports';
+import AdminOperations from './AdminOperations';
+import AdminModeration from './AdminModeration';
 import EliteAdSpace from './EliteAdSpace';
 import { splitCategories, businessOnlyCategories } from './categoryPolicy';
 import AuthForm from './AuthForm';
@@ -109,7 +111,8 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [zone, setZone] = useState('All zones');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<BrowseFilters['sort']>('recommended');
-  const [results, setResults] = useState<SearchResult[]>(allResults);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [feedUnavailable, setFeedUnavailable] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try { const saved = JSON.parse(localStorage.getItem('madinaty-favorites') ?? 'null'); if (Array.isArray(saved)) return new Set(saved.filter((id): id is string => typeof id === 'string')); } catch { /* Start with demo favourites if storage is unavailable. */ }
     return new Set(['listing-3']);
@@ -141,7 +144,24 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     return () => { cancelled = true; };
   }, []);
   useEffect(() => { getPublicConfig().then(value => { setRegistrationEnabled(value.registrationEnabled); setCognitoEnabled(value.cognitoEnabled); setTranslationEnabled(value.translationEnabled === true); }).catch(() => { setRegistrationEnabled(false); setCognitoEnabled(false); setTranslationEnabled(false); }); }, []);
-  useEffect(() => { getPublishedSubmissions().then(({ submissions }) => setResults(current => [...current, ...submissions.map(publicSubmissionResult).filter((result): result is SearchResult => Boolean(result))])).catch(() => { /* Demo catalogue remains available if the public feed is unavailable. */ }); }, []);
+  useEffect(() => {
+    let active = true;
+    let latest = 0;
+    const load = () => {
+      const sequence = ++latest;
+      return getPublishedSubmissions().then(({ submissions, hiddenContentIds }) => {
+      if (!active || sequence !== latest) return;
+      const hidden = new Set(hiddenContentIds || []);
+      setFeedUnavailable(false);
+      setResults([...allResults.filter(item => !hidden.has(`${item.type}:${item.id}`)), ...submissions.map(publicSubmissionResult).filter((result): result is SearchResult => Boolean(result))]);
+      }).catch(() => { if (active && sequence === latest) { setResults([]); setFeedUnavailable(true); } });
+    };
+    void load();
+    const timer = window.setInterval(load, 15000);
+    window.addEventListener('focus', load);
+    window.addEventListener('madinaty-feed-refresh', load);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', load); window.removeEventListener('madinaty-feed-refresh', load); };
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const url = new URL(window.location.href);
@@ -268,17 +288,23 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     setToast(favorites.has(result.id) ? 'Removed from saved' : 'Saved to your shortlist');
   };
 
-  const contactResult = (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => {
+  const contactResult = async (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => {
+    const number = method === 'whatsapp' ? result.type === 'business' ? result.whatsapp || result.phone : result.type === 'service' ? result.whatsapp || result.phone : '' : '';
+    // Reserve the tab inside the click gesture so Safari still allows the verified link to open.
+    const tab = number ? window.open('about:blank', '_blank') : null;
+    if (tab) tab.opener = null;
+    try { await checkContentVisible(result.type, result.id); } catch { tab?.close(); setToast(language === 'ar' ? 'هذا الإعلان غير متاح الآن' : 'This ad is no longer available'); window.dispatchEvent(new Event('madinaty-feed-refresh')); return; }
     const eventName = method === 'whatsapp' ? 'whatsapp_clicked' : method === 'phone' ? 'phone_clicked' : 'quote_requested';
       track(eventName, { result_type: result.type, result_id: result.id });
       if (method === 'whatsapp') {
-      const number = result.type === 'business' ? result.whatsapp || result.phone : result.type === 'service' ? result.whatsapp || result.phone : '';
       if (number) {
         const message = language === 'ar'
           ? '🏷️ مدينتي ديلز\nالسلام عليكم، لقيت رقمك علي مدينتي ديلز. عايز اعرف الاسعار و المواعيد'
           : `🏷️ Madinaty Deals\nHello, I found ${result.title} on Madinaty Deals and would like to ask about your services.`;
         const normalized = number.replace(/[^\d]/g, '').replace(/^0/, '20');
-        window.open(`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+        const href = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+        if (tab && !tab.closed) tab.location.replace(href);
+        else window.location.assign(href);
         return;
       }
       setToast(language === 'ar' ? 'هذا إعلان تجريبي — أضف رقم واتساب صاحب المحل أولًا' : 'Demo ad — add the shop owner’s WhatsApp number first');
@@ -294,11 +320,13 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
 
   const publishListing = (listing: Listing, published: boolean) => {
     setModal(null);
+    window.dispatchEvent(new Event('madinaty-feed-refresh'));
     track('listing_submitted', { category: listing.category });
     setToast(published ? 'Your listing is published and visible to the community' : 'Your listing is held for a safety or commercial check');
   };
   const publishService = (service: Service, published: boolean) => {
     setModal(null);
+    window.dispatchEvent(new Event('madinaty-feed-refresh'));
     track('service_submitted', { category: service.category });
     setToast(published ? 'Your service is published and visible to the community' : 'Your service is held for a safety or commercial check');
   };
@@ -337,6 +365,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       </div>
 
       <main className="main-content">
+        {feedUnavailable && <p className="form-error" role="alert">{t('Listings are temporarily unavailable. Please refresh this page shortly.')}</p>}
         {view === 'home' ? (
           <HomeView isAdmin={isAdmin} residentVerified={residentVerified} translationEnabled={translationEnabled} results={visibleResults} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
@@ -642,26 +671,18 @@ function AdminAccessDenied({ onBack }: { onBack: () => void }) {
 }
 
 function AdminView({ isAdmin, permissions, onBack }: { isAdmin: boolean; permissions: string[]; onBack: () => void }) {
-  const { t, language } = useTranslation();
-  const [, setRefresh] = useState(0);
-  const events = getTrackedEvents();
-  const count = (names: string[]) => events.filter(event => names.includes(event.name)).length;
-  const totalListings = count(['listing_submitted']);
-  const totalServices = count(['service_submitted']);
-  const contacts = count(['whatsapp_clicked', 'phone_clicked', 'quote_requested']);
-  const searches = count(['search_performed']);
-  const saves = count(['favorite_added']);
-  const reports = count(['report_submitted']);
-  const recentEvents = [...events].reverse().slice(0, 8);
-  const eventName = (name: string) => ({ search_performed: 'Search', favorite_added: 'Saved item', whatsapp_clicked: 'WhatsApp contact', phone_clicked: 'Phone contact', quote_requested: 'Quote request', listing_submitted: 'Listing submitted for review', service_submitted: 'Service submitted for review', report_submitted: 'Report attempt' }[name] ?? name);
-  const eventIcon = (name: string) => name === 'search_performed' ? <Eye size={15} /> : name.endsWith('_clicked') || name === 'quote_requested' ? <MessageCircle size={15} /> : name.endsWith('_submitted') ? <Plus size={15} /> : <Activity size={15} />;
+  const { t } = useTranslation();
   const canViewDashboard = isAdmin || permissions.includes('DASHBOARD');
   const canViewReports = isAdmin || permissions.includes('REPORTS');
+  const canViewContent = isAdmin || permissions.includes('CONTENT_REVIEW');
   const canViewVerifications = isAdmin || permissions.includes('RESIDENT_VERIFICATIONS');
-  return <div className="admin-view operations-dashboard"><div className="page-intro"><div><span className="eyebrow">{t('OWNER DASHBOARD · OPERATIONS')}</span><h1>{t('Understand what is happening.')}</h1><p>{t('Track marketplace activity, demand and the actions that need your attention.')}</p></div><div className="dashboard-actions"><span className="demo-status"><span /> {t('Demo analytics')}</span><button className="button button-outline" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} /> {t('Refresh')}</button><button className="button button-dark" onClick={onBack}>{t('Back to app')}</button></div></div>
-    {canViewDashboard && <><div className="admin-stats dashboard-stats"><div><span className="admin-stat-icon blue"><BarChart3 size={17} /></span><span><b>{totalListings}</b><small>{t('Listing submissions this session')}</small></span></div><div><span className="admin-stat-icon mint"><Wrench size={17} /></span><span><b>{totalServices}</b><small>{t('Service submissions this session')}</small></span></div><div><span className="admin-stat-icon amber"><MessageCircle size={17} /></span><span><b>{contacts}</b><small>{t('Contact actions')}</small></span></div><div><span className="admin-stat-icon plum"><Eye size={17} /></span><span><b>{searches}</b><small>{t('Searches')}</small></span></div><div><span className="admin-stat-icon blue"><Bookmark size={17} /></span><span><b>{saves}</b><small>{t('Saved items')}</small></span></div><div><span className="admin-stat-icon amber"><Flag size={17} /></span><span><b>{reports}</b><small>{t('Report attempts this session')}</small></span></div></div>
-    <div className="dashboard-grid"><section className="admin-panel activity-panel"><div className="panel-heading"><div><span className="eyebrow">{t('LIVE SESSION')}</span><h2>{t('Recent activity')}</h2></div><span className="live-pill light-live"><span /> {t('Tracking')}</span></div>{recentEvents.length ? <div className="activity-list">{recentEvents.map((event, index) => <div className="activity-row" key={`${event.occurredAt}-${index}`}><span className="activity-icon">{eventIcon(event.name)}</span><span><b>{t(eventName(event.name))}</b><small>{new Date(event.occurredAt).toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-EG', { hour: 'numeric', minute: '2-digit' })}{event.properties?.result_type ? ` · ${event.properties.result_type}` : ''}</small></span><strong>{event.properties?.category ? String(event.properties.category) : ''}</strong></div>)}</div> : <div className="dashboard-empty"><Activity size={21} /><p>{t('Activity will appear here as people browse, save, contact and post.')}</p></div>}</section><section className="admin-panel channel-panel"><div className="panel-heading"><div><span className="eyebrow">{t('DEMAND SIGNALS')}</span><h2>{t('What people do')}</h2></div><BarChart3 size={18} className="panel-icon" /></div><div className="channel-row"><span>{t('Searches')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, searches * 18 + 12)}%` }} /></div><b>{searches}</b></div><div className="channel-row"><span>{t('Contact actions')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, contacts * 20 + 8)}%` }} /></div><b>{contacts}</b></div><div className="channel-row"><span>{t('Saved items')}</span><div className="mini-track"><i style={{ width: `${Math.min(100, saves * 20 + 8)}%` }} /></div><b>{saves}</b></div><div className="channel-insight"><TrendingUp size={16} /><span><b>{t('Next insight')}</b><small>{t('Watch which service categories get searches but few contact actions.')}</small></span></div></section></div>
-    <div className="dashboard-note"><ShieldCheck size={18} /><p><b>{t('Analytics status')}</b><br />{t('These analytics are local to this browser session and are not marketplace-wide or persistent.')}</p></div></>}{isAdmin && <AdminUsers />}{canViewVerifications && <AdminReviewQueue />}{canViewReports && <AdminReports />}{isAdmin && <RevenueDesk />}
+  return <div className="admin-view operations-dashboard"><div className="page-intro"><div><span className="eyebrow">{t('OWNER DASHBOARD · OPERATIONS')}</span><h1>{t('Marketplace control center')}</h1><p>{t('Review content, handle reports and control publication from one place.')}</p></div><button className="button button-dark" onClick={onBack}>{t('Back to app')}</button></div>
+    {canViewDashboard && <AdminOperations showHistory={isAdmin} />}
+    {canViewContent && <AdminModeration isAdmin={isAdmin} canReadReports={canViewReports} />}
+    {canViewReports && <AdminReports canHide={canViewContent} />}
+    {canViewVerifications && <AdminReviewQueue />}
+    {isAdmin && <AdminUsers />}
+    {isAdmin && <RevenueDesk />}
   </div>;
 }
 

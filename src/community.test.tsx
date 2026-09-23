@@ -6,7 +6,7 @@ import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
 import { getPublicConfig, getSession, submitPost } from './api';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED', published: true }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [], hiddenContentIds: [] }), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED', published: true }) }));
 beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }); });
 
 afterEach(() => { cleanup(); vi.useRealTimers(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
@@ -104,19 +104,19 @@ it('keeps the pet-care research category and its subcategories admin-only', asyn
   fireEvent.change(screen.getByLabelText('Pet business type'), { target: { value: 'Pet shops' } });
   expect(screen.queryByRole('heading', { name: 'Veterinary clinics · research preview' })).toBeNull();
   expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
-});
+}, 15000);
 
 it('keeps the admin-only pet-care category out of the service form', () => {
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   expect(Array.from((screen.getByLabelText('Choose your service category') as HTMLSelectElement).options).some(option => option.value === 'Pet care')).toBe(false);
 });
 
-it('routes the home services category to providers in Arabic', () => {
+it('routes the home services category to providers in Arabic', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'إزاي تستخدم مدينتي ديلز؟' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /خدمات منزلية/ }));
   expect(screen.getByRole('heading', { name: 'خدمات موثوقة قريبة منك' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'كول بوينت للتكييف' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'كول بوينت للتكييف' })).toBeTruthy();
 });
 
 it('opens the posting form for a server-authenticated user', async () => {

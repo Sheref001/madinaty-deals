@@ -22,6 +22,7 @@ const database = () => ({
   $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
   contentView: { create: vi.fn().mockResolvedValue({}), count: vi.fn().mockResolvedValue(1) },
   comment: { create: vi.fn().mockResolvedValue({ id: 'comment-1', body: 'مرحبا' }), findMany: vi.fn().mockResolvedValue([]) },
+  contentControl: { findUnique: vi.fn().mockResolvedValue(null) },
 });
 
 describe('API responses', () => {
@@ -72,6 +73,15 @@ describe('API responses', () => {
     const result = await request(createRequestHandler({ prisma, auth }), '/api/content/listing/id/view', { method: 'POST', headers: { 'x-visitor-id': 'visitor-1' } });
     expect(result.status).toBe(200);
     expect(JSON.parse(result.body)).toEqual({ viewCount: 1 });
+  });
+  it('rejects direct content actions after emergency hiding', async () => {
+    const prisma = database();
+    prisma.contentControl.findUnique.mockResolvedValue({ status: 'HIDDEN' });
+    const handler = createRequestHandler({ prisma, auth });
+    expect((await request(handler, '/api/content/listing/listing-1/visible')).status).toBe(404);
+    expect((await request(handler, '/api/content/listing/listing-1/comments')).status).toBe(404);
+    expect((await request(handler, '/api/content/listing/listing-1/view', { method: 'POST', headers: { 'x-visitor-id': 'visitor-1' } })).status).toBe(404);
+    expect(prisma.contentView.create).not.toHaveBeenCalled();
   });
 
   it('translates content only through the server translation service', async () => {

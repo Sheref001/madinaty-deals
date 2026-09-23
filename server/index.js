@@ -11,6 +11,7 @@ import { createLocalStorage } from './local-storage.js';
 import { createSubmissions } from './submissions.js';
 import { createAdmin } from './admin.js';
 import { createReports } from './reports.js';
+import { createOperations } from './operations.js';
 import { createTranslator } from './translation.js';
 
 const prisma = new PrismaClient();
@@ -22,8 +23,9 @@ const uploads = createUploads({ prisma, config, auth, storage: createLocalStorag
 const submissions = createSubmissions({ prisma, auth });
 const admin = createAdmin({ prisma, auth });
 const reports = createReports({ prisma, auth, origin: config.origin });
+const operations = createOperations({ prisma, auth });
 const translator = createTranslator({ prisma, config });
-const server = createServer(createRequestHandler({ prisma, auth, cognito, uploads, submissions, admin, reports, translator, config, corsOrigin: config.origin }));
+const server = createServer(createRequestHandler({ prisma, auth, cognito, uploads, submissions, admin, reports, operations, translator, config, corsOrigin: config.origin }));
 server.requestTimeout = 45000;
 server.headersTimeout = 15000;
 

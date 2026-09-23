@@ -705,12 +705,30 @@ model Submission {
   kind        String
   payload     Json
   status      String   @default("PENDING_REVIEW")
+  statusBeforeHide String?
   rentalMonth String?
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   uploads     Upload[]
   @@unique([userId, rentalMonth])
   @@index([status, createdAt])
+}
+
+model ContentControl {
+  id          String   @id @default(uuid()) @db.Uuid
+  contentType String
+  contentId   String
+  status      String
+  reason      String?
+  updatedAt   DateTime @updatedAt
+  @@unique([contentType, contentId])
+  @@index([status, updatedAt])
+}
+
+model PublicationPause {
+  category  String   @id
+  reason    String
+  createdAt DateTime @default(now())
 }
 
 model TranslationCache {

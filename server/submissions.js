@@ -23,8 +23,11 @@ function publicPayload(kind, payload) {
 export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
     if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
-      const records = await prisma.submission.findMany({ where: { status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } });
-      return send(response, 200, { submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
+      const [records, hidden] = await Promise.all([
+        prisma.submission.findMany({ where: { status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
+        prisma.contentControl.findMany({ where: { status: { in: ['HIDDEN', 'REMOVED'] } }, select: { contentType: true, contentId: true } }),
+      ]);
+      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
@@ -138,9 +141,10 @@ export function createSubmissions({ prisma, auth }) {
     if (!Array.isArray(ids) || ids.length > 6 || !ids.every(uuid) || new Set(ids).size !== ids.length) throw new RequestError(400, 'Invalid photos');
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';
     const rentalMonth = rental ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date()) : null;
-    const status = publicationStatus(clean);
     const result = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
+      const pause = await tx.publicationPause.findFirst({ where: { category: { in: ['*', clean.category, ...(clean.offer ? ['Deals & promotions'] : [])] } } });
+      const status = pause ? 'PENDING_REVIEW' : publicationStatus(clean);
       if (clean.offer) {
         const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1) - 86400000);
         const previousPromotions = await tx.submission.findMany({ where: { userId: current.userId, kind: 'service', createdAt: { gte: monthStart } }, select: { createdAt: true, payload: true }, take: 100 });

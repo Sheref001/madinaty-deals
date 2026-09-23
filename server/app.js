@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { readJson, routeParts, validContent, RequestError } from './request.js';
 import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
+import { isContentVisible } from './moderation.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, translator, config = {} }) {
+export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, operations, translator, config = {} }) {
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
   const translationLimit = createRateLimiter({ limit: 20, windowMs: 60000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
@@ -42,6 +43,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (parts.length === 2 && parts[1] === 'submissions' && request.method === 'GET' && submissions) return submissions.handle(request, response, parts, send);
     if (['uploads', 'public-uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);
     if (parts[1] === 'admin' && parts[2] === 'reports' && reports) return reports.handle(request, response, parts, send);
+    if (parts[1] === 'admin' && ['operations', 'content', 'publication-pause'].includes(parts[2]) && operations) return operations.handle(request, response, parts, send);
     if (parts[1] === 'admin' && parts[2] === 'verifications' && submissions) return submissions.handle(request, response, parts, send);
     if (parts[1] === 'admin' && admin) return admin.handle(request, response, parts, send);
     if (parts[1] === 'public-submissions' && submissions) return submissions.handle(request, response, parts, send);
@@ -63,6 +65,8 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     }
     if (parts.length !== 5 || parts[1] !== 'content' || !validContent(parts[2], parts[3])) return send(response, 404, { error: 'Not found' });
     const [, , contentType, contentId, action] = parts;
+    if (!(await isContentVisible(prisma, contentType, contentId))) return send(response, 404, { error: 'Not found' });
+    if (request.method === 'GET' && action === 'visible') return send(response, 200, { visible: true });
 
     if (request.method === 'POST' && action === 'view') {
       const visitorId = String(request.headers['x-visitor-id'] || '').slice(0, 100);

@@ -9,6 +9,7 @@ const request = body => Object.assign(Readable.from([JSON.stringify(body)]), { m
 function fixture() {
   const prisma = {
     user: { findMany: vi.fn().mockResolvedValue([adminUser, target]), findUnique: vi.fn().mockResolvedValue(target), update: vi.fn().mockResolvedValue({ ...target, role: 'MODERATOR' }), count: vi.fn().mockResolvedValue(1) },
+    session: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
     auditLog: { create: vi.fn() },
   };
   prisma.$transaction = async callback => callback(prisma);
@@ -30,5 +31,11 @@ describe('administrator user controls', () => {
     await f.admin.handle(request({ role: 'MODERATOR' }), {}, ['api', 'admin', 'users', target.id, 'role'], f.send);
     expect(f.prisma.user.update).toHaveBeenCalledWith({ where: { id: target.id }, data: { role: 'MODERATOR' } });
     expect(f.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'admin.user_role_changed', targetId: target.id }) }));
+  });
+  it('suspends an account with a reason and revokes existing sessions', async () => {
+    const f = fixture();
+    await f.admin.handle(request({ status: 'SUSPENDED', reason: 'Repeated prohibited ads' }), {}, ['api', 'admin', 'users', target.id, 'status'], f.send);
+    expect(f.prisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: target.id } });
+    expect(f.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'admin.user_status_changed', metadata: expect.objectContaining({ reason: 'Repeated prohibited ads' }) }) }));
   });
 });

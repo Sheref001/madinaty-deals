@@ -967,3 +967,23 @@ input[type="tel"], input[type="number"] { direction: ltr; text-align: start; }
 .file-drop-area { display: grid; gap: 8px; min-width: 0; flex: 1; padding: 6px; border: 1px dashed #9ec5b0; border-radius: 8px; }
 .file-drop-area:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
 .file-drop-area > small { color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.admin-user-search, .publication-controls, .moderation-toolbar { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+.admin-user-search { margin: 18px 0; }
+.admin-user-search label, .moderation-toolbar label { flex: 1 1 220px; }
+.admin-user-search input, .moderation-toolbar input, .publication-controls select, .publication-controls input { min-height: 42px; border: 1px solid #bac7c5; border-radius: 10px; padding: 8px 12px; background: #fff; color: #17332f; }
+.admin-user-search input, .moderation-toolbar input { width: 100%; }
+.publication-controls input { flex: 1 1 220px; min-width: 160px; }
+.publication-control { padding: 16px; margin: 16px 0; border: 1px solid #dfc39a; background: #fff9ed; border-radius: 14px; color: #283a35; }
+.publication-control p { margin: 8px 0; }
+.publication-controls select { max-width: 320px; }
+.moderation-toolbar { justify-content: space-between; margin: 18px 0; }
+.moderation-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.moderation-tabs button { border: 1px solid #b8cbc5; border-radius: 999px; padding: 8px 12px; background: #fff; color: #17332f; cursor: pointer; }
+.moderation-tabs button.active { background: #173d36; border-color: #173d36; color: #fff; }
+.moderation-list { display: grid; gap: 12px; }
+.moderation-row { display: flex; justify-content: space-between; gap: 18px; align-items: start; padding: 16px; border: 1px solid #d9e3df; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+.moderation-row > div:first-child { min-width: 0; }
+.moderation-row small { display: block; margin-top: 5px; color: #425d56; }
+.moderation-row p { margin: 8px 0; }
+.moderation-row .verification-actions { flex: 0 0 auto; max-width: 330px; justify-content: flex-end; }
+@media (max-width: 700px) { .moderation-row { flex-direction: column; } .moderation-row .verification-actions { max-width: none; justify-content: flex-start; } }

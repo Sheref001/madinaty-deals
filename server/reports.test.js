@@ -16,14 +16,21 @@ const auth = {
   protect: vi.fn().mockResolvedValue({ userId: 'admin-1', publicUser: { role: 'ADMIN' } }),
 };
 
-const database = () => ({
+const database = () => {
+  const prisma = {
   $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
+  contentControl: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn() },
+  auditLog: { create: vi.fn() },
   contentReport: {
     create: vi.fn().mockResolvedValue({ id: 'report-1', status: 'OPEN', createdAt: new Date('2026-09-22T00:00:00Z') }),
     findMany: vi.fn().mockResolvedValue([]),
-    update: vi.fn().mockResolvedValue({ id: 'report-1', status: 'RESOLVED', resolvedAt: new Date('2026-09-22T00:00:00Z') }),
+    findUnique: vi.fn().mockResolvedValue({ id: '11111111-1111-4111-8111-111111111111', contentType: 'listing', contentId: 'listing-1', status: 'OPEN' }),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
   },
-});
+  };
+  prisma.$transaction = callback => callback(prisma);
+  return prisma;
+};
 
 describe('content reports', () => {
   it('persists a valid anonymous report', async () => {
@@ -51,6 +58,15 @@ describe('content reports', () => {
     expect((await request(handler, '/api/admin/reports')).status).toBe(200);
     const result = await request(handler, '/api/admin/reports/11111111-1111-4111-8111-111111111111', { method: 'POST', body: JSON.stringify({ status: 'RESOLVED' }) });
     expect(result.status).toBe(200);
-    expect(prisma.contentReport.update).toHaveBeenCalled();
+    expect(prisma.contentReport.updateMany).toHaveBeenCalled();
+  });
+  it('hides the reported ad and resolves its report in one transaction', async () => {
+    const prisma = database();
+    const adminAuth = { session: vi.fn().mockResolvedValue({ userId: 'admin-1', user: { role: 'ADMIN' }, publicUser: { role: 'ADMIN' } }), protect: vi.fn().mockResolvedValue({ userId: 'admin-1', user: { role: 'ADMIN' }, publicUser: { role: 'ADMIN' } }) };
+    const handler = createRequestHandler({ prisma, reports: createReports({ prisma, auth: adminAuth, origin: 'https://madinatydeals.com' }) });
+    const result = await request(handler, '/api/admin/reports/11111111-1111-4111-8111-111111111111', { method: 'POST', body: JSON.stringify({ status: 'RESOLVED', action: 'HIDE', reason: 'Potential scam listing' }) });
+    expect(result.status).toBe(200);
+    expect(prisma.contentControl.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ contentId: 'listing-1', status: 'HIDDEN' }) }));
+    expect(prisma.contentReport.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'RESOLVED' }) }));
   });
 });

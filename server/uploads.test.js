@@ -22,4 +22,19 @@ describe('upload boundaries', () => {
     await expect(uploads.handle({ method: 'GET', url: '/api/uploads/12345678-1234-1234-1234-123456789012' }, {}, ['api', 'uploads', '12345678-1234-1234-1234-123456789012'], vi.fn())).rejects.toMatchObject({ status: 404 });
     expect(storage.send).not.toHaveBeenCalled();
   });
+  it('stops serving a public photo when its ad is hidden or owner suspended', async () => {
+    const record = { purpose: 'photo', status: 'READY', mimeType: 'image/webp', objectKey: 'photo/test', submission: { status: 'HIDDEN', user: { status: 'ACTIVE' } } };
+    const storage = { get: vi.fn().mockResolvedValue(Buffer.from('image')) };
+    const uploads = createUploads({ config: { origin: 'https://madinatydeals.com' }, storage, auth: {}, prisma: { upload: { findUnique: vi.fn().mockResolvedValue(record) } } });
+    const req = { method: 'GET', url: '/api/public-uploads/12345678-1234-1234-1234-123456789012' };
+    const parts = ['api', 'public-uploads', '12345678-1234-1234-1234-123456789012'];
+    await expect(uploads.handle(req, {}, parts, vi.fn())).rejects.toMatchObject({ status: 404 });
+    record.submission.status = 'PUBLISHED'; record.submission.user.status = 'SUSPENDED';
+    await expect(uploads.handle(req, {}, parts, vi.fn())).rejects.toMatchObject({ status: 404 });
+    expect(storage.get).not.toHaveBeenCalled();
+    record.submission.user.status = 'ACTIVE';
+    const headers = {};
+    await uploads.handle(req, { writeHead: (_status, values) => Object.assign(headers, values), end: vi.fn() }, parts, vi.fn());
+    expect(headers['cache-control']).toBe('private, no-store');
+  });
 });

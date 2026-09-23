@@ -1,15 +1,22 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from './App';
 import { filterResults } from './domain';
 import { listings } from './data';
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [], hiddenContentIds: [] }) }));
+
+async function renderReady() {
+  const result = render(<App />);
+  await screen.findByRole('heading', { name: 'Solid oak dining table' });
+  return result;
+}
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
-it('searches all sections from the header and opens result details', () => {
+it('searches all sections from the header and opens result details', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  render(<App />);
+  await renderReady();
   const search = screen.getByLabelText('Search items, services or places');
   fireEvent.change(search, { target: { value: 'maintenance' } });
   fireEvent.submit(search.closest('form')!);
@@ -18,9 +25,9 @@ it('searches all sections from the header and opens result details', () => {
   expect(within(screen.getByRole('dialog')).getByText('Installation, maintenance & repair')).toBeTruthy();
 });
 
-it('filters by condition and switches between list and grid without losing the filter', () => {
+it('filters by condition and switches between list and grid without losing the filter', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  render(<App />);
+  await renderReady();
   fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
   fireEvent.change(screen.getByLabelText('Condition'), { target: { value: 'Fair' } });
   expect(screen.getByRole('heading', { name: 'IKEA Hemnes shoe cabinet' })).toBeTruthy();
@@ -30,12 +37,12 @@ it('filters by condition and switches between list and grid without losing the f
   expect(screen.getByRole('heading', { name: 'IKEA Hemnes shoe cabinet' })).toBeTruthy();
 });
 
-it('persists favouriting a homepage item on this browser', () => {
+it('persists favouriting a homepage item on this browser', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  const first = render(<App />);
+  const first = await renderReady();
   fireEvent.click(screen.getByRole('button', { name: 'Save Solid oak dining table' }));
   first.unmount();
-  render(<App />);
+  await renderReady();
   fireEvent.click(screen.getAllByRole('button', { name: 'Saved' })[0]);
   expect(screen.getByRole('heading', { name: 'Solid oak dining table' })).toBeTruthy();
 });
@@ -49,9 +56,9 @@ it('orders prices with unknown values last and applies inclusive price limits', 
 });
 
 
-it('filters tutoring individuals and centres without an audience banner', () => {
+it('filters tutoring individuals and centres without an audience banner', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  render(<App />);
+  await renderReady();
   fireEvent.click(screen.getByRole('button', { name: /Tutoring & education\s*Explore/ }));
   expect(screen.getByRole('heading', { name: 'Tutoring & education' })).toBeTruthy();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
@@ -65,9 +72,9 @@ it('filters tutoring individuals and centres without an audience banner', () => 
   expect(screen.queryByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeNull();
 });
 
-it.each(['Electronics'])('shows both subcategories for %s even with no matching ads', category => {
+it.each(['Electronics'])('shows both subcategories for %s even with no matching ads', async category => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  render(<App />);
+  await renderReady();
   fireEvent.click(screen.getByRole('button', { name: `${category}Explore` }));
   expect(screen.getByRole('heading', { name: category })).toBeTruthy();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
@@ -78,9 +85,9 @@ it.each(['Electronics'])('shows both subcategories for %s even with no matching 
 });
 
 
-it('shows gym providers without an individual and business audience panel', () => {
+it('shows gym providers without an individual and business audience panel', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
-  render(<App />);
+  await renderReady();
   fireEvent.click(screen.getByRole('button', { name: 'Health & fitnessExplore' }));
   expect(screen.getByRole('heading', { name: 'Health & fitness' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Studio 8 Pilates' })).toBeTruthy();

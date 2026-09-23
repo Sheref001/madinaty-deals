@@ -10,7 +10,7 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   const prisma = {
     $queryRaw: vi.fn().mockResolvedValue([{ count: 1 }]),
     profile: { findUnique: vi.fn().mockResolvedValue({ verificationState: verified ? 'VERIFIED' : 'UNVERIFIED' }), update: vi.fn() },
-    submission: { findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) },
+    submission: { findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]), create: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED' }) },
     upload: { findMany: vi.fn(async ({ where }) => photos.filter(photo => where.id.in.includes(photo.id) && photo.userId === where.userId && photo.purpose === where.purpose && photo.status === where.status && photo.submissionId === null)), updateMany: vi.fn() },
     residentVerification: { findMany: vi.fn().mockResolvedValue([]), findUnique: vi.fn().mockResolvedValue({ id: verificationId, userId: 'resident' }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     auditLog: { create: vi.fn() },
@@ -41,11 +41,27 @@ describe('marketplace submission boundaries', () => {
     await f.call({}, 'api/submissions', 'GET');
     expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ userId: 'owner' });
   });
-  it('queues ordinary listings and ignores client-supplied ownership and approval', async () => {
+  it('exposes only published submissions through the public feed', async () => {
+    const f = fixture();
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'published-id', kind: 'listing', payload: { ...payload, feeStatus: 'AWAITING_AGREEMENT', businessAuthenticationStatus: 'PENDING_REVIEW' }, createdAt: new Date('2026-09-23T10:00:00Z'), user: { profile: { displayName: 'Neighbour', verificationState: 'VERIFIED' } } }]);
+    await f.call({}, 'api/public-submissions', 'GET');
+    expect(f.prisma.submission.findMany.mock.calls[0][0].where).toEqual({ status: 'PUBLISHED' });
+    expect(f.send.mock.calls[0][2].submissions[0]).toMatchObject({ id: 'published-id', kind: 'listing', seller: 'Neighbour', verified: true });
+    expect(f.send.mock.calls[0][2].submissions[0].payload.feeStatus).toBeUndefined();
+  });
+  it('publishes ordinary listings immediately and ignores client-supplied ownership and approval', async () => {
     const f = fixture();
     await f.call({ kind: 'listing', payload: { ...payload, status: 'PUBLISHED', userId: 'attacker' }, userId: 'attacker', status: 'PUBLISHED' });
-    expect(f.prisma.submission.create.mock.calls[0][0].data).toEqual({ userId: 'owner', kind: 'listing', payload, rentalMonth: null });
-    expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PENDING_REVIEW' });
+    expect(f.prisma.submission.create.mock.calls[0][0].data).toEqual({ userId: 'owner', kind: 'listing', payload, status: 'PUBLISHED', rentalMonth: null });
+    expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PUBLISHED', published: true });
+  });
+  it('holds risky and commercial submissions for review', async () => {
+    const risky = fixture();
+    await risky.call({ kind: 'listing', payload: { ...payload, subtitle: 'Guaranteed profit. Visit https://example.test' } });
+    expect(risky.prisma.submission.create.mock.calls[0][0].data.status).toBe('PENDING_REVIEW');
+    const commercial = fixture();
+    await commercial.call({ kind: 'listing', payload: { ...payload, category: 'Electronics', advertiserType: 'small_business', businessRequest: 'posting' } });
+    expect(commercial.prisma.submission.create.mock.calls[0][0].data.status).toBe('PENDING_REVIEW');
   });
   it('allows service providers without resident verification', async () => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });

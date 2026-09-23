@@ -10,7 +10,7 @@ import PostingAudience from './PostingAudience';
 import { splitCategories } from './categoryPolicy';
 import type { AdvertiserType, BusinessRequest } from './types';
 
-export default function ListingForm({ onPublish, residentVerified = false, rentalPostsThisMonth = 0 }: { onPublish: (listing: Listing) => void; residentVerified?: boolean; rentalPostsThisMonth?: number }) {
+export default function ListingForm({ onPublish, residentVerified = false, rentalPostsThisMonth = 0 }: { onPublish: (listing: Listing, published: boolean) => void; residentVerified?: boolean; rentalPostsThisMonth?: number }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -35,7 +35,7 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
     if (!preview) { setPreview(true); return; }
     const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(category === 'Groceries' ? { groceryActivity } : {}), ...(splitCategories.includes(category) ? { advertiserType, ...(advertiserType === 'small_business' ? { businessRequest } : {}) } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
     setBusy(true); setError('');
-    try { await submitPost('listing', payload, photos); onPublish(payload); }
+    try { const result = await submitPost('listing', payload, photos); onPublish(payload, result.published === true); }
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
     finally { setBusy(false); }
   }
@@ -64,8 +64,8 @@ export default function ListingForm({ onPublish, residentVerified = false, renta
     </>}
     <div className="modal-foot">
       {preview ? <button className="button button-outline" type="button" disabled={busy} onClick={() => setPreview(false)}>{t('Edit details')}</button> : <span className="privacy-note"><ShieldCheck size={15} />{t('Apartment details stay private')}</span>}
-      <button className="button button-accent" type="submit" disabled={!valid || busy}>{t(busy ? 'Please wait…' : preview ? 'Submit for review' : 'Preview listing')}<ArrowRight size={16} /></button>
+      <button className="button button-accent" type="submit" disabled={!valid || busy}>{t(busy ? 'Please wait…' : preview ? 'Publish listing' : 'Preview listing')}<ArrowRight size={16} /></button>
     </div>
-    <p className="modal-intro">{t('Your post and photos will be saved privately for review before publishing.')}</p>
+    <p className="modal-intro">{t('Most posts publish immediately. Safety or commercial checks may hold a post for review.')}</p>
   </form>;
 }

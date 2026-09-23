@@ -2,9 +2,30 @@ import { RequestError, readJson } from './request.js';
 import { consumeLimit, isReviewer } from './auth.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
+const riskyText = /(?:guaranteed\s+profit|send\s+otp|password|weapon|firearm| наркот|مخدر|سلاح|احصل على ربح مضمون)/i;
+
+function publicationStatus(payload) {
+  const text = [payload.title, payload.subtitle, payload.description, payload.offer?.discount].filter(value => typeof value === 'string').join(' ');
+  if (riskyText.test(text) || /https?:\/\//i.test(text)) return 'PENDING_REVIEW';
+  // Commercial posts remain held until the agreed fee/authentication is handled.
+  if (payload.advertiserType === 'small_business' || payload.feeStatus === 'AWAITING_AGREEMENT') return 'PENDING_REVIEW';
+  return 'PUBLISHED';
+}
+
+function publicPayload(kind, payload) {
+  const common = ['title', 'subtitle', 'category', 'zone'];
+  const fields = kind === 'listing'
+    ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity']
+    : [...common, 'whatsapp', 'pricing', 'availability', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
+  return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
+}
 
 export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
+    if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
+      const records = await prisma.submission.findMany({ where: { status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } });
+      return send(response, 200, { submissions: records.map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
+    }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
       if (!isReviewer(current.user)) throw new RequestError(403, 'Reviewer access required');
@@ -117,6 +138,7 @@ export function createSubmissions({ prisma, auth }) {
     if (!Array.isArray(ids) || ids.length > 6 || !ids.every(uuid) || new Set(ids).size !== ids.length) throw new RequestError(400, 'Invalid photos');
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';
     const rentalMonth = rental ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit' }).format(new Date()) : null;
+    const status = publicationStatus(clean);
     const result = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))`;
       if (clean.offer) {
@@ -133,12 +155,12 @@ export function createSubmissions({ prisma, auth }) {
       }
       const photos = await tx.upload.findMany({ where: { id: { in: ids }, userId: current.userId, purpose: 'photo', submissionId: null, status: 'READY' } });
       if (photos.length !== ids.length || photos.reduce((sum, item) => sum + item.byteSize, 0) > 20 * 1024 * 1024) throw new RequestError(400, 'Invalid photos');
-      const submission = await tx.submission.create({ data: { userId: current.userId, kind: body.kind, payload: clean, rentalMonth } });
+      const submission = await tx.submission.create({ data: { userId: current.userId, kind: body.kind, payload: clean, status, rentalMonth } });
       await tx.upload.updateMany({ where: { id: { in: ids } }, data: { submissionId: submission.id } });
       await tx.auditLog.create({ data: { actorId: current.userId, action: 'submission.created', targetType: 'Submission', targetId: submission.id } });
       return submission;
     });
-    return send(response, 201, { id: result.id, status: result.status });
+    return send(response, 201, { id: result.id, status: result.status, published: result.status === 'PUBLISHED' });
   }
   return { handle };
 }

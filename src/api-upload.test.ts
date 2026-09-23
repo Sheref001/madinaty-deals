@@ -32,11 +32,11 @@ it.each([401, 403, 429, 502])('explains a non-JSON HTTP %s without leaking raw H
 it('sends the file bytes, then attaches the returned upload ID to the submission', async () => {
   const fetch = vi.fn()
     .mockResolvedValueOnce(Response.json({ upload: { id: 'photo-id' } }, { status: 201 }))
-    .mockResolvedValueOnce(Response.json({ id: 'submission-id', status: 'PENDING_REVIEW' }, { status: 201 }));
+    .mockResolvedValueOnce(Response.json({ id: 'submission-id', status: 'PUBLISHED', published: true }, { status: 201 }));
   vi.stubGlobal('fetch', fetch);
   const photo = new File(['bytes'], 'صورة.jpg', { type: 'image/jpeg' });
   const payload = { title: 'My table' };
-  expect(await submitPost('listing', payload, [photo])).toEqual({ id: 'submission-id', status: 'PENDING_REVIEW' });
+  expect(await submitPost('listing', payload, [photo])).toEqual({ id: 'submission-id', status: 'PUBLISHED', published: true });
   expect(fetch.mock.calls[0][1].body).toBe(photo);
   expect(fetch.mock.calls[0][1].headers['x-file-name']).toBe(encodeURIComponent(photo.name));
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ kind: 'listing', payload, uploadIds: ['photo-id'] });

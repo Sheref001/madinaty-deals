@@ -6,7 +6,7 @@ import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import { LanguageContext } from './i18n';
 import { getPublicConfig, getSession, submitPost } from './api';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PENDING_REVIEW' }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED', published: true }) }));
 beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }); });
 
 afterEach(() => { cleanup(); vi.useRealTimers(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
@@ -42,8 +42,8 @@ it('previews details without publishing and preserves them when editing', async 
   expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toContain('small scratch');
   expect((screen.getByLabelText('Condition') as HTMLSelectElement).value).toBe('Fair');
   fireEvent.click(screen.getByRole('button', { name: 'Preview listing' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
-  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Small oak desk', condition: 'Fair', price: 1450.5, subtitle: 'One year old, a small scratch on the top.' })));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish listing' }));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Small oak desk', condition: 'Fair', price: 1450.5, subtitle: 'One year old, a small scratch on the top.' }), true));
   expect(submitPost).toHaveBeenCalled();
 });
 
@@ -61,7 +61,7 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   expect(screen.getByRole('heading', { name: 'Math tutoring for students' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
-  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' })));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Math tutoring for students', category: 'Tutoring & education', advertiserType: 'individual', whatsapp: '+20 100 000 0000', zone: 'All zones', serviceArea: 'Madinaty-wide' }), true));
 });
 
 it('offers one structured promotion for every visible service category', () => {
@@ -153,6 +153,7 @@ it('hides account creation and presents sign-in while registrations are paused',
 
 
 it('preserves a small business authentication request through preview and submission', async () => {
+  vi.mocked(submitPost).mockResolvedValueOnce({ id: 'submission', status: 'PENDING_REVIEW', published: false });
   const publish = vi.fn();
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={publish} /></LanguageContext.Provider>);
   fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Health & fitness' } });
@@ -169,5 +170,5 @@ it('preserves a small business authentication request through preview and submis
   expect((screen.getByLabelText('Business request') as HTMLSelectElement).value).toBe('both');
   fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
   fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
-  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false })));
+  await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false }), false));
 });

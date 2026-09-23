@@ -14,7 +14,7 @@ import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
-import { getComments, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment } from './api';
+import { getComments, getPublishedSubmissions, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment, type PublicSubmission } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
@@ -64,6 +64,16 @@ const navItems: { id: View; label: string; icon: LucideIcon }[] = [
 const searchScopes = (['search', 'browse', 'services', 'businesses', ...(featureFlags.offers ? ['offers'] : [])] as View[]);
 const searchScopeLabels = ['All categories', 'Buy & sell', 'Services', 'Businesses', ...(featureFlags.offers ? ['Offers'] : [])];
 
+function publicSubmissionResult(record: PublicSubmission): SearchResult | null {
+  const payload = record.payload;
+  if (record.kind === 'listing') {
+    if (typeof payload.title !== 'string' || typeof payload.subtitle !== 'string' || typeof payload.category !== 'string' || typeof payload.zone !== 'string') return null;
+    return { id: `submission-${record.id}`, publicAdId: `MD-${record.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`, type: 'listing', title: payload.title, subtitle: payload.subtitle, category: payload.category, zone: payload.zone, createdAt: 'Just now', image: 'new', accent: 'lime', price: typeof payload.price === 'number' ? payload.price : null, condition: (typeof payload.condition === 'string' ? payload.condition : 'Good') as Listing['condition'], seller: record.seller, sellerVerified: record.verified, status: 'active', ...(typeof payload.furnishing === 'string' ? { furnishing: payload.furnishing as Listing['furnishing'] } : {}) };
+  }
+  if (typeof payload.title !== 'string' || typeof payload.subtitle !== 'string' || typeof payload.category !== 'string' || typeof payload.zone !== 'string') return null;
+  return { id: `submission-${record.id}`, publicAdId: `MD-${record.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`, type: 'service', title: payload.title, subtitle: payload.subtitle, category: payload.category, zone: payload.zone, createdAt: 'Just now', image: 'new-service', accent: 'mint', rating: 0, reviewCount: 0, serviceArea: typeof payload.serviceArea === 'string' ? payload.serviceArea : payload.zone, phone: '', whatsapp: typeof payload.whatsapp === 'string' ? payload.whatsapp : undefined, response: 'Response time to be configured', verified: record.verified, pricing: typeof payload.pricing === 'string' ? payload.pricing : undefined, availability: typeof payload.availability === 'string' ? payload.availability : undefined };
+}
+
 function App() {
   const [language, setLanguage] = useState<Language>(initialLanguage);
   useEffect(() => {
@@ -99,7 +109,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [zone, setZone] = useState('All zones');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState<BrowseFilters['sort']>('recommended');
-  const [results] = useState<SearchResult[]>(allResults);
+  const [results, setResults] = useState<SearchResult[]>(allResults);
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try { const saved = JSON.parse(localStorage.getItem('madinaty-favorites') ?? 'null'); if (Array.isArray(saved)) return new Set(saved.filter((id): id is string => typeof id === 'string')); } catch { /* Start with demo favourites if storage is unavailable. */ }
     return new Set(['listing-3']);
@@ -129,6 +139,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     return () => { cancelled = true; };
   }, []);
   useEffect(() => { getPublicConfig().then(value => { setRegistrationEnabled(value.registrationEnabled); setCognitoEnabled(value.cognitoEnabled); setTranslationEnabled(value.translationEnabled === true); }).catch(() => { setRegistrationEnabled(false); setCognitoEnabled(false); setTranslationEnabled(false); }); }, []);
+  useEffect(() => { getPublishedSubmissions().then(({ submissions }) => setResults(current => [...current, ...submissions.map(publicSubmissionResult).filter((result): result is SearchResult => Boolean(result))])).catch(() => { /* Demo catalogue remains available if the public feed is unavailable. */ }); }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const url = new URL(window.location.href);
@@ -279,15 +290,15 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     setModal('report');
   };
 
-  const publishListing = (listing: Listing) => {
+  const publishListing = (listing: Listing, published: boolean) => {
     setModal(null);
     track('listing_submitted', { category: listing.category });
-    setToast('Your submission is awaiting review');
+    setToast(published ? 'Your listing is published and visible to the community' : 'Your listing is held for a safety or commercial check');
   };
-  const publishService = (service: Service) => {
+  const publishService = (service: Service, published: boolean) => {
     setModal(null);
     track('service_submitted', { category: service.category });
-    setToast('Your submission is awaiting review');
+    setToast(published ? 'Your service is published and visible to the community' : 'Your service is held for a safety or commercial check');
   };
 
   return (
@@ -676,7 +687,7 @@ function RegistrationModal({ onClose, onRegistered, registrationEnabled, cognito
   return <ModalShell title={registrationEnabled ? 'Sign in or create account' : 'Sign in'} eyebrow="A QUICK START" onClose={onClose}>{signInError && <p className="form-error" role="alert">{t(signInError)}</p>}<AuthForm registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onSignedIn={onRegistered} /></ModalShell>;
 }
 
-function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing) => void; onPublishService: (service: Service) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {
+function PostModal({ onClose, onPublish, onPublishService, residentVerified, rentalPostsThisMonth }: { onClose: () => void; onPublish: (listing: Listing, published: boolean) => void; onPublishService: (service: Service, published: boolean) => void; residentVerified: boolean; rentalPostsThisMonth: number }) {
   const { t } = useTranslation();
   const [postType, setPostType] = useState<'choose' | 'listing' | 'service'>('choose');
   return <ModalShell title={postType === 'choose' ? 'Post something' : postType === 'service' ? 'Offer a service' : 'Post a listing'} eyebrow="SHARE WITH YOUR NEIGHBOURS" onClose={onClose}>

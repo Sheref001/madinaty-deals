@@ -1,6 +1,10 @@
 // English keys stay stable for the existing English interface and stored taxonomy.
 export const arabic: Record<string, string> = {
+  'Featured listing promotion':'الترويج لإعلان مميز', 'FEATURED LISTING':'إعلان مميز',
+  'Publish listing':'نشر الإعلان', 'Publish service':'نشر الخدمة', 'Most posts publish immediately. Safety or commercial checks may hold a post for review.':'تُنشر معظم الإعلانات فورًا. قد تُحال المنشورات التي تحتاج فحصًا أمنيًا أو تجاريًا للمراجعة.', 'Your listing is held for a safety or commercial check':'تم تعليق إعلانك لفحص أمني أو تجاري.', 'Your service is held for a safety or commercial check':'تم تعليق خدمتك لفحص أمني أو تجاري.',
   'Drag or paste files': 'سحب الملفات أو لصقها',
+  'Your listing is published and visible to the community': 'تم نشر إعلانك وأصبح ظاهرًا للمجتمع',
+  'Your service is published and visible to the community': 'تم نشر خدمتك وأصبحت ظاهرة للمجتمع',
   'The server rejected the file size. Try a smaller file or contact hello@madinatydeals.com.': 'رفض الخادم حجم الملف. جرّب ملفًا أصغر أو تواصل معنا على hello@madinatydeals.com.',
   'Your session has expired. Sign in again, then retry.': 'انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة.',
   'The request was blocked. Refresh the page and try again. If it continues, contact hello@madinatydeals.com.': 'تم حظر الطلب. حدّث الصفحة وأعد المحاولة. إذا استمرت المشكلة، تواصل معنا على hello@madinatydeals.com.',

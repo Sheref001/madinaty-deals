@@ -43,6 +43,8 @@ export interface Account { id: string; email?: string | null; phone?: string | n
 export interface AdminUser extends Account { status: string; createdAt: string; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
 export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
+export interface PublicSubmission { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; createdAt: string; seller: string; verified: boolean; }
+export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[] }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {
   const result = await request('/auth/session');

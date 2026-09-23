@@ -14,7 +14,7 @@ const serviceCategories = ['Tutoring & education', 'Health & fitness', 'Home ser
 const serviceAreas = [{ value: 'All zones', label: 'All of Madinaty' }, ...zones.slice(1).map(value => ({ value, label: value }))];
 const petBusinessType: PetBusinessType = 'Veterinary clinics';
 
-export default function ServiceForm({ onPublish }: { onPublish: (service: Service) => void }) {
+export default function ServiceForm({ onPublish }: { onPublish: (service: Service, published: boolean) => void }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -51,7 +51,7 @@ export default function ServiceForm({ onPublish }: { onPublish: (service: Servic
     if (!preview) { setPreview(true); return; }
     const payload: Service = { id: crypto.randomUUID(), type: 'service', title: title.trim(), subtitle: description.trim(), category, ...(category === 'Tutoring & education' ? { educationLevel, subjects } : {}), ...(category === 'Home services' ? { homeServiceType } : {}), ...(category === 'Housekeeping & cleaning' ? { housekeepingType } : {}), ...(category === 'Health & fitness' ? { fitnessProviderType } : {}), ...(category === 'Pet care' ? { petBusinessType } : {}), ...((businessOnly || splitCategories.includes(category)) ? { advertiserType: effectiveAdvertiserType, ...(effectiveAdvertiserType === 'small_business' ? { businessRequest } : {}) } : {}), ...(offerEnabled && promotionEligible ? { offer: { kind: offerKind, discount: offerDiscount.trim(), validUntil: offerValidUntil } } : {}), serviceArea: area === 'All zones' ? 'Madinaty-wide' : area, phone: '', whatsapp: whatsapp.trim(), response: availability.trim() || 'Response time to be configured', pricing: price.trim() || undefined, availability: availability.trim() || undefined, rating: 0, reviewCount: 0, zone: area, createdAt: 'Just now', image: 'new-service', accent: 'mint', verified: false };
     setBusy(true); setError('');
-    try { await submitPost('service', payload, photos); onPublish(payload); }
+    try { const result = await submitPost('service', payload, photos); onPublish(payload, result.published === true); }
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
     finally { setBusy(false); }
   }

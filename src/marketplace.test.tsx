@@ -18,7 +18,9 @@ afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({
 it('opens Online Finds as a business collection with store-type filters', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   await renderReady();
-  fireEvent.click(screen.getByRole('button', { name: /Online Finds\s*Explore/ }));
+  const category = screen.getByRole('button', { name: /Online Finds\s*Explore/ });
+  expect(category.querySelector('img')?.getAttribute('src')).toContain('images.pexels.com/photos/7667442/pexels-photo-7667442.jpeg');
+  fireEvent.click(category);
   expect(screen.getByRole('heading', { name: 'Online Finds' })).toBeTruthy();
   const filter = screen.getByLabelText('Store type') as HTMLSelectElement;
   expect(Array.from(filter.options).map(option => option.value)).toContain('Beauty & personal care');

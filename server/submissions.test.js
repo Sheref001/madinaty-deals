@@ -54,9 +54,10 @@ describe('marketplace submission boundaries', () => {
   });
   it('includes a service social account in the public feed', async () => {
     const f = fixture();
-    f.prisma.submission.findMany.mockResolvedValue([{ id: 'service-id', kind: 'service', payload: { title: 'Home service', subtitle: 'Helpful service provider.', category: 'Home services', socialAccount: 'https://instagram.com/provider', whatsapp: '+201001234567' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Provider', verificationState: 'UNVERIFIED' } } }]);
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'service-id', kind: 'service', payload: { title: 'Home service', subtitle: 'Helpful service provider.', category: 'Home services', providerName: 'Nour Hassan', socialAccount: 'https://instagram.com/provider', whatsapp: '+201001234567' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Provider', verificationState: 'UNVERIFIED' } } }]);
     await f.call({}, 'api/public-submissions', 'GET');
     expect(f.send.mock.calls[0][2].submissions[0].payload.socialAccount).toBe('https://instagram.com/provider');
+    expect(f.send.mock.calls[0][2].submissions[0].payload.providerName).toBe('Nour Hassan');
   });
   it('keeps an older vehicle ad out of the public feed if its owner is unverified', async () => {
     const f = fixture();
@@ -95,7 +96,7 @@ describe('marketplace submission boundaries', () => {
   });
   it('holds business services for a fee even outside the former split categories', async () => {
     const f = fixture();
-    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'PAID' } });
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', providerName: 'Nour Hassan', whatsapp: '+201001234567', advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'PAID' } });
     const created = f.prisma.submission.create.mock.calls[0][0].data;
     expect(created.status).toBe('PENDING_REVIEW');
     expect(created.payload).toMatchObject({ advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'AWAITING_AGREEMENT' });
@@ -109,21 +110,30 @@ describe('marketplace submission boundaries', () => {
   });
   it('allows service providers without resident verification', async () => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });
-    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', socialAccount: 'https://instagram.com/provider' } });
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', providerName: 'Nour Hassan', whatsapp: '+201001234567', socialAccount: 'https://instagram.com/provider' } });
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
     expect(f.prisma.submission.create.mock.calls[0][0].data.payload.socialAccount).toBe('https://instagram.com/provider');
+    expect(f.prisma.submission.create.mock.calls[0][0].data.payload.providerName).toBe('Nour Hassan');
+  });
+  it('requires a valid provider or business name for service submissions', async () => {
+    const f = fixture({ role: 'SERVICE_PROVIDER' });
+    const baseService = { ...payload, category: 'Home services', whatsapp: '+201001234567' };
+    await expect(f.call({ kind: 'service', payload: { ...baseService, providerName: ' ' } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: { ...baseService, providerName: 'A'.repeat(101) } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('allows an optional free social profile for individual and business service providers', async () => {
     for (const advertiserType of ['individual', 'small_business']) {
       const f = fixture({ role: 'SERVICE_PROVIDER' });
-      await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', advertiserType, businessRequest: advertiserType === 'small_business' ? 'posting' : undefined, socialAccount: 'https://www.facebook.com/provider' } });
+      await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', providerName: 'Madinaty Services', whatsapp: '+201001234567', advertiserType, businessRequest: advertiserType === 'small_business' ? 'posting' : undefined, socialAccount: 'https://www.facebook.com/provider' } });
       expect(f.prisma.submission.create.mock.calls[0][0].data.payload.socialAccount).toBe('https://www.facebook.com/provider');
+      expect(f.prisma.submission.create.mock.calls[0][0].data.payload.providerName).toBe('Madinaty Services');
     }
   });
   it.each(['http://instagram.com/provider', 'https://instagram.com.evil.test/provider', 'javascript:alert(1)'])('rejects a non-secure or unsupported social profile: %s', async socialAccount => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });
-    await expect(f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', socialAccount } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: { ...payload, category: 'Home services', providerName: 'Provider Name', whatsapp: '+201001234567', socialAccount } })).rejects.toMatchObject({ status: 400 });
     expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('accepts a complete tutoring service submission as an individual', async () => {
@@ -132,6 +142,7 @@ describe('marketplace submission boundaries', () => {
       title: 'Math tutoring for students',
       subtitle: 'Private lessons for school students and exam preparation.',
       category: 'Tutoring & education',
+      providerName: 'Nour Hassan',
       zone: 'B1',
       advertiserType: 'individual',
       educationLevel: 'Before university',
@@ -146,7 +157,7 @@ describe('marketplace submission boundaries', () => {
   });
   it('allows one structured promotion per month and rejects a second one', async () => {
     const f = fixture();
-    const service = { ...payload, category: 'Home services', whatsapp: '+201001234567', offer: { kind: 'Percentage discount', discount: '10% off the first booking', validUntil: '2026-12-31' } };
+    const service = { ...payload, category: 'Home services', providerName: 'Madinaty Services', whatsapp: '+201001234567', offer: { kind: 'Percentage discount', discount: '10% off the first booking', validUntil: '2026-12-31' } };
     await f.call({ kind: 'service', payload: service });
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     f.prisma.submission.findMany.mockResolvedValue([{ createdAt: new Date(), payload: { offer: service.offer } }]);
@@ -155,14 +166,14 @@ describe('marketplace submission boundaries', () => {
   });
   it('rejects multiple or malformed promotions', async () => {
     const f = fixture();
-    const baseService = { ...payload, category: 'Moving', whatsapp: '+201001234567' };
+    const baseService = { ...payload, category: 'Moving', providerName: 'Moving Provider', whatsapp: '+201001234567' };
     await expect(f.call({ kind: 'service', payload: { ...baseService, offer: { kind: 'Percentage discount', discount: '10% and first session free', validUntil: '2026-12-31', secondOffer: 'free delivery' } } })).rejects.toMatchObject({ status: 400 });
     await expect(f.call({ kind: 'service', payload: { ...baseService, offer: { kind: 'Percentage discount', discount: '10%\nFirst session free', validUntil: '2026-12-31' } } })).rejects.toMatchObject({ status: 400 });
     expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('keeps pet-care research submissions restricted to administrators and validates the subtype', async () => {
     const resident = fixture();
-    const petCare = { ...payload, category: 'Pet care', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics', advertiserType: 'small_business' };
+    const petCare = { ...payload, category: 'Pet care', providerName: 'Madinaty Vet', whatsapp: '+201001234567', petBusinessType: 'Veterinary clinics', advertiserType: 'small_business' };
     await expect(resident.call({ kind: 'service', payload: petCare })).rejects.toMatchObject({ status: 403 });
     expect(resident.prisma.submission.create).not.toHaveBeenCalled();
     const admin = fixture({ role: 'ADMIN' });
@@ -193,7 +204,7 @@ describe('marketplace submission boundaries', () => {
   });
   it('accepts private transportation as a service rather than a vehicle sale', async () => {
     const f = fixture();
-    await f.call({ kind: 'service', payload: { ...payload, category: 'Private transportation', whatsapp: '+201001234567' } });
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Private transportation', providerName: 'Nour Hassan', whatsapp: '+201001234567' } });
     expect(f.prisma.submission.create.mock.calls[0][0].data.kind).toBe('service');
   });
   it('uses the Cairo calendar month and blocks a second rental', async () => {
@@ -264,7 +275,7 @@ describe('verification review boundaries', () => {
 describe('individual and small business submissions', () => {
   it.each(['Electronics', 'Tutoring & education'])('keeps %s individual ads free and ignores commercial approval fields', async category => {
     const f = fixture();
-    await f.call({ kind: category === 'Electronics' ? 'listing' : 'service', payload: { ...payload, category, whatsapp: '+201001234567', advertiserType: 'individual', feeStatus: 'PAID', businessAuthenticationStatus: 'VERIFIED' } });
+    await f.call({ kind: category === 'Electronics' ? 'listing' : 'service', payload: { ...payload, category, ...(category === 'Electronics' ? {} : { providerName: 'Nour Hassan' }), whatsapp: '+201001234567', advertiserType: 'individual', feeStatus: 'PAID', businessAuthenticationStatus: 'VERIFIED' } });
     const saved = f.prisma.submission.create.mock.calls[0][0].data.payload;
     expect(saved.advertiserType).toBe('individual');
     expect(saved.feeStatus).toBeUndefined();
@@ -288,7 +299,7 @@ describe('individual and small business submissions', () => {
 
 it('requires fee agreement for individual and business gym posts', async () => {
   const f = fixture();
-  const gym = { ...payload, category: 'Health & fitness', whatsapp: '+201001234567', advertiserType: 'individual' };
+  const gym = { ...payload, category: 'Health & fitness', providerName: 'Madinaty Gym', whatsapp: '+201001234567', advertiserType: 'individual' };
   await f.call({ kind: 'service', payload: gym });
   expect(f.prisma.submission.create.mock.calls[0][0].data.payload.feeStatus).toBe('AWAITING_AGREEMENT');
   await f.call({ kind: 'service', payload: { ...gym, advertiserType: 'small_business', businessRequest: 'posting' } });

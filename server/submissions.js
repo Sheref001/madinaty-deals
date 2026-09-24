@@ -34,7 +34,7 @@ function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
-    : [...common, 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
+    : [...common, 'providerName', 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
 }
 
@@ -107,8 +107,9 @@ export function createSubmissions({ prisma, auth }) {
     } else {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
+      if (typeof payload.providerName !== 'string' || payload.providerName.trim().length < 2 || payload.providerName.trim().length > 100) throw new RequestError(400, 'Enter a valid provider or business name');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
-      Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
+      Object.assign(clean, { providerName: payload.providerName.trim(), whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
       if (payload.socialAccount !== undefined) {
         if (typeof payload.socialAccount !== 'string' || payload.socialAccount.length > 2048) throw new RequestError(400, 'Enter one valid social account link');
         const socialAccount = payload.socialAccount.trim();

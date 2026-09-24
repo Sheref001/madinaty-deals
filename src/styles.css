@@ -246,6 +246,8 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .seller-panel h4 { margin-top: 3px; }
 .seller-panel p { font-size: 9px; }
 .seller-panel .button { padding: 9px 10px; font-size: 10px; white-space: nowrap; }
+.seller-contact-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 480px) { .seller-panel { flex-wrap: wrap; } .seller-contact-actions { width: 100%; justify-content: flex-start; } }
 .ad-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .ad-actions .report-action { width: auto; padding: 8px 0; border: 0; background: none; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
 .ad-actions .report-action:hover { color: #a22d2d; }

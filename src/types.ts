@@ -75,6 +75,7 @@ export interface Service extends BaseResult {
   reviewCount: number;
   serviceArea: string;
   phone: string;
+  providerName?: string;
   whatsapp?: string;
   socialAccount?: string;
   response: string;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getAdminContent, getAdminReports, getPublicationPauses, getRegistrationAccess, moderateContent, openPrivateUpload, setPublicationPause, setRegistrationAccess, type AdminContentReport, type ContentControl, type ModeratedContent, type PublicationPause } from './api';
-import { allResults, categories } from './data';
+import { getAdminContent, getAdminReports, getPublicationPauses, getRegistrationAccess, moderateContent, openPrivateUpload, setPublicationPause, setRegistrationAccess, type AdminContentReport, type ModeratedContent, type PublicationPause } from './api';
+import { categories } from './data';
 import { useTranslation } from './i18n';
 
 type Row = { id: string; kind: string; status: string; title: string; description: string; category: string; owner?: ModeratedContent['owner']; uploadIds: string[]; commercial?: boolean; createdAt?: string };
@@ -8,7 +8,6 @@ type Row = { id: string; kind: string; status: string; title: string; descriptio
 export default function AdminModeration({ isAdmin, canReadReports }: { isAdmin: boolean; canReadReports: boolean }) {
   const { t } = useTranslation();
   const [submissions, setSubmissions] = useState<ModeratedContent[]>([]);
-  const [controls, setControls] = useState<ContentControl[]>([]);
   const [reports, setReports] = useState<AdminContentReport[]>([]);
   const [pauses, setPauses] = useState<PublicationPause[]>([]);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
@@ -22,14 +21,11 @@ export default function AdminModeration({ isAdmin, canReadReports }: { isAdmin: 
   const [loading, setLoading] = useState(true);
   const load = useCallback(() => {
     return Promise.all([getAdminContent(), canReadReports ? getAdminReports() : Promise.resolve({ reports: [] }), isAdmin ? getPublicationPauses() : Promise.resolve({ pauses: [] }), isAdmin ? getRegistrationAccess().catch(() => ({ enabled: true })) : Promise.resolve({ enabled: true })])
-      .then(([content, reportData, pauseData, access]) => { setSubmissions(content.submissions); setControls(content.controls); setReports(reportData.reports); setPauses(pauseData.pauses); setRegistrationEnabled(access.enabled); setError(''); })
+      .then(([content, reportData, pauseData, access]) => { setSubmissions(content.submissions); setReports(reportData.reports); setPauses(pauseData.pauses); setRegistrationEnabled(access.enabled); setError(''); })
       .catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load review queue')).finally(() => setLoading(false));
   }, [canReadReports, isAdmin]);
   useEffect(() => { load(); window.addEventListener('madinaty-operations-refresh', load); return () => window.removeEventListener('madinaty-operations-refresh', load); }, [load]);
-  const rows = useMemo<Row[]>(() => {
-    const staticRows = allResults.map(item => { const control = controls.find(value => value.contentType === item.type && value.contentId === item.id); return { id: item.id, kind: item.type, status: control?.status || 'PUBLISHED', title: item.title, description: item.subtitle, category: item.category, uploadIds: [] }; });
-    return [...submissions.map(item => ({ ...item, kind: item.kind })), ...staticRows];
-  }, [submissions, controls]);
+  const rows = useMemo<Row[]>(() => submissions.map(item => ({ ...item, kind: item.kind })), [submissions]);
   const openReports = reports.filter(item => ['OPEN', 'IN_REVIEW'].includes(item.status));
   const filtered = rows.filter(item => {
     const matches = !query || `${item.title} ${item.id} ${item.category} ${item.owner?.email || ''} ${item.owner?.phone || ''}`.toLowerCase().includes(query.toLowerCase());

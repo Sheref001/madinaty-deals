@@ -154,11 +154,9 @@ it('keeps the pet-care research category and its subcategories admin-only', asyn
   await screen.findByRole('button', { name: 'Sign out' });
   fireEvent.click(screen.getByRole('button', { name: /Pet care.*Admin research preview/ }));
   expect(screen.getByRole('heading', { name: 'Pet care' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'Veterinary clinics · research preview' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'No matches yet' })).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Pet business type'), { target: { value: 'Pet shops' } });
-  expect(screen.queryByRole('heading', { name: 'Veterinary clinics · research preview' })).toBeNull();
-  expect(screen.getByRole('heading', { name: 'Pet shops · research preview' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'No matches yet' })).toBeTruthy();
 }, 15000);
 
 it('keeps the admin-only pet-care category out of the service form', () => {
@@ -170,8 +168,8 @@ it('routes the home services category to providers in Arabic', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'إزاي تستخدم مدينتي ديلز؟' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /خدمات منزلية/ }));
-  expect(screen.getByRole('heading', { name: 'خدمات موثوقة قريبة منك' })).toBeTruthy();
-  expect(await screen.findByRole('heading', { name: 'كول بوينت للتكييف' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'خدمات محلية قريبة منك' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'لا توجد نتائج' })).toBeTruthy();
 });
 
 it('opens the posting form for a server-authenticated user', async () => {

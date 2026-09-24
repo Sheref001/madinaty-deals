@@ -2,13 +2,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from './App';
+import { getPublishedSubmissions } from './api';
 import { filterResults } from './domain';
-import { listings } from './data';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [], hiddenContentIds: [] }) }));
+import { listings } from './testFixtures';
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: (await import('./testFixtures')).submissions }) }));
 
 async function renderReady() {
   const result = render(<App />);
-  await screen.findByRole('heading', { name: 'Solid oak dining table' });
+  await screen.findByRole('heading', { name: 'Test dining table' });
   return result;
 }
 
@@ -21,7 +22,7 @@ it('searches all sections from the header and opens result details', async () =>
   fireEvent.change(search, { target: { value: 'maintenance' } });
   fireEvent.submit(search.closest('form')!);
   expect(screen.getByRole('heading', { name: 'Search results' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Cool Point AC Services' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Test AC service' }));
   expect(within(screen.getByRole('dialog')).getByText('Installation, maintenance & repair')).toBeTruthy();
 });
 
@@ -30,21 +31,21 @@ it('filters by condition and switches between list and grid without losing the f
   await renderReady();
   fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
   fireEvent.change(screen.getByLabelText('Condition'), { target: { value: 'Fair' } });
-  expect(screen.getByRole('heading', { name: 'IKEA Hemnes shoe cabinet' })).toBeTruthy();
-  expect(screen.queryByRole('heading', { name: 'LG 55” 4K Smart TV' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Test shoe cabinet' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Test television' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Grid view' }));
   expect(screen.getByRole('button', { name: 'Grid view' }).getAttribute('aria-pressed')).toBe('true');
-  expect(screen.getByRole('heading', { name: 'IKEA Hemnes shoe cabinet' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Test shoe cabinet' })).toBeTruthy();
 });
 
 it('persists favouriting a homepage item on this browser', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   const first = await renderReady();
-  fireEvent.click(screen.getByRole('button', { name: 'Save Solid oak dining table' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save Test dining table' }));
   first.unmount();
   await renderReady();
   fireEvent.click(screen.getAllByRole('button', { name: 'Saved' })[0]);
-  expect(screen.getByRole('heading', { name: 'Solid oak dining table' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Test dining table' })).toBeTruthy();
 });
 
 it('shows vehicle and transport choices within the Cars & motorcycles collection', async () => {
@@ -54,7 +55,7 @@ it('shows vehicle and transport choices within the Cars & motorcycles collection
   const filter = screen.getByLabelText('Vehicle & transport') as HTMLSelectElement;
   expect(Array.from(filter.options).map(option => option.value)).toEqual(['', 'Cars', 'Motorcycles', 'Moving furniture', 'Private transportation']);
   fireEvent.change(filter, { target: { value: 'Moving furniture' } });
-  expect(screen.getByRole('heading', { name: 'Madinaty Move' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Test moving service' })).toBeTruthy();
   expect(screen.queryByLabelText('Condition')).toBeNull();
 });
 
@@ -75,11 +76,11 @@ it('filters tutoring individuals and centres without an audience banner', async 
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
   expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
   expect(screen.getByLabelText('Provider type')).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Test math tutor' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Test learning center' })).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Provider type'), { target: { value: 'small_business' } });
-  expect(screen.getByRole('heading', { name: 'Kite Learning Studio' })).toBeTruthy();
-  expect(screen.queryByRole('heading', { name: 'Sheref · Math Tutor · DEMO' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Test learning center' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Test math tutor' })).toBeNull();
 });
 
 it.each(['Electronics'])('shows both subcategories for %s even with no matching ads', async category => {
@@ -94,16 +95,33 @@ it.each(['Electronics'])('shows both subcategories for %s even with no matching 
 });
 
 
-it('shows gym providers without an individual and business audience panel', async () => {
+it('shows health and fitness filters without inventing gym providers', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   await renderReady();
   fireEvent.click(screen.getByRole('button', { name: 'Health & fitnessExplore' }));
   expect(screen.getByRole('heading', { name: 'Health & fitness' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: 'Studio 8 Pilates' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'No matches yet' })).toBeTruthy();
   expect(screen.queryByRole('region', { name: 'Subcategories' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Individuals' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Small businesses' })).toBeNull();
   expect(screen.queryByText('Choose individuals or small businesses in this category.')).toBeNull();
   expect(screen.queryByLabelText('Provider type')).toBeNull();
   expect(screen.getByLabelText('Fitness provider')).toBeTruthy();
+});
+
+it('shows an honest empty state when the API has no published ads', async () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  vi.mocked(getPublishedSubmissions).mockResolvedValueOnce({ submissions: [] });
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'No listings yet' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Test dining table' })).toBeNull();
+});
+
+it('clears saved IDs belonging to removed sample ads', async () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  localStorage.setItem('madinaty-favorites', JSON.stringify(['listing-3']));
+  await renderReady();
+  expect(JSON.parse(localStorage.getItem('madinaty-favorites') || 'null')).toEqual([]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Saved' })[0]);
+  expect(screen.getByRole('heading', { name: 'No matches yet' })).toBeTruthy();
 });

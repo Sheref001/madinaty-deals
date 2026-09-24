@@ -22,7 +22,7 @@ Dockerfile              Production build/runtime image
 - `src/main.tsx` mounts `src/App.tsx`. Navigation is implemented with application state and URL query parameters; no routing library is configured.
 - `src/api.ts` is the fetch client. It defaults to the same-origin `/api`; `VITE_API_BASE_URL` can override it at build time.
 - Interface language is Arabic by default, with English support, translations in `src/ar.ts`, and RTL direction for Arabic. Language preference and URL state are managed in the frontend.
-- Marketplace seed/sample inventory remains in `src/data.ts`. The client also loads published listing and service submissions from the API.
+- `src/data.ts` contains category covers, zones, and formatting helpers, but no sample ads. The client loads published listing and service submissions from the API; an empty API response shows an empty marketplace.
 - Admin screens are frontend views; sensitive actions are authorized by the backend, not by frontend visibility alone.
 
 ## Backend and API
@@ -57,7 +57,7 @@ Dockerfile              Production build/runtime image
 - Admin endpoints require the `ADMIN` role. Moderators receive explicit `DASHBOARD`, `REPORTS`, `RESIDENT_VERIFICATIONS`, and/or `CONTENT_REVIEW` permissions, checked by server modules. Account-role/status changes and moderator assignment/revocation are admin-only.
 - Implemented admin functions include user search/role/status changes, moderator assignment, residency verification review, content submission review and status controls, report review, publication pauses, public registration access, dashboard counts, and audit history.
 - Sensitive changes are recorded in `AuditLog`. Suspending an account revokes sessions; the public submission and image paths check account/content state.
-- The web app includes reporting, comments, resident verification, and listing/service submissions. New comments are stored hidden and public reads return only published comments; a comment-review endpoint is not currently implemented. Public inventory still includes illustrative frontend seed data; backend submission records provide additional public listing/service data when published.
+- The web app includes reporting, comments, resident verification, and listing/service submissions. New comments are stored hidden and public reads return only published comments; a comment-review endpoint is not currently implemented. Public inventory comes from published backend submissions only; any existing production submissions require separate admin review/removal.
 
 ## Email, Cognito email, and AWS services
 

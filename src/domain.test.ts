@@ -3,6 +3,13 @@ import { listings, results } from './testFixtures';
 import { filterResults, getViewResults, matchesQuery } from './domain';
 
 describe('discovery domain rules', () => {
+  it('filters online stores by type and finds translated store categories', () => {
+    const store = { id: 'store-one', type: 'business' as const, title: 'Nour Beauty', subtitle: 'Cosmetics for Madinaty', category: 'Online Finds', onlineStoreCategory: 'Beauty & personal care', zone: 'B1', createdAt: 'Just now', image: 'new-service', accent: 'mint' as const, rating: 0, reviewCount: 0, hours: 'Delivery or pickup', phone: '', verified: false };
+    expect(getViewResults('businesses', [store])).toEqual([store]);
+    expect(matchesQuery(store, 'الجمال والعناية الشخصية')).toBe(true);
+    expect(filterResults([store], { query: '', zone: 'All zones', verifiedOnly: false, sort: 'recommended', onlineStoreCategory: 'Beauty & personal care' })).toEqual([store]);
+    expect(filterResults([store], { query: '', zone: 'All zones', verifiedOnly: false, sort: 'recommended', onlineStoreCategory: 'Food & treats' })).toEqual([]);
+  });
   it('matches a query across title, subtitle, category and zone', () => {
     expect(matchesQuery(listings[0], 'dining')).toBe(true);
     expect(matchesQuery(listings[0], 'B1')).toBe(true);

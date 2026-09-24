@@ -1,6 +1,6 @@
 import { RequestError, readJson } from './request.js';
 import { canReview } from './auth.js';
-import { contentActions, contentTypes, publicationCategories, setContentStatus } from './moderation.js';
+import { contentActions, contentTypes, publicContentType, publicationCategories, setContentStatus } from './moderation.js';
 import { PUBLIC_REGISTRATION_SETTING, publicRegistrationEnabled } from './access.js';
 
 const safeReason = value => typeof value === 'string' && value.trim().length >= 5 && value.length <= 500;
@@ -31,7 +31,7 @@ export function createOperations({ prisma, auth }) {
         prisma.submission.findMany({ orderBy: { createdAt: 'desc' }, take: 200, select: { id: true, kind: true, status: true, createdAt: true, payload: true, uploads: { where: { purpose: 'photo', status: 'READY' }, select: { id: true } }, user: { select: { id: true, email: true, phone: true, status: true, profile: { select: { displayName: true } } } } } }),
         prisma.contentControl.findMany({ select: { contentType: true, contentId: true, status: true, reason: true, updatedAt: true } }),
       ]);
-      return send(response, 200, { submissions: submissions.map(item => ({ id: `submission-${item.id}`, kind: item.kind, status: item.status, createdAt: item.createdAt, title: typeof item.payload?.title === 'string' ? item.payload.title : 'Untitled', description: typeof item.payload?.subtitle === 'string' ? item.payload.subtitle : '', category: item.payload?.category || '', commercial: item.payload?.advertiserType === 'small_business' || item.payload?.feeStatus === 'AWAITING_AGREEMENT', assistedPosting: Boolean(item.payload?.assistedPosting), providerName: item.payload?.assistedPosting && typeof item.payload?.providerName === 'string' ? item.payload.providerName : undefined, owner: { id: item.user.id, name: item.user.profile?.displayName || 'Neighbour', email: item.user.email, phone: item.user.phone, status: item.user.status }, uploadIds: item.uploads.map(upload => upload.id) })), controls });
+      return send(response, 200, { submissions: submissions.map(item => ({ id: `submission-${item.id}`, kind: publicContentType(item.kind), status: item.status, createdAt: item.createdAt, title: typeof item.payload?.title === 'string' ? item.payload.title : 'Untitled', description: typeof item.payload?.subtitle === 'string' ? item.payload.subtitle : '', category: item.payload?.category || '', commercial: item.payload?.advertiserType === 'small_business' || item.payload?.feeStatus === 'AWAITING_AGREEMENT', assistedPosting: Boolean(item.payload?.assistedPosting), providerName: item.payload?.assistedPosting && typeof item.payload?.providerName === 'string' ? item.payload.providerName : undefined, owner: { id: item.user.id, name: item.user.profile?.displayName || 'Neighbour', email: item.user.email, phone: item.user.phone, status: item.user.status }, uploadIds: item.uploads.map(upload => upload.id) })), controls });
     }
     if (parts.length === 4 && parts[2] === 'content' && parts[3] === 'status' && request.method === 'POST') {
       if (!canReview(user, 'CONTENT_REVIEW')) throw new RequestError(403, 'Content review permission required');

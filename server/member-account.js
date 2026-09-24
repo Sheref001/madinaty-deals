@@ -1,18 +1,18 @@
 import { URL } from 'node:url';
 import { RequestError, readJson } from './request.js';
 import { consumeLimit } from './auth.js';
-import { publicPayload, validateServiceDescription } from './submissions.js';
+import { isOnlineStoreZone, publicPayload, validateServiceDescription } from './submissions.js';
 import { vehicleResidenceAllowed } from './moderation.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const publicSelect = { id: true, kind: true, payload: true, status: true, ownerState: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { status: true, profile: { select: { displayName: true, verificationState: true } } } } };
 const ownedSelect = { id: true, kind: true, payload: true, status: true, ownerState: true, version: true, createdAt: true, updatedAt: true };
 const isVisible = item => item && item.status === 'PUBLISHED' && item.ownerState === 'ACTIVE' && item.user.status === 'ACTIVE' && vehicleResidenceAllowed(item);
-const sellerName = item => item.kind === 'service' ? item.payload.providerName || 'Neighbour' : item.user.profile?.displayName || 'Neighbour';
+const sellerName = item => item.kind === 'store' ? item.payload.title : item.kind === 'service' ? item.payload.providerName || 'Neighbour' : item.user.profile?.displayName || 'Neighbour';
 
 function publicRecord(item) {
   if (!isVisible(item)) return null;
-  return { id: item.id, kind: item.kind, payload: publicPayload(item.kind, item.payload), createdAt: item.createdAt, uploadIds: item.uploads.map(upload => upload.id), seller: sellerName(item), verified: !item.payload.assistedPosting && item.user.profile?.verificationState === 'VERIFIED' };
+  return { id: item.id, kind: item.kind, payload: publicPayload(item.kind, item.payload), createdAt: item.createdAt, uploadIds: item.uploads.map(upload => upload.id), seller: sellerName(item), verified: item.kind !== 'store' && !item.payload.assistedPosting && item.user.profile?.verificationState === 'VERIFIED' };
 }
 
 function ownerRecord(item) {
@@ -21,7 +21,7 @@ function ownerRecord(item) {
 
 function editablePayload(item, changes) {
   if (!changes || typeof changes !== 'object' || Array.isArray(changes)) throw new RequestError(400, 'Invalid listing changes');
-  const fields = item.kind === 'service' ? ['title', 'subtitle', 'zone', 'pricing', 'availability', 'serviceArea'] : ['title', 'subtitle', 'zone', 'price'];
+  const fields = item.kind === 'service' ? ['title', 'subtitle', 'zone', 'pricing', 'availability', 'serviceArea'] : item.kind === 'store' ? ['title', 'subtitle', 'zone'] : ['title', 'subtitle', 'zone', 'price'];
   if (!Object.keys(changes).length || Object.keys(changes).some(key => !fields.includes(key))) throw new RequestError(400, 'Only listing details, rates and availability can be edited here. Contact support for other changes.');
   const payload = { ...item.payload };
   for (const [key, value] of Object.entries(changes)) {
@@ -36,7 +36,8 @@ function editablePayload(item, changes) {
     if (/<\s*\/?\s*[a-z!][^>]*>?|\bjavascript\s*:/i.test(value)) throw new RequestError(400, 'HTML and script content are not allowed in listing details.');
     payload[key] = value.trim();
   }
-  if (item.kind === 'service') validateServiceDescription(payload.category, payload.subtitle);
+  if (item.kind === 'service' || item.kind === 'store') validateServiceDescription(payload.category, payload.subtitle);
+  if (item.kind === 'store' && !isOnlineStoreZone(payload.zone)) throw new RequestError(400, 'Choose a Madinaty delivery area');
   return payload;
 }
 
@@ -59,7 +60,7 @@ export function createMemberAccount({ prisma, auth }) {
         return send(response, 200, { activity: records.slice(0, 20).map(record => ({ id: record.submissionId, title: record.title, providerName: record.providerName, kind: record.kind, openedAt: record.openedAt, submission: publicRecord(record.submission) })), hasMore: records.length > 20 });
       }
       const kind = url.searchParams.get('kind');
-      if (!['listing', 'service'].includes(kind)) throw new RequestError(400, 'Choose items or services');
+      if (!['listing', 'service', 'store'].includes(kind)) throw new RequestError(400, 'Choose items, services or online stores');
       const records = await prisma.submission.findMany({ where: { userId: current.userId, kind }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], skip: page * 20, take: 21, select: ownedSelect });
       return send(response, 200, { listings: records.slice(0, 20).map(ownerRecord), hasMore: records.length > 20 });
     }
@@ -81,7 +82,7 @@ export function createMemberAccount({ prisma, auth }) {
           if (!existing && await tx.savedSubmission.count({ where: { userId: current.userId } }) >= 500) throw new RequestError(409, 'Your shortlist is full. Remove a saved item first.');
           await tx.savedSubmission.upsert({ where, update: {}, create: { userId: current.userId, submissionId: id } });
         } else {
-          if (item.kind !== 'service' || typeof item.payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(item.payload.whatsapp)) throw new RequestError(400, 'Contact details are unavailable');
+          if (!['service', 'store'].includes(item.kind) || typeof item.payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(item.payload.whatsapp)) throw new RequestError(400, 'Contact details are unavailable');
           const data = { title: String(item.payload.title).slice(0, 120), providerName: String(sellerName(item)).slice(0, 100), kind: item.kind, openedAt: new Date() };
           await tx.contactActivity.upsert({ where, update: data, create: { userId: current.userId, submissionId: id, ...data } });
         }

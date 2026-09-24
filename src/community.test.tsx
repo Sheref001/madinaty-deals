@@ -4,12 +4,28 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import App from './App';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
+import OnlineStoreForm from './OnlineStoreForm';
 import { LanguageContext } from './i18n';
 import { getPublicConfig, getSession, submitPost } from './api';
 vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getPublicConfig: vi.fn(), getSession: vi.fn(), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [], hiddenContentIds: [] }), submitPost: vi.fn().mockResolvedValue({ id: 'submission', status: 'PUBLISHED', published: true }) }));
 beforeEach(() => { vi.mocked(getSession).mockResolvedValue(null); vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }); });
 
 afterEach(() => { cleanup(); vi.useRealTimers(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
+
+it('previews a cosmetics store and submits it as an online business', async () => {
+  const published = vi.fn();
+  render(<LanguageContext.Provider value="en"><OnlineStoreForm onPublish={published} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Store name'), { target: { value: 'Nour Beauty Shop' } });
+  fireEvent.change(screen.getByLabelText('What do you sell?'), { target: { value: 'Cosmetics and skincare for Madinaty residents.' } });
+  fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
+  fireEvent.click(screen.getByLabelText('This store delivers to or offers pickup for Madinaty residents.'));
+  fireEvent.click(screen.getByRole('button', { name: 'Preview store' }));
+  expect(published).not.toHaveBeenCalled();
+  expect(screen.getByRole('heading', { name: 'Nour Beauty Shop' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit store for review' }));
+  await waitFor(() => expect(submitPost).toHaveBeenCalledWith('store', expect.objectContaining({ title: 'Nour Beauty Shop', category: 'Online Finds', onlineStoreCategory: 'Beauty & personal care', advertiserType: 'small_business', servesMadinaty: true }), []));
+  expect(published).toHaveBeenCalled();
+});
 
 it.each(['en', 'ar'])('keeps Cognito failures visible in the account dialog in %s with a fresh login link', async language => {
   vi.mocked(getPublicConfig).mockResolvedValue({ registrationEnabled: true, cognitoEnabled: true });

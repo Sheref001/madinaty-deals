@@ -375,6 +375,7 @@ html[lang="ar"] .brand-small { font-weight: 800; }
 html[lang="ar"] .brand-small em { font-family: inherit; font-style: normal; }
 
 .post-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.post-choice-grid > .post-choice:last-child:nth-child(3) { grid-column: 1 / -1; }
 .post-choice { min-height: 116px; border: 1px solid var(--line); border-radius: 15px; background: var(--white); color: var(--ink); padding: 16px; display: flex; align-items: center; gap: 12px; text-align: start; transition: .2s ease; }
 .post-choice:hover:not(:disabled) { border-color: var(--teal); transform: translateY(-2px); box-shadow: var(--shadow); }
 .post-choice > span:nth-child(2) { flex: 1; display: grid; gap: 5px; }

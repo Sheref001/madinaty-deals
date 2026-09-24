@@ -15,6 +15,16 @@ async function renderReady() {
 
 afterEach(() => { cleanup(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
+it('opens Online Finds as a business collection with store-type filters', async () => {
+  localStorage.setItem('madinaty-deals-language', 'en');
+  await renderReady();
+  fireEvent.click(screen.getByRole('button', { name: /Online Finds\s*Explore/ }));
+  expect(screen.getByRole('heading', { name: 'Online Finds' })).toBeTruthy();
+  const filter = screen.getByLabelText('Store type') as HTMLSelectElement;
+  expect(Array.from(filter.options).map(option => option.value)).toContain('Beauty & personal care');
+  expect(screen.getByRole('tab', { name: 'Businesses' }).getAttribute('aria-selected')).toBe('true');
+});
+
 it('searches all sections from the header and opens result details', async () => {
   localStorage.setItem('madinaty-deals-language', 'en');
   await renderReady();

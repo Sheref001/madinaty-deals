@@ -5,6 +5,7 @@ import { createSubmissions } from './submissions.js';
 const photoId = '11111111-1111-4111-8111-111111111111';
 const verificationId = '22222222-2222-4222-8222-222222222222';
 const payload = { title: 'Dining table', subtitle: 'Solid wood table in good condition.', category: 'Furniture & home', zone: 'B1', price: 1000, condition: 'Good', advertiserType: 'individual' };
+const storePayload = { title: 'Madinaty Beauty Shop', subtitle: 'Cosmetics and skincare delivered within Madinaty.', category: 'Online Finds', onlineStoreCategory: 'Beauty & personal care', zone: 'B1', whatsapp: '+201001234567', socialAccount: 'https://instagram.com/madinatybeauty', advertiserType: 'small_business', servesMadinaty: true };
 function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   const current = { userId: 'owner', user: { role, moderatorAssignment: role === 'MODERATOR' ? { permissions: ['RESIDENT_VERIFICATIONS'] } : null } };
   const prisma = {
@@ -30,6 +31,28 @@ const review = `api/admin/verifications/${verificationId}/review`;
 afterEach(() => vi.useRealTimers());
 
 describe('marketplace submission boundaries', () => {
+  it('holds a local online store for commercial review without trusting client fee claims', async () => {
+    const f = fixture();
+    await f.call({ kind: 'store', payload: { ...storePayload, feeStatus: 'PAID' } });
+    expect(f.prisma.submission.create.mock.calls[0][0].data).toMatchObject({ kind: 'store', status: 'PENDING_REVIEW', payload: { onlineStoreCategory: 'Beauty & personal care', socialAccount: 'https://instagram.com/madinatybeauty', advertiserType: 'small_business', businessRequest: 'posting', feeStatus: 'AWAITING_AGREEMENT' } });
+  });
+  it('rejects stores outside Madinaty or with unsafe social links', async () => {
+    const f = fixture();
+    await expect(f.call({ kind: 'store', payload: { ...storePayload, servesMadinaty: false } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'store', payload: { ...storePayload, zone: 'Nasr City' } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'store', payload: { ...storePayload, socialAccount: 'javascript:alert(1)' } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'store', payload: { ...storePayload, advertiserType: 'individual' } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it('publishes store contact details without owner identity or private fee state', async () => {
+    const f = fixture({ verified: true });
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'store-id', kind: 'store', payload: { ...storePayload, feeStatus: 'AWAITING_AGREEMENT' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Owner Account', verificationState: 'VERIFIED' } } }]);
+    await f.call({}, 'api/public-submissions', 'GET');
+    const published = f.send.mock.calls[0][2].submissions[0];
+    expect(published).toMatchObject({ kind: 'store', seller: 'Madinaty Beauty Shop', verified: false, payload: { onlineStoreCategory: 'Beauty & personal care', whatsapp: '+201001234567' } });
+    expect(JSON.stringify(published)).not.toContain('Owner Account');
+    expect(published.payload.feeStatus).toBeUndefined();
+  });
   it('requires authentication before reading or writing submissions', async () => {
     const f = fixture();
     f.auth.protect.mockRejectedValue({ status: 401 });

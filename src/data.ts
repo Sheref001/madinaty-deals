@@ -18,6 +18,7 @@ export const categories = [
   { label: 'Local delivery riders', icon: 'bike', photo: 'https://images.unsplash.com/photo-1659493000588-c3f35d630905?auto=format&fit=crop&w=1200&q=88' },
   { label: 'Tutoring & education', icon: 'graduation-cap', photo: 'https://plus.unsplash.com/premium_photo-1681248156475-be7454b5d54b?auto=format&fit=crop&w=1200&q=88' },
   { label: 'Groceries', icon: 'shopping-basket', photo: 'https://www.foodbusinessmea.com/wp-content/uploads/2022/12/Food-Tank2.jpg' },
+  { label: 'Online Finds', icon: 'store' },
   { label: 'Health & fitness', icon: 'heart-pulse', photo: 'https://plus.unsplash.com/premium_photo-1726614172307-15106d1750cd?auto=format&fit=crop&w=1200&q=88' },
   { label: 'Pet care', icon: 'paw-print', adminOnly: true },
   { label: 'Deals & promotions', icon: 'tag', photo: '/images/madinaty-offers.webp' },

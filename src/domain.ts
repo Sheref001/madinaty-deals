@@ -20,11 +20,12 @@ export interface BrowseFilters {
   housekeepingType?: string;
   fitnessProviderType?: string;
   petBusinessType?: string;
+  onlineStoreCategory?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
   if (!query.trim()) return true;
-  const fields = [result.title, result.subtitle, result.zone, 'category' in result ? result.category : ''];
+  const fields = [result.title, result.subtitle, result.zone, 'category' in result ? result.category : '', result.type === 'business' ? result.onlineStoreCategory || '' : ''];
   const haystack = normalizeSearch(fields.flatMap((field) => [field, translate(field, 'ar')]).join(' '));
   return haystack.includes(normalizeSearch(query.trim()));
 }
@@ -47,7 +48,8 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const housekeepingTypeMatches = !filters.housekeepingType || (result.type === 'service' && result.housekeepingType === filters.housekeepingType);
     const fitnessProviderTypeMatches = !filters.fitnessProviderType || (result.type === 'business' && result.fitnessProviderType === filters.fitnessProviderType);
     const petBusinessTypeMatches = !filters.petBusinessType || ((result.type === 'business' || result.type === 'service') && result.petBusinessType === filters.petBusinessType);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && vehicleTypeMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && matchesQuery(result, filters.query);
+    const onlineStoreMatches = !filters.onlineStoreCategory || (result.type === 'business' && result.onlineStoreCategory === filters.onlineStoreCategory);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && vehicleTypeMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && onlineStoreMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

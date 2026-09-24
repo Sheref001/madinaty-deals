@@ -5,6 +5,7 @@ import { changeOwnedListing, getContactActivity, getOwnedListings, removeContact
 import { useTranslation } from './i18n';
 import type { View } from './types';
 import { getDescriptionPolicyViolation } from './contentPolicy';
+import { zones } from './data';
 import './account.css';
 
 type AccountSection = 'account' | 'saved' | 'activity' | 'my-listings';
@@ -18,7 +19,7 @@ export default function AccountDashboard({ account, section, onNavigate, onPost,
     <nav className="account-tabs" aria-label={t('Account navigation')}>{tabs.map(({ id, label, icon: Icon }) => <button key={id} aria-current={section === id ? 'page' : undefined} onClick={() => onNavigate(id)}><Icon size={18} />{t(label)}</button>)}</nav>
     {section === 'account' && <>
       <div className="account-profile"><UserRound size={30} /><div><h2 dir="auto">{account.name}</h2>{account.email && <p><bdi>{account.email}</bdi></p>}{account.phone && <p><bdi>{account.phone}</bdi></p>}<p>{t(account.residentVerified ? 'Verified resident' : 'Residency not verified')}</p></div>{!account.residentVerified && <button className="button button-outline" onClick={onVerify}><ShieldCheck size={16} />{t('Become a verified resident')}</button>}</div>
-      <div className="account-shortcuts">{tabs.slice(1).map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><Icon size={25} /><strong>{t(label)}</strong><span>{t(id === 'saved' ? 'Your shortlist, available on every device.' : id === 'activity' ? 'Find services whose contact links you opened.' : 'Manage your items, rates and service availability.')}</span></button>)}</div>
+      <div className="account-shortcuts">{tabs.slice(1).map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)}><Icon size={25} /><strong>{t(label)}</strong><span>{t(id === 'saved' ? 'Your shortlist, available on every device.' : id === 'activity' ? 'Find services and stores whose contact links you opened.' : 'Manage your items, services and online stores.')}</span></button>)}</div>
       <p className="account-note">{t('Saved items and contact activity are private. Other members see only your public listings.')}</p>
     </>}
     {section === 'saved' && <SavedPanel items={saved} ready={savedReady} error={savedError} onUnsave={onUnsave} renderResult={renderResult} />}
@@ -58,11 +59,11 @@ function ActivityPanel({ renderResult }: { renderResult: Props['renderResult'] }
 
 function ListingsPanel({ onPost }: { onPost: () => void }) {
   const { t } = useTranslation();
-  const [kind, setKind] = useState<'listing' | 'service'>('listing');
-  return <><div className="account-kind-tabs"><button aria-pressed={kind === 'listing'} onClick={() => setKind('listing')}>{t('My Items')}</button><button aria-pressed={kind === 'service'} onClick={() => setKind('service')}>{t('My Services')}</button></div><OwnedListings key={kind} kind={kind} onPost={onPost} /></>;
+  const [kind, setKind] = useState<'listing' | 'service' | 'store'>('listing');
+  return <><div className="account-kind-tabs"><button aria-pressed={kind === 'listing'} onClick={() => setKind('listing')}>{t('My Items')}</button><button aria-pressed={kind === 'service'} onClick={() => setKind('service')}>{t('My Services')}</button><button aria-pressed={kind === 'store'} onClick={() => setKind('store')}>{t('My Online Stores')}</button></div><OwnedListings key={kind} kind={kind} onPost={onPost} /></>;
 }
 
-function OwnedListings({ kind, onPost }: { kind: 'listing' | 'service'; onPost: () => void }) {
+function OwnedListings({ kind, onPost }: { kind: 'listing' | 'service' | 'store'; onPost: () => void }) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
@@ -74,7 +75,7 @@ function OwnedListings({ kind, onPost }: { kind: 'listing' | 'service'; onPost: 
     return () => { active = false; };
   }, [kind, page, reload]);
   const ready = data?.page === page && data.reload === reload;
-  return <>{error && <div role="alert"><p>{t(error)}</p></div>}<button className="text-link" onClick={() => setReload(value => value + 1)}>{t('Refresh listings')}</button>{!ready && !error ? <p role="status">{t('Loading…')}</p> : ready && <>{data.listings.length ? <div className="account-records">{data.listings.map(item => <OwnedListingCard key={`${item.id}:${item.version}`} item={item} onChanged={listing => { setData(current => current ? { ...current, listings: current.listings.map(record => record.id === listing.id ? listing : record) } : current); window.dispatchEvent(new Event('madinaty-feed-refresh')); window.dispatchEvent(new Event('madinaty-saved-refresh')); }} />)}</div> : <><EmptyState text={kind === 'service' ? 'You have not posted any services yet.' : 'You have not posted any items yet.'} /><button className="button button-accent" onClick={onPost}>{t('Post ad')}</button></>}<Pagination page={page} hasMore={data.hasMore} onChange={setPage} /></>}</>;
+  return <>{error && <div role="alert"><p>{t(error)}</p></div>}<button className="text-link" onClick={() => setReload(value => value + 1)}>{t('Refresh listings')}</button>{!ready && !error ? <p role="status">{t('Loading…')}</p> : ready && <>{data.listings.length ? <div className="account-records">{data.listings.map(item => <OwnedListingCard key={`${item.id}:${item.version}`} item={item} onChanged={listing => { setData(current => current ? { ...current, listings: current.listings.map(record => record.id === listing.id ? listing : record) } : current); window.dispatchEvent(new Event('madinaty-feed-refresh')); window.dispatchEvent(new Event('madinaty-saved-refresh')); }} />)}</div> : <><EmptyState text={kind === 'service' ? 'You have not posted any services yet.' : kind === 'store' ? 'You have not listed any online stores yet.' : 'You have not posted any items yet.'} /><button className="button button-accent" onClick={onPost}>{t('Post ad')}</button></>}<Pagination page={page} hasMore={data.hasMore} onChange={setPage} /></>}</>;
 }
 
 const statusLabels: Record<string, string> = { PUBLISHED: 'Live', PENDING_REVIEW: 'Awaiting review', HIDDEN: 'Hidden by moderation', REMOVED: 'Removed', REJECTED: 'Changes required', ACTIVE: 'Active', PAUSED: 'Paused', CLOSED: 'Closed', SOLD: 'Sold' };
@@ -95,13 +96,13 @@ function OwnedListingCard({ item, onChanged }: { item: OwnedListing; onChanged: 
   return <article className="account-card">
     <span className="account-status">{t(statusLabels[item.ownerState === 'ACTIVE' ? item.status : item.ownerState] || item.status)}</span>{item.ownerState !== 'ACTIVE' && <span className="account-status">{t(statusLabels[item.status] || item.status)}</span>}
     <h2 dir="auto">{String(item.payload.title || '')}</h2><p>{t(String(item.payload.category || ''))} · {t(String(item.payload.zone || ''))}</p>
-    {item.kind === 'listing' ? <p>{t('Price (EGP)')}: {String(item.payload.price ?? '')}</p> : <><p>{t('Rate')}: {String(item.payload.pricing || '—')}</p><p>{t('Availability')}: {String(item.payload.availability || '—')}</p></>}
+    {item.kind === 'listing' ? <p>{t('Price (EGP)')}: {String(item.payload.price ?? '')}</p> : item.kind === 'store' ? <p>{t('Store type')}: {t(String(item.payload.onlineStoreCategory || ''))}</p> : <><p>{t('Rate')}: {String(item.payload.pricing || '—')}</p><p>{t('Availability')}: {String(item.payload.availability || '—')}</p></>}
     {item.assisted && <p>{t('Posted on behalf of a provider. Confirm their permission before changing their details.')}</p>}
     {error && <p className="form-error" role="alert">{t(error)}</p>}
     {editing ? <ListingEditor item={item} busy={busy} onSave={changes => void change('edit', changes)} onCancel={() => setEditing(false)} /> : <div className="account-actions">
       {manageable && ['PUBLISHED', 'PENDING_REVIEW'].includes(item.status) && <button className="button button-outline" disabled={busy} onClick={() => setEditing(true)}>{t('Edit details')}</button>}
       {manageable && <button className="button button-outline" disabled={busy} onClick={() => void change(item.ownerState === 'PAUSED' ? 'resume' : 'pause')}>{t(item.ownerState === 'PAUSED' ? 'Resume listing' : 'Pause listing')}</button>}
-      {manageable && <button className="text-link" disabled={busy} onClick={() => setConfirmation(item.kind === 'listing' ? 'sold' : 'close')}>{t(item.kind === 'listing' ? 'Mark as sold' : 'Close service')}</button>}
+      {manageable && <button className="text-link" disabled={busy} onClick={() => setConfirmation(item.kind === 'listing' ? 'sold' : 'close')}>{t(item.kind === 'listing' ? 'Mark as sold' : item.kind === 'store' ? 'Close store' : 'Close service')}</button>}
       {item.ownerState !== 'REMOVED' && <button className="text-link" disabled={busy} onClick={() => setConfirmation('remove')}>{t('Remove listing')}</button>}
     </div>}
     {confirmation && <div className="account-confirm" role="group" aria-label={t('Confirm listing action')}><p>{t('This ends the listing and cannot be undone here. Posting quotas are not reset. Pause it instead if you plan to return.')}</p><button className="button button-accent" disabled={busy} onClick={() => void change(confirmation)}>{t('Confirm')}</button><button className="button button-outline" disabled={busy} onClick={() => setConfirmation(null)}>{t('Cancel')}</button></div>}
@@ -110,11 +111,11 @@ function OwnedListingCard({ item, onChanged }: { item: OwnedListing; onChanged: 
 
 function ListingEditor({ item, busy, onSave, onCancel }: { item: OwnedListing; busy: boolean; onSave: (changes: Record<string, unknown>) => void; onCancel: () => void }) {
   const { t } = useTranslation();
-  const fields = item.kind === 'listing' ? ['title', 'subtitle', 'zone', 'price'] : ['title', 'subtitle', 'zone', 'pricing', 'availability', 'serviceArea'];
+  const fields = item.kind === 'listing' ? ['title', 'subtitle', 'zone', 'price'] : item.kind === 'store' ? ['title', 'subtitle', 'zone'] : ['title', 'subtitle', 'zone', 'pricing', 'availability', 'serviceArea'];
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(key => [key, String(item.payload[key] ?? (key === 'serviceArea' ? item.payload.zone : ''))])));
   const [policyNotice, setPolicyNotice] = useState('');
   const educational = ['Tutoring', 'Tutoring & education'].includes(String(item.payload.category));
-  const descriptionViolation = item.kind === 'service' ? getDescriptionPolicyViolation(values.subtitle, educational) : '';
+  const descriptionViolation = item.kind === 'service' || item.kind === 'store' ? getDescriptionPolicyViolation(values.subtitle, educational) : '';
   const labels: Record<string, string> = { title: 'Title', subtitle: 'Description', zone: 'Broad zone', price: 'Price (EGP)', pricing: 'Rate', availability: 'Availability', serviceArea: 'Service area' };
   const limits: Record<string, [number, number]> = { title: [5, 120], subtitle: [10, 2000], zone: [1, 80], pricing: [0, 80], availability: [0, 120], serviceArea: [1, 80] };
   function submit(event: FormEvent) {
@@ -124,7 +125,13 @@ function ListingEditor({ item, busy, onSave, onCancel }: { item: OwnedListing; b
     if (Object.keys(changes).length) onSave(changes);
     else onCancel();
   }
-  return <form className="modal-form account-editor" onSubmit={submit}><p>{t('Rates and availability update immediately for live listings. Changes to the title, description or area require review and temporarily hide the listing.')}</p><fieldset disabled={busy}>{fields.map(key => <label key={key}>{t(labels[key])}{key === 'subtitle' ? <textarea dir="auto" value={values[key]} minLength={10} maxLength={2000} rows={4} required onPaste={event => { if (item.kind !== 'service') return; const input = event.currentTarget; const next = input.value.slice(0, input.selectionStart) + event.clipboardData.getData('text') + input.value.slice(input.selectionEnd); const violation = getDescriptionPolicyViolation(next, educational); if (violation) { event.preventDefault(); setPolicyNotice(violation); } }} onChange={event => { setPolicyNotice(''); setValues(current => ({ ...current, [key]: event.target.value })); }} /> : <input dir="auto" type={key === 'price' ? 'number' : 'text'} value={values[key]} min={key === 'price' ? '0.01' : undefined} max={key === 'price' ? '100000000' : undefined} step={key === 'price' ? '0.01' : undefined} minLength={limits[key]?.[0]} maxLength={limits[key]?.[1]} required={!['pricing', 'availability'].includes(key)} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} />}</label>)}</fieldset>{(descriptionViolation || policyNotice) && <p className="form-error" role="alert">{t(descriptionViolation || policyNotice)}</p>}<p>{t('For category, provider identity, contact, photo or promotion changes, contact hello@madinatydeals.com.')}</p><div className="account-actions"><button className="button button-accent" disabled={busy || Boolean(descriptionViolation)} type="submit">{t(busy ? 'Please wait…' : 'Save changes')}</button><button className="button button-outline" disabled={busy} type="button" onClick={onCancel}>{t('Cancel')}</button></div></form>;
+  return <form className="modal-form account-editor" onSubmit={submit}>
+    <p>{t(item.kind === 'store' ? 'Changes to store details require review and temporarily hide the listing.' : 'Rates and availability update immediately for live listings. Changes to the title, description or area require review and temporarily hide the listing.')}</p>
+    <fieldset disabled={busy}>{fields.map(key => <label key={key}>{t(item.kind === 'store' && key === 'zone' ? 'Delivery area' : labels[key])}{key === 'subtitle' ? <textarea dir="auto" value={values[key]} minLength={10} maxLength={2000} rows={4} required onPaste={event => { if (item.kind !== 'service' && item.kind !== 'store') return; const input = event.currentTarget; const next = input.value.slice(0, input.selectionStart) + event.clipboardData.getData('text') + input.value.slice(input.selectionEnd); const violation = getDescriptionPolicyViolation(next, educational); if (violation) { event.preventDefault(); setPolicyNotice(violation); } }} onChange={event => { setPolicyNotice(''); setValues(current => ({ ...current, [key]: event.target.value })); }} /> : item.kind === 'store' && key === 'zone' ? <select value={values[key]} onChange={event => setValues(current => ({ ...current, zone: event.target.value }))}><option value="All zones">{t('All of Madinaty')}</option>{zones.slice(1, 13).map(zone => <option key={zone} value={zone}>{t(zone)}</option>)}</select> : <input dir="auto" type={key === 'price' ? 'number' : 'text'} value={values[key]} min={key === 'price' ? '0.01' : undefined} max={key === 'price' ? '100000000' : undefined} step={key === 'price' ? '0.01' : undefined} minLength={limits[key]?.[0]} maxLength={limits[key]?.[1]} required={!['pricing', 'availability'].includes(key)} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} />}</label>)}</fieldset>
+    {(descriptionViolation || policyNotice) && <p className="form-error" role="alert">{t(descriptionViolation || policyNotice)}</p>}
+    <p>{t('For category, provider identity, contact, photo or promotion changes, contact hello@madinatydeals.com.')}</p>
+    <div className="account-actions"><button className="button button-accent" disabled={busy || Boolean(descriptionViolation)} type="submit">{t(busy ? 'Please wait…' : 'Save changes')}</button><button className="button button-outline" disabled={busy} type="button" onClick={onCancel}>{t('Cancel')}</button></div>
+  </form>;
 }
 
 function EmptyState({ text }: { text: string }) {

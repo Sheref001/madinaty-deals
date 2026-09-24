@@ -98,6 +98,8 @@ export interface Business extends BaseResult {
   hours: string;
   phone: string;
   whatsapp?: string;
+  socialAccount?: string;
+  onlineStoreCategory?: string;
   featured?: boolean;
   groceryActivity?: GroceryActivity;
   fitnessProviderType?: FitnessProviderType;

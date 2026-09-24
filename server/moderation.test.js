@@ -16,6 +16,16 @@ function fixture(status = 'PUBLISHED', kind = 'listing') {
 }
 
 describe('emergency content moderation', () => {
+  it('maps store submissions to business moderation and visibility checks', async () => {
+    const { item, tx } = fixture('PENDING_REVIEW', 'store');
+    item.payload = { category: 'Online Finds', feeStatus: 'AWAITING_AGREEMENT' };
+    await expect(setContentStatus(tx, { contentType: 'business', contentId, action: 'APPROVE', actorId: id, admin: false })).rejects.toMatchObject({ status: 403 });
+    await setContentStatus(tx, { contentType: 'business', contentId, action: 'APPROVE', actorId: id, admin: true });
+    expect(item.status).toBe('PUBLISHED');
+    const prisma = { submission: { findUnique: vi.fn().mockResolvedValue({ ...item, ownerState: 'ACTIVE', user: { status: 'ACTIVE' } }) } };
+    expect(await isContentVisible(prisma, 'business', contentId)).toBe(true);
+    expect(await isContentVisible(prisma, 'service', contentId)).toBe(false);
+  });
   it('hides a published ad immediately, records why, and restores its prior status', async () => {
     const { item, tx } = fixture();
     await setContentStatus(tx, { contentType: 'listing', contentId, action: 'HIDE', reason: 'Unsafe contact details', actorId: id, admin: false });

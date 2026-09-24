@@ -76,6 +76,7 @@ export interface Service extends BaseResult {
   serviceArea: string;
   phone: string;
   whatsapp?: string;
+  socialAccount?: string;
   response: string;
   pricing?: string;
   availability?: string;

@@ -1,3 +1,4 @@
+import { URL } from 'node:url';
 import { RequestError, readJson } from './request.js';
 import { canReview, consumeLimit } from './auth.js';
 import { vehicleResidenceAllowed } from './moderation.js';
@@ -33,7 +34,7 @@ function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
-    : [...common, 'whatsapp', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
+    : [...common, 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
 }
 
@@ -108,6 +109,17 @@ export function createSubmissions({ prisma, auth }) {
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
       Object.assign(clean, { whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
+      if (payload.socialAccount !== undefined) {
+        if (typeof payload.socialAccount !== 'string' || payload.socialAccount.length > 2048) throw new RequestError(400, 'Enter one valid social account link');
+        const socialAccount = payload.socialAccount.trim();
+        if (socialAccount) {
+          let url;
+          try { url = new URL(socialAccount); } catch { throw new RequestError(400, 'Enter one valid social account link'); }
+          const socialHosts = ['facebook.com', 'instagram.com', 'linkedin.com', 'threads.net', 'tiktok.com', 'x.com', 'youtube.com', 'youtu.be'];
+          if (url.protocol !== 'https:' || url.username || url.password || !socialHosts.some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))) throw new RequestError(400, 'Use a link to one supported social account');
+          clean.socialAccount = url.href;
+        }
+      }
       if (clean.category === 'Tutoring & education') {
         const educationLevel = payload.educationLevel || 'Before university';
         const submittedSubjects = payload.subjects || ['Mathematics'];

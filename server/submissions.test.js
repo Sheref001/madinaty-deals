@@ -52,6 +52,12 @@ describe('marketplace submission boundaries', () => {
     expect(f.send.mock.calls[0][2].submissions[0]).toMatchObject({ id: 'published-id', kind: 'listing', seller: 'Neighbour', verified: true });
     expect(f.send.mock.calls[0][2].submissions[0].payload.feeStatus).toBeUndefined();
   });
+  it('includes a service social account in the public feed', async () => {
+    const f = fixture();
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'service-id', kind: 'service', payload: { title: 'Home service', subtitle: 'Helpful service provider.', category: 'Home services', socialAccount: 'https://instagram.com/provider', whatsapp: '+201001234567' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Provider', verificationState: 'UNVERIFIED' } } }]);
+    await f.call({}, 'api/public-submissions', 'GET');
+    expect(f.send.mock.calls[0][2].submissions[0].payload.socialAccount).toBe('https://instagram.com/provider');
+  });
   it('keeps an older vehicle ad out of the public feed if its owner is unverified', async () => {
     const f = fixture();
     f.prisma.submission.findMany.mockResolvedValue([{ id: 'old-vehicle', kind: 'listing', payload: vehicle.payload, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Neighbour', verificationState: 'UNVERIFIED' } } }]);
@@ -103,9 +109,22 @@ describe('marketplace submission boundaries', () => {
   });
   it('allows service providers without resident verification', async () => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });
-    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567' } });
+    await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', socialAccount: 'https://instagram.com/provider' } });
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
+    expect(f.prisma.submission.create.mock.calls[0][0].data.payload.socialAccount).toBe('https://instagram.com/provider');
+  });
+  it('allows an optional free social profile for individual and business service providers', async () => {
+    for (const advertiserType of ['individual', 'small_business']) {
+      const f = fixture({ role: 'SERVICE_PROVIDER' });
+      await f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', advertiserType, businessRequest: advertiserType === 'small_business' ? 'posting' : undefined, socialAccount: 'https://www.facebook.com/provider' } });
+      expect(f.prisma.submission.create.mock.calls[0][0].data.payload.socialAccount).toBe('https://www.facebook.com/provider');
+    }
+  });
+  it.each(['http://instagram.com/provider', 'https://instagram.com.evil.test/provider', 'javascript:alert(1)'])('rejects a non-secure or unsupported social profile: %s', async socialAccount => {
+    const f = fixture({ role: 'SERVICE_PROVIDER' });
+    await expect(f.call({ kind: 'service', payload: { ...payload, category: 'Home services', whatsapp: '+201001234567', socialAccount } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('accepts a complete tutoring service submission as an individual', async () => {
     const f = fixture();

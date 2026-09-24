@@ -233,6 +233,7 @@ html[lang="ar"] .photo-caption > span { letter-spacing: normal; }
 .ad-meta-row span { display: inline-flex; gap: 4px; align-items: center; }
 .ad-meta-row .ad-id { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .ad-section { display: grid; gap: 7px; }
+.social-account-link { display: inline-flex; width: fit-content; align-items: center; gap: 7px; color: var(--teal); font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .ad-section h4, .seller-panel h4, .ad-safety h4 { margin: 0; color: var(--ink); font-size: 13px; }
 .ad-section p, .seller-panel p, .ad-safety p { margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 1.6; }
 .transaction-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }

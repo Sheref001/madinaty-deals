@@ -1,4 +1,4 @@
-export type View = 'home' | 'browse' | 'services' | 'businesses' | 'offers' | 'saved' | 'admin' | 'search';
+export type View = 'home' | 'browse' | 'services' | 'businesses' | 'offers' | 'saved' | 'admin' | 'search' | 'account' | 'activity' | 'my-listings';
 export type ResultType = 'listing' | 'service' | 'business' | 'offer';
 export const listingConditionSets = {
   'Furniture & home': ['New', 'Like new', 'Good', 'Fair'] as const,

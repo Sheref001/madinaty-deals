@@ -9,6 +9,10 @@ export function vehicleResidenceAllowed(submission) {
   return submission?.kind !== 'listing' || submission.payload?.category !== 'Cars & motorcycles' || submission.user?.profile?.verificationState === 'VERIFIED';
 }
 
+export function ownerListingActive(submission) {
+  return !submission?.ownerState || submission.ownerState === 'ACTIVE';
+}
+
 export function submissionId(contentId) {
   const id = typeof contentId === 'string' && contentId.startsWith('submission-') ? contentId.slice(11) : '';
   return uuid.test(id) ? id : null;
@@ -17,8 +21,8 @@ export function submissionId(contentId) {
 export async function isContentVisible(prisma, contentType, contentId) {
   const id = submissionId(contentId);
   if (id) {
-    const submission = await prisma.submission.findUnique({ where: { id }, select: { kind: true, status: true, payload: true, user: { select: { status: true, profile: { select: { verificationState: true } } } } } });
-    return submission?.kind === contentType && submission.status === 'PUBLISHED' && submission.user?.status === 'ACTIVE' && vehicleResidenceAllowed(submission);
+    const submission = await prisma.submission.findUnique({ where: { id }, select: { kind: true, status: true, ownerState: true, payload: true, user: { select: { status: true, profile: { select: { verificationState: true } } } } } });
+    return submission?.kind === contentType && submission.status === 'PUBLISHED' && ownerListingActive(submission) && submission.user?.status === 'ACTIVE' && vehicleResidenceAllowed(submission);
   }
   const control = await prisma.contentControl.findUnique({ where: { contentType_contentId: { contentType, contentId } }, select: { status: true } });
   return !control || control.status === 'PUBLISHED';
@@ -33,7 +37,7 @@ export async function setContentStatus(tx, { contentType, contentId, action, rea
   let before;
   let after;
   if (id) {
-    const item = await tx.submission.findUnique({ where: { id }, select: { id: true, kind: true, status: true, statusBeforeHide: true, payload: true, user: { select: { profile: { select: { verificationState: true } } } } } });
+    const item = await tx.submission.findUnique({ where: { id }, select: { id: true, kind: true, status: true, version: true, statusBeforeHide: true, payload: true, user: { select: { profile: { select: { verificationState: true } } } } } });
     if (!item || item.kind !== contentType) throw new RequestError(404, 'Ad not found');
     before = item.status;
     if (action === 'HIDE' && ['PUBLISHED', 'PENDING_REVIEW'].includes(before)) after = 'HIDDEN';
@@ -45,7 +49,7 @@ export async function setContentStatus(tx, { contentType, contentId, action, rea
     } else if (action === 'REMOVE' && before !== 'REMOVED') after = 'REMOVED';
     else throw new RequestError(409, 'This ad cannot be changed from its current state');
     if (after === 'PUBLISHED' && !vehicleResidenceAllowed(item)) throw new RequestError(403, 'Vehicle listings require verified Madinaty residency');
-    const changed = await tx.submission.updateMany({ where: { id, status: before }, data: { status: after, statusBeforeHide: action === 'HIDE' ? before : action === 'RESTORE' ? null : item.statusBeforeHide } });
+    const changed = await tx.submission.updateMany({ where: { id, status: before, version: item.version }, data: { status: after, version: { increment: 1 }, statusBeforeHide: action === 'HIDE' ? before : action === 'RESTORE' ? null : item.statusBeforeHide } });
     if (!changed.count) throw new RequestError(409, 'This ad changed while you were reviewing it');
   } else {
     if (action === 'APPROVE') throw new RequestError(400, 'This content does not have a review queue');

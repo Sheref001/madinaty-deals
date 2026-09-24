@@ -30,12 +30,29 @@ import EliteAdSpace from './EliteAdSpace';
 import { splitCategories, businessOnlyCategories } from './categoryPolicy';
 import AuthForm from './AuthForm';
 import VerificationForm from './VerificationForm';
+import AccountDashboard from './AccountDashboard';
+import useSavedItems from './useSavedItems';
+import { recordContactOpened } from './api';
 import { getSession, signOut, type Account } from './api';
 const emptyFilters: CollectionFilters = { category: '', advertiserType: '', condition: '', furnishing: '', vehicleType: '', min: '', max: '', educationLevel: '', subject: '', groceryActivity: '', homeServiceType: '', housekeepingType: '', fitnessProviderType: '', petBusinessType: '' };
 
 const getPublicAdId = (result: SearchResult) => result.publicAdId || `MD-${result.id.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 const getAdLink = (result: SearchResult) => { const url = new URL(window.location.href); url.searchParams.set('ad', result.id); return url.toString(); };
 const hasArabicText = (value: string) => /[\u0600-\u06FF]/.test(value);
+
+function rememberSignInDestination(destination?: string) {
+  try {
+    if (destination) sessionStorage.setItem('madinaty-signin-destination', destination);
+    else sessionStorage.removeItem('madinaty-signin-destination');
+  } catch { return; }
+}
+
+function readSignInDestination(): 'account' | 'saved' | 'activity' | 'my-listings' | 'post' | null {
+  try {
+    const value = sessionStorage.getItem('madinaty-signin-destination');
+    return value === 'account' || value === 'saved' || value === 'activity' || value === 'my-listings' || value === 'post' ? value : null;
+  } catch { return null; }
+}
 
 const iconMap: Record<string, LucideIcon> = {
   sofa: Sofa,
@@ -112,20 +129,18 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [results, setResults] = useState<SearchResult[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedUnavailable, setFeedUnavailable] = useState(false);
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    try { const saved = JSON.parse(localStorage.getItem('madinaty-favorites') ?? 'null'); if (Array.isArray(saved)) return new Set(saved.filter((id): id is string => typeof id === 'string' && id.startsWith('submission-'))); } catch { /* Keep an empty shortlist if storage is unavailable. */ }
-    return new Set();
-  });
   const [searchType, setSearchType] = useState<View>('search');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categoryNavigation, setCategoryNavigation] = useState(false);
-  useEffect(() => { try { localStorage.setItem('madinaty-favorites', JSON.stringify([...favorites])); } catch { /* Session state remains available. */ } }, [favorites]);
   const [modal, setModal] = useState<'post' | 'register' | 'report' | 'verify' | null>(null);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [toast, setToast] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
+  const savedState = useSavedItems(account?.id);
+  const { favorites } = savedState;
+  const signInDestination = useRef<View | 'post'>('account');
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [cognitoEnabled, setCognitoEnabled] = useState(false);
@@ -140,7 +155,16 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const rentalPostsThisMonth = 0;
   useEffect(() => {
     let cancelled = false;
-    getSession().then(user => { if (!cancelled) setAccount(user); }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
+    getSession().then(user => {
+      if (cancelled) return;
+      setAccount(user);
+      const destination = user ? readSignInDestination() : null;
+      if (destination) {
+        rememberSignInDestination();
+        setView(destination === 'post' ? 'account' : destination);
+        if (destination === 'post') setModal('post');
+      }
+    }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
     return () => { cancelled = true; };
   }, []);
   useEffect(() => { const load = () => getPublicConfig().then(value => { setRegistrationEnabled(value.registrationEnabled); setMaintenanceMode(value.maintenanceMode === true); setCognitoEnabled(value.cognitoEnabled); setTranslationEnabled(value.translationEnabled === true); }).catch(() => { setRegistrationEnabled(false); setMaintenanceMode(false); setCognitoEnabled(false); setTranslationEnabled(false); }); load(); window.addEventListener('madinaty-config-refresh', load); return () => window.removeEventListener('madinaty-config-refresh', load); }, []);
@@ -184,7 +208,12 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     return () => window.clearTimeout(timer);
   }, [t]);
 
-  const openPost = () => { if (!authLoading) setModal(registered ? 'post' : 'register'); };
+  const openSignIn = (destination: View | 'post' = 'account') => {
+    signInDestination.current = destination;
+    rememberSignInDestination(destination);
+    setModal('register');
+  };
+  const openPost = () => { if (!authLoading) { if (registered) setModal('post'); else openSignIn('post'); } };
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -211,6 +240,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       setToast('Admin access required');
       return;
     }
+    if (['account', 'activity', 'my-listings'].includes(nextView) && !registered) { openSignIn(nextView); return; }
     const url = new URL(window.location.href);
     if (url.searchParams.has('ad')) {
       url.searchParams.delete('ad');
@@ -274,19 +304,12 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     track('search_performed', { query: query || 'empty', zone });
   };
 
-  const toggleFavorite = (result: SearchResult) => {
-    setFavorites((current) => {
-      const next = new Set(current);
-      if (next.has(result.id)) {
-        next.delete(result.id);
-      } else {
-        next.add(result.id);
-        track('favorite_added', { result_type: result.type });
-      }
-      return next;
-    });
-    setToast(favorites.has(result.id) ? 'Removed from saved' : 'Saved to your shortlist');
+  const toggleSaved = async (id: string) => {
+    const removing = favorites.has(id);
+    try { await savedState.toggle(id); setToast(removing ? 'Removed from saved' : 'Saved to your shortlist'); }
+    catch (cause) { setToast(cause instanceof Error ? cause.message : 'Could not save this item. Please retry.'); }
   };
+  const toggleFavorite = (result: SearchResult) => { void toggleSaved(result.id); };
 
   const contactResult = async (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => {
     const number = method === 'whatsapp' ? result.type === 'business' ? result.whatsapp || result.phone : result.type === 'service' ? result.whatsapp || result.phone : '' : '';
@@ -303,14 +326,18 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           : `🏷️ Madinaty Deals\nHello, I found ${result.title} on Madinaty Deals and would like to ask about your services.`;
         const normalized = number.replace(/[^\d]/g, '').replace(/^0/, '20');
         const href = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+        if (account && result.id.startsWith('submission-')) {
+          try { await recordContactOpened(result.id.slice(11)); }
+          catch { setToast('WhatsApp will open, but this contact could not be saved to your activity.'); }
+        }
         if (tab && !tab.closed) tab.location.replace(href);
         else window.location.assign(href);
         return;
       }
-      setToast(language === 'ar' ? 'هذا إعلان تجريبي — أضف رقم واتساب صاحب المحل أولًا' : 'Demo ad — add the shop owner’s WhatsApp number first');
+      setToast('Contact details are unavailable');
       return;
     }
-    setToast(method === 'phone' ? 'Call action recorded' : 'Quote request started');
+    setToast('Contact details are unavailable');
   };
 
   const reportResult = (result: SearchResult) => {
@@ -349,7 +376,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="header-contact" onClick={() => document.getElementById('contact-us')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle size={16} />{t('Contact us')}</button>
           <button className="header-saved" aria-label={t('Saved')} onClick={() => goTo('saved')}><Heart size={19} /><span>{t('Saved')}</span></button>
           <button className="button button-accent header-post" onClick={openPost}><Plus size={18} />{t('Post ad')}</button>
-          {maintenanceMode && !registered ? <button className="account-link maintenance-account-link" onClick={() => setModal('register')}><ShieldCheck size={17} /><span>{t('Administrator sign-in')}</span></button> : <button className="account-link" onClick={() => setModal(registered ? 'verify' : 'register')}><UserRound size={17} /><span>{t(registered ? 'Your account' : registrationEnabled ? 'Sign in or create account' : 'Sign in')}</span></button>}{registered && <button className="text-link" onClick={async () => { try { await signOut(cognitoEnabled); setAccount(null); setModal(null); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
+          {maintenanceMode && !registered ? <button className="account-link maintenance-account-link" onClick={() => setModal('register')}><ShieldCheck size={17} /><span>{t('Administrator sign-in')}</span></button> : <button className="account-link" onClick={() => registered ? goTo('account') : openSignIn()}><UserRound size={17} /><span>{t(registered ? 'My Account' : registrationEnabled ? 'Sign in or create account' : 'Sign in')}</span></button>}{registered && <button className="text-link" onClick={async () => { try { await signOut(cognitoEnabled); setAccount(null); setModal(null); setView('home'); rememberSignInDestination(); } catch { setToast('Sign-out failed. Please try again.'); } }}>{t('Sign out')}</button>}
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
@@ -359,14 +386,17 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
-          {!registered && registrationEnabled && !maintenanceMode && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); setModal('register'); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
+          {!registered && registrationEnabled && !maintenanceMode && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); openSignIn(); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
           <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
 
       <main className="main-content">
+        {view === 'saved' && !account && !authLoading && <p className="account-note">{t('These saves stay on this browser. Sign in to use a private shortlist across your devices.')} <button className="text-link" onClick={() => openSignIn('saved')}>{t('Sign in')}</button></p>}
         {feedUnavailable && <p className="form-error" role="alert">{t('Listings are temporarily unavailable. Please refresh this page shortly.')}</p>}
-        {view === 'home' ? (
+        {account && ['account', 'saved', 'activity', 'my-listings'].includes(view) ? (
+          <AccountDashboard key={account.id} account={account} section={view as 'account' | 'saved' | 'activity' | 'my-listings'} onNavigate={goTo} onPost={openPost} onVerify={() => setModal('verify')} saved={savedState.items} savedReady={savedState.ready} savedError={savedState.error} onUnsave={id => void toggleSaved(id)} renderResult={record => { const result = publicSubmissionResult(record); return result ? <ResultCard result={result} favorite={favorites.has(result.id)} onFavorite={toggleFavorite} onContact={contactResult} onReport={reportResult} verifiedResident={residentVerified} translationEnabled={translationEnabled} /> : null; }} />
+        ) : view === 'home' ? (
           <HomeView isAdmin={isAdmin} residentVerified={residentVerified} translationEnabled={translationEnabled} results={visibleResults} feedLoading={feedLoading} feedUnavailable={feedUnavailable} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           canAccessAdmin ? <AdminView isAdmin={isAdmin} permissions={moderatorPermissions} onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
@@ -408,7 +438,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       {maintenanceMode && !registered && <div className="maintenance-banner" role="status"><ShieldCheck size={18} /><span><b>{t('Madinaty Deals is under maintenance')}</b><small>{t('Browsing remains available. Public sign-in and registration are temporarily paused.')}</small></span></div>}
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onVerify={() => setModal('verify')} onPublish={publishListing} onPublishService={publishService} accountId={account?.id ?? ''} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
-      {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal('post'); track('account_signed_in'); }} />}
+      {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal(signInDestination.current === 'post' ? 'post' : null); setView(signInDestination.current === 'post' ? 'account' : signInDestination.current); rememberSignInDestination(); track('account_signed_in'); }} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={async (reason, details) => { await submitReport(selectedResult.type, selectedResult.id, reason, details); setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSkip={() => setModal(null)} onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>
@@ -420,6 +450,7 @@ function Navigation({ view, goTo, favoriteCount, isAdmin, onAdmin, onVerify }: {
   return <nav className="nav-list" aria-label={t("Main navigation")}>
     {navItems.map((item) => <NavItem key={item.id} item={item} active={view === item.id} onClick={() => goTo(item.id)} />)}
     <NavItem item={{ id: 'saved', label: 'Saved', icon: Bookmark }} active={view === 'saved'} onClick={() => goTo('saved')} count={favoriteCount} />
+    <NavItem item={{ id: 'account', label: 'My Account', icon: UserRound }} active={['account', 'activity', 'my-listings'].includes(view)} onClick={() => goTo('account')} />
     {isAdmin && <button className="admin-nav-link" type="button" onClick={onAdmin}><BarChart3 size={18} /><span>{t('Admin dashboard')}</span></button>}
     <div className="nav-divider" />
     <span className="section-label nav-section-label">{t("For businesses")}</span>

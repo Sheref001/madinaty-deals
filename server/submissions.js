@@ -10,6 +10,11 @@ const descriptionUrl = /(?:\b(?:https?|ftp):\/\/|\bwww\.)\S+|\b(?:[a-z0-9-]+\.)+
 const descriptionSocialHandle = /(?:^|\s)@[a-z0-9_.-]{2,}|\b(?:instagram|facebook|tiktok|linkedin|youtube|threads|twitter|snapchat)\s*(?:[:/@]\s*)[a-z0-9_.-]{2,}/i;
 const linkPolicyViolation = 'Community Content Policy violation: tutoring descriptions cannot include links, email addresses, or social media handles. Use the social account field instead.';
 
+export function validateServiceDescription(category, description) {
+  if (descriptionMarkup.test(description)) throw new RequestError(400, 'HTML and script content are not allowed in service descriptions.');
+  if (['Tutoring', 'Tutoring & education'].includes(category) && (descriptionUrl.test(description) || descriptionSocialHandle.test(description))) throw new RequestError(400, linkPolicyViolation);
+}
+
 function publicationStatus(payload) {
   const text = [payload.title, payload.subtitle, payload.description, payload.offer?.discount].filter(value => typeof value === 'string').join(' ');
   if (riskyText.test(text) || /https?:\/\//i.test(text)) return 'PENDING_REVIEW';
@@ -34,7 +39,7 @@ function applyAdvertiserPolicy(clean, payload) {
   if (!tutoringCentre && !businessOnly && payload.businessRequest !== 'posting') clean.businessAuthenticationStatus = 'PENDING_REVIEW';
 }
 
-function publicPayload(kind, payload) {
+export function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
@@ -46,7 +51,7 @@ export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
     if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
       const [records, hidden] = await Promise.all([
-        prisma.submission.findMany({ where: { status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
+        prisma.submission.findMany({ where: { status: 'PUBLISHED', ownerState: 'ACTIVE', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
         prisma.contentControl.findMany({ where: { status: { in: ['HIDDEN', 'REMOVED'] } }, select: { contentType: true, contentId: true } }),
       ]);
       return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.payload?.assistedPosting ? record.payload.providerName : record.user.profile?.displayName || 'Neighbour', verified: !record.payload?.assistedPosting && record.user.profile?.verificationState === 'VERIFIED' })) });
@@ -120,8 +125,11 @@ export function createSubmissions({ prisma, auth }) {
       const educationalService = ['Tutoring', 'Tutoring & education'].includes(clean.category);
       if (typeof payload.providerName !== 'string' || payload.providerName.trim().length < 2 || payload.providerName.trim().length > 100) throw new RequestError(400, 'Enter a valid provider or business name');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
-      if (descriptionMarkup.test(clean.subtitle)) throw new RequestError(400, 'HTML and script content are not allowed in service descriptions.');
-      if (educationalService && (descriptionUrl.test(clean.subtitle) || descriptionSocialHandle.test(clean.subtitle))) throw new RequestError(400, linkPolicyViolation);
+      validateServiceDescription(clean.category, clean.subtitle);
+      if (payload.serviceArea !== undefined) {
+        if (typeof payload.serviceArea !== 'string' || !payload.serviceArea.trim() || payload.serviceArea.length > 80) throw new RequestError(400, 'Invalid service area');
+        clean.serviceArea = payload.serviceArea.trim();
+      }
       Object.assign(clean, { providerName: payload.providerName.trim(), whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
       if (payload.socialAccount !== undefined) {
         if (typeof payload.socialAccount !== 'string' || payload.socialAccount.length > 2048) throw new RequestError(400, 'Enter one valid social account link');

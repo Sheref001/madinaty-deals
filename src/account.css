@@ -1,0 +1,32 @@
+.account-dashboard { max-width: 1100px; margin: 0 auto; }
+.account-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 20px 0; }
+.account-heading h1 { font-size: clamp(30px, 5vw, 44px); margin: 10px 0; }
+.account-heading p, .account-note { color: var(--ink-soft); line-height: 1.65; }
+.account-tabs, .account-kind-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0; }
+.account-tabs button, .account-kind-tabs button { display: inline-flex; align-items: center; gap: 7px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--teal); }
+.account-tabs [aria-current], .account-kind-tabs [aria-pressed="true"] { background: var(--teal); color: white; }
+.account-profile, .account-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 22px; min-width: 0; overflow-wrap: anywhere; }
+.account-profile { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; }
+.account-profile > div { flex: 1; min-width: 180px; }
+.account-profile p { margin: 8px 0; }
+.account-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 22px 0; }
+.account-shortcuts button { display: grid; gap: 13px; text-align: start; border: 1px solid var(--line); background: var(--white); border-radius: 14px; padding: 24px; color: var(--teal); }
+.account-shortcuts span { color: var(--ink-soft); line-height: 1.6; }
+.account-records { display: grid; gap: 16px; margin: 18px 0; }
+.account-card h2 { font-size: 23px; margin: 12px 0; }
+.account-card p { line-height: 1.6; }
+.account-card time { display: block; color: var(--muted); font-size: 13px; margin-top: 10px; }
+.account-status { display: inline-block; background: var(--paper-deep); color: var(--teal); padding: 6px 11px; border-radius: 20px; font-size: 12px; margin-inline-end: 5px; }
+.account-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+.account-editor { margin-top: 20px; }
+.account-editor fieldset { display: grid; gap: 15px; padding: 0; border: 0; min-width: 0; }
+.account-confirm { margin-top: 20px; padding: 16px; background: var(--paper-deep); border-radius: 10px; }
+.account-confirm button { margin-inline-end: 10px; }
+.account-saved-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.account-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 24px 0; }
+@media (max-width: 700px) {
+  .account-heading { align-items: flex-start; flex-direction: column; }
+  .account-shortcuts, .account-saved-grid { grid-template-columns: 1fr; }
+  .account-card, .account-profile { padding: 17px; }
+  .account-tabs button { flex: 1 1 40%; justify-content: center; padding: 11px 8px; }
+}

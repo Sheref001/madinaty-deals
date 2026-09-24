@@ -7,9 +7,11 @@ import { createRateLimiter } from './rate-limit.js';
 import { consumeLimit } from './auth.js';
 import { isContentVisible } from './moderation.js';
 import { publicRegistrationEnabled } from './access.js';
+import { createMemberAccount } from './member-account.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, operations, translator, config = {} }) {
+  const memberAccount = auth ? createMemberAccount({ prisma, auth }) : null;
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
   const translationLimit = createRateLimiter({ limit: 20, windowMs: 60000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
@@ -43,6 +45,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     }
     if (parts[1] === 'auth' && parts[2] === 'cognito' && cognito) return cognito.handle(request, response, parts, send);
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);
+    if (parts[1] === 'account' && memberAccount) return memberAccount.handle(request, response, parts, send);
     if (parts[1] === 'reports' && reports) return reports.handle(request, response, parts, send);
     if (parts.length === 2 && parts[1] === 'submissions' && request.method === 'GET' && submissions) return submissions.handle(request, response, parts, send);
     if (['uploads', 'public-uploads', 'verifications'].includes(parts[1]) && uploads) return uploads.handle(request, response, parts, send);

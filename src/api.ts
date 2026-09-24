@@ -47,6 +47,18 @@ export interface AdminVerificationRequest { id: string; userId: string; name: st
 export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; maintenanceMode?: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
 export interface PublicSubmission { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
 export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }>;
+export interface SavedItem { id: string; submission: PublicSubmission | null; }
+export interface ContactActivity extends SavedItem { title: string; providerName: string; kind: 'listing' | 'service'; openedAt: string; }
+export interface OwnedListing { id: string; kind: 'listing' | 'service'; payload: Record<string, unknown>; status: string; ownerState: 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'SOLD' | 'REMOVED'; version: number; createdAt: string; updatedAt: string; assisted: boolean; feeStatus: string | null; }
+export type ListingAction = 'edit' | 'pause' | 'resume' | 'close' | 'sold' | 'remove';
+export const getSavedItems = () => request('/account/saved') as Promise<{ saved: SavedItem[] }>;
+export const saveAccountItem = (id: string) => request(`/account/saved/${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+export const removeAccountItem = (id: string) => request(`/account/saved/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const getContactActivity = (page = 0) => request(`/account/activity?page=${page}`) as Promise<{ activity: ContactActivity[]; hasMore: boolean }>;
+export const recordContactOpened = (id: string) => request(`/account/activity/${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+export const removeContactActivity = (id: string) => request(`/account/activity/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const getOwnedListings = (kind: 'listing' | 'service', page = 0) => request(`/account/listings?kind=${kind}&page=${page}`) as Promise<{ listings: OwnedListing[]; hasMore: boolean }>;
+export const changeOwnedListing = (id: string, version: number, action: ListingAction, changes?: Record<string, unknown>) => request(`/account/listings/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ version, action, ...(changes ? { changes } : {}) }) }) as Promise<{ listing: OwnedListing }>;
 export const checkContentVisible = (type: string, id: string) => request(`/content/${encodeURIComponent(type)}/${encodeURIComponent(id)}/visible`, { signal: AbortSignal.timeout(8000) }) as Promise<{ visible: boolean }>;
 let csrfToken: string | null = null;
 export async function getSession(): Promise<Account | null> {

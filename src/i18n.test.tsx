@@ -5,7 +5,7 @@ import App from './App';
 import { listings, results } from './testFixtures';
 import { matchesQuery } from './domain';
 import { languageKey, translate } from './i18n';
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn().mockResolvedValue({ id: 'user', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false }), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: (await import('./testFixtures')).submissions }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSavedItems: vi.fn().mockResolvedValue({ saved: (await import('./testFixtures')).submissions.filter(item => item.id === 'test-chair').map(submission => ({ id: submission.id, submission })) }), getSession: vi.fn().mockResolvedValue({ id: 'user', name: 'Neighbour', email: 'test@example.test', role: 'RESIDENT', residentVerified: false }), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: (await import('./testFixtures')).submissions }) }));
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
@@ -17,14 +17,15 @@ describe('Arabic and English experience', () => {
     const { unmount } = render(<App />);
     expect(document.documentElement.lang).toBe('ar');
     expect(document.documentElement.dir).toBe('rtl');
+    await screen.findByRole('button', { name: 'تسجيل الخروج' });
     fireEvent.click(screen.getAllByRole('button', { name: /المحفوظات/ })[0]);
-    expect(screen.getByRole('heading', { name: 'إعلاناتك المحفوظة' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'المحفوظات' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(document.documentElement.dir).toBe('ltr');
-    expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Saved' })).toBeTruthy();
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Saved' }));
-    expect(screen.getByRole('heading', { name: 'Your saved shortlist' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Saved' })).toBeTruthy();
     expect(await screen.findByRole('heading', { name: 'Test child chair' })).toBeTruthy();
     expect(localStorage.getItem(languageKey)).toBe('en');
     unmount();
@@ -33,6 +34,7 @@ describe('Arabic and English experience', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
     fireEvent.click(screen.getByRole('button', { name: 'التبديل إلى العربية' }));
     expect(document.documentElement.dir).toBe('rtl');
+    await screen.findByRole('button', { name: 'تسجيل الخروج' });
     expect(screen.getByRole('heading', { name: translate('Find your next good thing', 'ar') })).toBeTruthy();
   }, 15000);
 

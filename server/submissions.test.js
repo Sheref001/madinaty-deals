@@ -54,10 +54,11 @@ describe('marketplace submission boundaries', () => {
   });
   it('includes a service social account in the public feed', async () => {
     const f = fixture();
-    f.prisma.submission.findMany.mockResolvedValue([{ id: 'service-id', kind: 'service', payload: { title: 'Home service', subtitle: 'Helpful service provider.', category: 'Home services', providerName: 'Nour Hassan', socialAccount: 'https://instagram.com/provider', whatsapp: '+201001234567' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Provider', verificationState: 'UNVERIFIED' } } }]);
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'service-id', kind: 'service', payload: { title: 'Arabic calligraphy lessons', subtitle: 'Helpful tutoring service provider.', category: 'Tutoring & education', providerName: 'Nour Hassan', socialAccount: 'https://instagram.com/provider', whatsapp: '+201001234567', subjects: [], otherSubject: 'Arabic calligraphy' }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Provider', verificationState: 'UNVERIFIED' } } }]);
     await f.call({}, 'api/public-submissions', 'GET');
     expect(f.send.mock.calls[0][2].submissions[0].payload.socialAccount).toBe('https://instagram.com/provider');
     expect(f.send.mock.calls[0][2].submissions[0].payload.providerName).toBe('Nour Hassan');
+    expect(f.send.mock.calls[0][2].submissions[0].payload.otherSubject).toBe('Arabic calligraphy');
   });
   it('keeps an older vehicle ad out of the public feed if its owner is unverified', async () => {
     const f = fixture();
@@ -154,6 +155,31 @@ describe('marketplace submission boundaries', () => {
     } });
     expect(f.prisma.submission.create).toHaveBeenCalledOnce();
     expect(f.send).toHaveBeenCalledWith({}, 201, { id: 'submission', status: 'PUBLISHED', published: true });
+  });
+  it('accepts a short custom subject as the only tutoring subject', async () => {
+    const f = fixture();
+    await f.call({ kind: 'service', payload: { ...payload, title: 'Arabic calligraphy lessons', category: 'Tutoring & education', providerName: 'Nour Hassan', whatsapp: '+201001234567', subjects: [], otherSubject: 'Arabic calligraphy', advertiserType: 'individual' } });
+    expect(f.prisma.submission.create.mock.calls[0][0].data.payload).toMatchObject({ subjects: [], otherSubject: 'Arabic calligraphy' });
+  });
+  it('rejects custom subjects over the word limit', async () => {
+    const f = fixture();
+    await expect(f.call({ kind: 'service', payload: { ...payload, category: 'Tutoring & education', providerName: 'Nour Hassan', whatsapp: '+201001234567', otherSubject: 'one two three four five six seven eight nine ten eleven' } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it.each([
+    'Learn with me at https://example.com/profile',
+    'Contact me at tutor@example.com',
+    'Find my profile @nour.tutor',
+    'Instagram: nour.tutor',
+  ])('rejects tutoring descriptions containing links or social accounts: %s', async subtitle => {
+    const f = fixture();
+    await expect(f.call({ kind: 'service', payload: { ...payload, title: 'Math tutoring for students', subtitle, category: 'Tutoring & education', providerName: 'Nour Hassan', whatsapp: '+201001234567' } })).rejects.toMatchObject({ status: 400, message: expect.stringContaining('Community Content Policy violation') });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
+  });
+  it.each(['<script>alert(1)</script>', '<img src=x onerror=alert(1)>', 'javascript:alert(1)'])('rejects markup and script content in service descriptions: %s', async subtitle => {
+    const f = fixture();
+    await expect(f.call({ kind: 'service', payload: { ...payload, category: 'Home services', providerName: 'Nour Hassan', whatsapp: '+201001234567', subtitle } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('allows one structured promotion per month and rejects a second one', async () => {
     const f = fixture();

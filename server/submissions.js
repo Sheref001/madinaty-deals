@@ -5,6 +5,10 @@ import { vehicleResidenceAllowed } from './moderation.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 const riskyText = /(?:guaranteed\s+profit|send\s+otp|password|weapon|firearm| наркот|مخدر|سلاح|احصل على ربح مضمون)/i;
+const descriptionMarkup = /<\s*\/?\s*[a-z!][^>]*>?|\bjavascript\s*:/i;
+const descriptionUrl = /(?:\b(?:https?|ftp):\/\/|\bwww\.)\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/i;
+const descriptionSocialHandle = /(?:^|\s)@[a-z0-9_.-]{2,}|\b(?:instagram|facebook|tiktok|linkedin|youtube|threads|twitter|snapchat)\s*(?:[:/@]\s*)[a-z0-9_.-]{2,}/i;
+const linkPolicyViolation = 'Community Content Policy violation: tutoring descriptions cannot include links, email addresses, or social media handles. Use the social account field instead.';
 
 function publicationStatus(payload) {
   const text = [payload.title, payload.subtitle, payload.description, payload.offer?.discount].filter(value => typeof value === 'string').join(' ');
@@ -34,7 +38,7 @@ function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
     ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
-    : [...common, 'providerName', 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
+    : [...common, 'providerName', 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'otherSubject', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
 }
 
@@ -107,8 +111,11 @@ export function createSubmissions({ prisma, auth }) {
     } else {
       if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
+      const educationalService = ['Tutoring', 'Tutoring & education'].includes(clean.category);
       if (typeof payload.providerName !== 'string' || payload.providerName.trim().length < 2 || payload.providerName.trim().length > 100) throw new RequestError(400, 'Enter a valid provider or business name');
       if (typeof payload.whatsapp !== 'string' || !/^[+\d ()-]{8,30}$/.test(payload.whatsapp)) throw new RequestError(400, 'Invalid WhatsApp number');
+      if (descriptionMarkup.test(clean.subtitle)) throw new RequestError(400, 'HTML and script content are not allowed in service descriptions.');
+      if (educationalService && (descriptionUrl.test(clean.subtitle) || descriptionSocialHandle.test(clean.subtitle))) throw new RequestError(400, linkPolicyViolation);
       Object.assign(clean, { providerName: payload.providerName.trim(), whatsapp: payload.whatsapp, ...(typeof payload.pricing === 'string' && payload.pricing.trim() ? { pricing: payload.pricing.trim().slice(0, 80) } : {}), ...(typeof payload.availability === 'string' && payload.availability.trim() ? { availability: payload.availability.trim().slice(0, 120) } : {}) });
       if (payload.socialAccount !== undefined) {
         if (typeof payload.socialAccount !== 'string' || payload.socialAccount.length > 2048) throw new RequestError(400, 'Enter one valid social account link');
@@ -121,14 +128,22 @@ export function createSubmissions({ prisma, auth }) {
           clean.socialAccount = url.href;
         }
       }
-      if (clean.category === 'Tutoring & education') {
+      if (educationalService) {
         const educationLevel = payload.educationLevel || 'Before university';
         const submittedSubjects = payload.subjects || ['Mathematics'];
         if (!['Before university', 'University'].includes(educationLevel)) throw new RequestError(400, 'Choose an education stage');
         const subjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'];
-        if (!Array.isArray(submittedSubjects) || submittedSubjects.length < 1 || submittedSubjects.length > subjects.length || !submittedSubjects.every(subject => subjects.includes(subject))) throw new RequestError(400, 'Choose at least one subject');
+        if (payload.otherSubject !== undefined) {
+          if (typeof payload.otherSubject !== 'string' || payload.otherSubject.trim().length < 1 || payload.otherSubject.trim().length > 60 || payload.otherSubject.trim().split(/\s+/).length > 10) throw new RequestError(400, 'Enter an other subject in no more than 10 words or 60 characters');
+          clean.otherSubject = payload.otherSubject.trim();
+        }
+        if (!Array.isArray(submittedSubjects) || submittedSubjects.length > subjects.length || !submittedSubjects.every(subject => subjects.includes(subject))) throw new RequestError(400, 'Choose valid subjects');
+        const selectedSubjects = [...new Set(submittedSubjects)];
+        if (!selectedSubjects.length && !clean.otherSubject) throw new RequestError(400, 'Choose at least one subject');
         clean.educationLevel = educationLevel;
-        clean.subjects = [...new Set(submittedSubjects)];
+        clean.subjects = selectedSubjects;
+      } else if (payload.otherSubject !== undefined) {
+        throw new RequestError(400, 'Other subjects are only allowed for tutoring services');
       }
       if (clean.category === 'Home services') {
         const homeServiceType = payload.homeServiceType || 'General maintenance';

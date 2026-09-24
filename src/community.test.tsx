@@ -75,6 +75,21 @@ it('submits a service with area and WhatsApp contact for review', async () => {
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ title: 'Tutoring & education · Mathematics · University', educationLevel: 'University', category: 'Tutoring & education', providerName: 'Nour Hassan', advertiserType: 'individual', whatsapp: '+20 100 000 0000', socialAccount: 'https://instagram.com/nour', zone: 'All zones', serviceArea: 'Madinaty-wide' }), true));
 });
 
+it('allows a short custom tutoring subject and blocks pasted links in the description', () => {
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Tutoring & education' } });
+  fireEvent.click(screen.getByRole('radio', { name: /I am an individual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Add another subject' }));
+  fireEvent.change(screen.getByLabelText(/Describe the subject in 10 words or fewer/), { target: { value: 'Arabic calligraphy' } });
+  const description = screen.getByLabelText('Description') as HTMLTextAreaElement;
+  fireEvent.paste(description, { clipboardData: { getData: () => 'See https://example.com' } });
+  expect(description.value).toBe('');
+  expect(screen.getByRole('alert').textContent).toContain('Community Content Policy violation');
+  fireEvent.change(description, { target: { value: 'Individual lessons in Arabic calligraphy for beginners.' } });
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
 it('offers one structured promotion for every visible service category', () => {
   render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
   const category = screen.getByLabelText('Choose your service category');

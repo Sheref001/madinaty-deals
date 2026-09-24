@@ -83,6 +83,7 @@ export interface Service extends BaseResult {
   availability?: string;
   educationLevel?: EducationLevel;
   subjects?: TutoringSubject[];
+  otherSubject?: string;
   homeServiceType?: HomeServiceType;
   housekeepingType?: HousekeepingType;
   petBusinessType?: PetBusinessType;

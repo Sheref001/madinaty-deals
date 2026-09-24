@@ -35,4 +35,12 @@ describe('owner content controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pause publication' }));
     await waitFor(() => expect(setPublicationPause).toHaveBeenCalledWith('*', true, 'Emergency review'));
   });
+  it('offers the assisted service form to administrators, but not moderators', async () => {
+    const admin = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Add provider service' }));
+    expect(screen.getByLabelText('Choose your service category')).toBeTruthy();
+    admin.unmount();
+    render(<LanguageContext.Provider value="en"><AdminModeration isAdmin={false} canReadReports={false} /></LanguageContext.Provider>);
+    expect(screen.queryByRole('button', { name: 'Add provider service' })).toBeNull();
+  });
 });

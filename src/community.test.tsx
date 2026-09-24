@@ -232,3 +232,23 @@ it('preserves a small business authentication request through preview and submis
   fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
   await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({ advertiserType: 'small_business', businessRequest: 'both', category: 'Health & fitness', verified: false }), false));
 });
+
+it('requires recorded permission before an administrator can submit an individual service on behalf', async () => {
+  const publish = vi.fn();
+  render(<LanguageContext.Provider value="en"><ServiceForm assistedPosting onPublish={publish} /></LanguageContext.Provider>);
+  const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
+  expect(Array.from(category.options).map(option => option.value)).toEqual(['', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders']);
+  expect(screen.queryByRole('radiogroup', { name: 'Who is posting?' })).toBeNull();
+  fireEvent.change(category, { target: { value: 'Housekeeping & cleaning' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Experienced local housekeeper available for weekly cleaning.' } });
+  fireEvent.change(screen.getByLabelText('Provider or business name'), { target: { value: 'Nour Hassan' } });
+  fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
+  expect((screen.getByRole('button', { name: 'Preview service' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('How did the provider agree?'), { target: { value: 'phone' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'I confirm the provider agreed to this public listing and contact number.' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
+  await waitFor(() => expect(submitPost).toHaveBeenCalledWith('service', expect.objectContaining({ providerName: 'Nour Hassan', advertiserType: 'individual', category: 'Housekeeping & cleaning' }), [], { consentMethod: 'phone', consentConfirmed: true }));
+  expect(publish).toHaveBeenCalled();
+});

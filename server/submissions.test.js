@@ -60,6 +60,16 @@ describe('marketplace submission boundaries', () => {
     expect(f.send.mock.calls[0][2].submissions[0].payload.providerName).toBe('Nour Hassan');
     expect(f.send.mock.calls[0][2].submissions[0].payload.otherSubject).toBe('Arabic calligraphy');
   });
+  it('shows an assisted provider rather than the administrator without leaking private consent', async () => {
+    const f = fixture({ role: 'ADMIN', verified: true });
+    f.prisma.submission.findMany.mockResolvedValue([{ id: 'assisted-id', kind: 'service', payload: { title: 'Housekeeping service', subtitle: 'Home cleaning in Madinaty.', category: 'Housekeeping & cleaning', zone: 'B1', providerName: 'Nour Hassan', whatsapp: '+201001234567', assistedPosting: { consentMethod: 'phone', confirmedAt: '2026-09-24T00:00:00Z' } }, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Madinaty Deals Admin', verificationState: 'VERIFIED' } } }]);
+    await f.call({}, 'api/public-submissions', 'GET');
+    const published = f.send.mock.calls[0][2].submissions[0];
+    expect(published.seller).toBe('Nour Hassan');
+    expect(published.verified).toBe(false);
+    expect(published.payload.assistedPosting).toBeUndefined();
+    expect(JSON.stringify(published)).not.toContain('Madinaty Deals Admin');
+  });
   it('keeps an older vehicle ad out of the public feed if its owner is unverified', async () => {
     const f = fixture();
     f.prisma.submission.findMany.mockResolvedValue([{ id: 'old-vehicle', kind: 'listing', payload: vehicle.payload, uploads: [], createdAt: new Date(), user: { profile: { displayName: 'Neighbour', verificationState: 'UNVERIFIED' } } }]);
@@ -116,6 +126,32 @@ describe('marketplace submission boundaries', () => {
     expect(f.prisma.profile.findUnique).not.toHaveBeenCalled();
     expect(f.prisma.submission.create.mock.calls[0][0].data.payload.socialAccount).toBe('https://instagram.com/provider');
     expect(f.prisma.submission.create.mock.calls[0][0].data.payload.providerName).toBe('Nour Hassan');
+  });
+  it.each(['Home services', 'Housekeeping & cleaning', 'Local delivery riders'])('lets an administrator post for a consenting individual in %s', async category => {
+    const f = fixture({ role: 'ADMIN' });
+    await f.call({ kind: 'service', payload: { ...payload, category, providerName: 'Nour Hassan', whatsapp: '+201001234567' }, assistedPosting: { consentMethod: 'phone', consentConfirmed: true } });
+    const created = f.prisma.submission.create.mock.calls[0][0].data;
+    expect(created.userId).toBe('owner');
+    expect(created.payload).toMatchObject({ providerName: 'Nour Hassan', advertiserType: 'individual', assistedPosting: { consentMethod: 'phone' } });
+    expect(created.payload.assistedPosting.confirmedAt).toBeTruthy();
+    expect(f.prisma.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'submission.assisted_created', actorId: 'owner', metadata: { consentMethod: 'phone', category } }) });
+  });
+  it('rejects non-admin assisted posting and ignores a forged private payload marker', async () => {
+    const f = fixture();
+    const service = { ...payload, category: 'Home services', providerName: 'Nour Hassan', whatsapp: '+201001234567', assistedPosting: { consentMethod: 'phone' } };
+    await expect(f.call({ kind: 'service', payload: service, assistedPosting: { consentMethod: 'phone', consentConfirmed: true } })).rejects.toMatchObject({ status: 403 });
+    await f.call({ kind: 'service', payload: service });
+    expect(f.prisma.submission.create.mock.calls[0][0].data.payload.assistedPosting).toBeUndefined();
+  });
+  it('requires provider consent and restricts assisted posting to individual local services', async () => {
+    const f = fixture({ role: 'ADMIN' });
+    const service = { ...payload, category: 'Home services', providerName: 'Nour Hassan', whatsapp: '+201001234567' };
+    await expect(f.call({ kind: 'service', payload: service, assistedPosting: { consentMethod: 'phone', consentConfirmed: false } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: service, assistedPosting: { consentMethod: 'unknown', consentConfirmed: true } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: { ...service, advertiserType: 'small_business' }, assistedPosting: { consentMethod: 'phone', consentConfirmed: true } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'service', payload: { ...service, category: 'Tutoring & education' }, assistedPosting: { consentMethod: 'phone', consentConfirmed: true } })).rejects.toMatchObject({ status: 400 });
+    await expect(f.call({ kind: 'listing', payload, assistedPosting: { consentMethod: 'phone', consentConfirmed: true } })).rejects.toMatchObject({ status: 400 });
+    expect(f.prisma.submission.create).not.toHaveBeenCalled();
   });
   it('requires a valid provider or business name for service submissions', async () => {
     const f = fixture({ role: 'SERVICE_PROVIDER' });

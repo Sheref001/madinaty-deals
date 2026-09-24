@@ -72,10 +72,11 @@ export async function uploadFile(file: File, purpose: 'photo' | 'verification', 
   return result.upload;
 }
 export const submitVerification = (uploadIds: string[]) => request('/verifications', { method: 'POST', body: JSON.stringify({ uploadIds }) });
-export async function submitPost(kind: 'listing' | 'service', payload: unknown, files: File[]) {
+export type AssistedPosting = { consentMethod: 'in_person' | 'phone' | 'message'; consentConfirmed: true };
+export async function submitPost(kind: 'listing' | 'service', payload: unknown, files: File[], assistedPosting?: AssistedPosting) {
   const uploadIds = [];
   for (const file of files) uploadIds.push((await uploadFile(file, 'photo')).id);
-  return request('/submissions', { method: 'POST', body: JSON.stringify({ kind, payload, uploadIds }) });
+  return request('/submissions', { method: 'POST', body: JSON.stringify({ kind, payload, uploadIds, ...(assistedPosting ? { assistedPosting } : {}) }) });
 }
 export const getAdminUsers = (query = '') => request(`/admin/users${query ? `?query=${encodeURIComponent(query)}` : ''}`) as Promise<{ users: AdminUser[] }>;
 export const updateAdminUserRole = (id: string, role: string) => request(`/admin/users/${encodeURIComponent(id)}/role`, { method: 'POST', body: JSON.stringify({ role }) }) as Promise<{ user: AdminUser }>;
@@ -88,7 +89,7 @@ export const reviewAdminVerification = (id: string, status: 'VERIFIED' | 'REJECT
 export interface AdminContentReport { id: string; contentType: string; contentId: string; reason: string; details?: string | null; status: string; createdAt: string; resolvedAt?: string | null; reporter?: { email?: string | null; phone?: string | null } | null; }
 export const getAdminReports = () => request('/admin/reports') as Promise<{ reports: AdminContentReport[] }>;
 export const reviewAdminReport = (id: string, status: 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED', action?: 'HIDE', reason?: string) => request(`/admin/reports/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ status, action, reason }) }) as Promise<{ report: AdminContentReport }>;
-export interface ModeratedContent { id: string; kind: string; status: string; createdAt: string; title: string; description: string; category: string; commercial: boolean; owner: { id: string; name: string; email?: string | null; phone?: string | null; status: string }; uploadIds: string[]; }
+export interface ModeratedContent { id: string; kind: string; status: string; createdAt: string; title: string; description: string; category: string; commercial: boolean; assistedPosting?: boolean; providerName?: string; owner: { id: string; name: string; email?: string | null; phone?: string | null; status: string }; uploadIds: string[]; }
 export interface ContentControl { contentType: string; contentId: string; status: string; reason?: string | null; updatedAt: string; }
 export interface PublicationPause { category: string; reason: string; createdAt: string; }
 export interface OperationAction { id: string; action: string; targetType: string; targetId?: string | null; metadata?: { reason?: string; from?: string; to?: string } | null; createdAt: string; actor: string; }

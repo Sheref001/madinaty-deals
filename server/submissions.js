@@ -49,7 +49,7 @@ export function createSubmissions({ prisma, auth }) {
         prisma.submission.findMany({ where: { status: 'PUBLISHED', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
         prisma.contentControl.findMany({ where: { status: { in: ['HIDDEN', 'REMOVED'] } }, select: { contentType: true, contentId: true } }),
       ]);
-      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.user.profile?.displayName || 'Neighbour', verified: record.user.profile?.verificationState === 'VERIFIED' })) });
+      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.payload?.assistedPosting ? record.payload.providerName : record.user.profile?.displayName || 'Neighbour', verified: !record.payload?.assistedPosting && record.user.profile?.verificationState === 'VERIFIED' })) });
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
@@ -86,6 +86,12 @@ export function createSubmissions({ prisma, auth }) {
     const body = await readJson(request);
     const payload = body.payload;
     if (!['listing', 'service'].includes(body.kind) || !payload || typeof payload !== 'object' || Array.isArray(payload)) throw new RequestError(400, 'Invalid submission');
+    const assistedPosting = body.assistedPosting;
+    if (assistedPosting !== undefined) {
+      if (current.user.role !== 'ADMIN') throw new RequestError(403, 'Administrator access required');
+      if (body.kind !== 'service' || !['Local delivery riders', 'Home services', 'Housekeeping & cleaning'].includes(payload.category) || payload.advertiserType !== 'individual') throw new RequestError(400, 'Assisted posting is only available for individual local service providers');
+      if (!assistedPosting || typeof assistedPosting !== 'object' || Array.isArray(assistedPosting) || assistedPosting.consentConfirmed !== true || !['in_person', 'phone', 'message'].includes(assistedPosting.consentMethod)) throw new RequestError(400, 'Confirm the provider gave permission to publish their details');
+    }
     for (const [key, min, max] of [['title', 5, 120], ['subtitle', 10, 2000], ['category', 2, 80], ['zone', 1, 80]]) {
       if (typeof payload[key] !== 'string' || payload[key].trim().length < min || payload[key].length > max) throw new RequestError(400, `Invalid ${key}`);
     }
@@ -175,6 +181,7 @@ export function createSubmissions({ prisma, auth }) {
       }
     }
     applyAdvertiserPolicy(clean, payload);
+    if (assistedPosting) clean.assistedPosting = { consentMethod: assistedPosting.consentMethod, confirmedAt: new Date().toISOString() };
     const ids = body.uploadIds || [];
     if (!Array.isArray(ids) || ids.length > 6 || !ids.every(uuid) || new Set(ids).size !== ids.length) throw new RequestError(400, 'Invalid photos');
     const rental = body.kind === 'listing' && clean.category === 'Apartment rentals';
@@ -209,7 +216,7 @@ export function createSubmissions({ prisma, auth }) {
       if (photos.length !== ids.length || photos.reduce((sum, item) => sum + item.byteSize, 0) > 20 * 1024 * 1024) throw new RequestError(400, 'Invalid photos');
       const submission = await tx.submission.create({ data: { userId: current.userId, kind: body.kind, payload: submissionPayload, status, ...(rentalMonth ? { rentalMonth } : {}) } });
       await tx.upload.updateMany({ where: { id: { in: ids } }, data: { submissionId: submission.id } });
-      await tx.auditLog.create({ data: { actorId: current.userId, action: 'submission.created', targetType: 'Submission', targetId: submission.id } });
+      await tx.auditLog.create({ data: { actorId: current.userId, action: assistedPosting ? 'submission.assisted_created' : 'submission.created', targetType: 'Submission', targetId: submission.id, ...(assistedPosting ? { metadata: { consentMethod: assistedPosting.consentMethod, category: clean.category } } : {}) } });
       return submission;
     });
     return send(response, 201, { id: result.id, status: result.status, published: result.status === 'PUBLISHED' });

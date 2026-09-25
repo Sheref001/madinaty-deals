@@ -5,9 +5,9 @@ import AccountDashboard from './AccountDashboard';
 import App from './App';
 import { LanguageContext } from './i18n';
 import useSavedItems from './useSavedItems';
-import { changeOwnedListing, getContactActivity, getOwnedListings, getSavedItems, getSession, recordContactOpened, removeAccountItem, saveAccountItem, type Account, type OwnedListing, type PublicSubmission } from './api';
+import { changeOwnedListing, getContactActivity, getOwnedListings, getSavedItems, getSession, recordContactOpened, removeAccountItem, requestCode, saveAccountItem, verifyCode, type Account, type OwnedListing, type PublicSubmission } from './api';
 
-vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), getSavedItems: vi.fn(), saveAccountItem: vi.fn(), removeAccountItem: vi.fn(), getContactActivity: vi.fn(), removeContactActivity: vi.fn(), getOwnedListings: vi.fn(), changeOwnedListing: vi.fn(), recordContactOpened: vi.fn(), signOut: vi.fn(), getPublicConfig: vi.fn().mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [] }), checkContentVisible: vi.fn().mockResolvedValue({ visible: true }) }));
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), getSession: vi.fn(), getSavedItems: vi.fn(), saveAccountItem: vi.fn(), removeAccountItem: vi.fn(), getContactActivity: vi.fn(), removeContactActivity: vi.fn(), getOwnedListings: vi.fn(), changeOwnedListing: vi.fn(), recordContactOpened: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), signOut: vi.fn(), getPublicConfig: vi.fn().mockResolvedValue({ registrationEnabled: true, cognitoEnabled: false }), getPublishedSubmissions: vi.fn().mockResolvedValue({ submissions: [] }), checkContentVisible: vi.fn().mockResolvedValue({ visible: true }) }));
 
 const account: Account = { id: 'owner', name: 'Nour', email: 'nour@example.test', role: 'RESIDENT', residentVerified: false };
 const item: OwnedListing = { id: '11111111-1111-4111-8111-111111111111', kind: 'service', status: 'PUBLISHED', ownerState: 'ACTIVE', version: 1, createdAt: '2026-09-24T00:00:00Z', updatedAt: '2026-09-24T00:00:00Z', assisted: false, feeStatus: null, payload: { title: 'Mathematics lessons', subtitle: 'Individual mathematics lessons for school students.', category: 'Tutoring & education', zone: 'B1', providerName: 'Nour Hassan', whatsapp: '+201000000000', pricing: '200 EGP', availability: 'Evenings', advertiserType: 'individual' } };
@@ -26,10 +26,12 @@ function dashboard(section: 'account' | 'saved' | 'activity' | 'my-listings') {
   return render(<LanguageContext.Provider value="en"><AccountDashboard account={account} section={section} onNavigate={vi.fn()} onPost={vi.fn()} onVerify={vi.fn()} saved={[]} savedReady savedError="" onUnsave={vi.fn()} renderResult={record => <p>{String(record.payload.title)}</p>} /></LanguageContext.Provider>);
 }
 
-it('opens My Account after sign-in and supports buying and selling navigation together', async () => {
+it('opens home after sign-in and lets members navigate to My Account', async () => {
   render(<App />);
   const header = within(screen.getByRole('banner'));
   await header.findByRole('button', { name: 'Sign out' });
+  expect(screen.getByRole('heading', { name: 'Buy, sell and discover in Madinaty' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'My Account' })).toBeNull();
   fireEvent.click(header.getByRole('button', { name: 'My Account' }));
   expect(screen.getByRole('heading', { name: 'My Account' })).toBeTruthy();
   expect(screen.getByText('nour@example.test')).toBeTruthy();
@@ -43,6 +45,33 @@ it('opens My Account after sign-in and supports buying and selling navigation to
   fireEvent.click(header.getByRole('button', { name: 'Sign out' }));
   await waitFor(() => expect(screen.queryByRole('heading', { name: 'My Activity' })).toBeNull());
   expect(screen.queryByText('nour@example.test')).toBeNull();
+});
+
+it('returns to home after a normal email-code sign-in', async () => {
+  vi.mocked(getSession).mockResolvedValue(null);
+  vi.mocked(requestCode).mockResolvedValue({ challengeId: 'challenge' });
+  vi.mocked(verifyCode).mockResolvedValue(account);
+  render(<App />);
+  fireEvent.click(await within(screen.getByRole('banner')).findByRole('button', { name: 'Sign in or create account' }));
+  expect(sessionStorage.getItem('madinaty-signin-destination')).toBe('home');
+  fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Nour' } });
+  fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'nour@example.test' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send sign-in code' }));
+  fireEvent.change(await screen.findByLabelText('Verification code'), { target: { value: '123456' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await within(screen.getByRole('banner')).findByRole('button', { name: 'Sign out' });
+  expect(screen.getByRole('heading', { name: 'Buy, sell and discover in Madinaty' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'My Account' })).toBeNull();
+  expect(sessionStorage.getItem('madinaty-signin-destination')).toBeNull();
+});
+
+it('returns to home after managed sign-in with an older account destination', async () => {
+  sessionStorage.setItem('madinaty-signin-destination', 'account');
+  render(<App />);
+  await within(screen.getByRole('banner')).findByRole('button', { name: 'Sign out' });
+  expect(screen.getByRole('heading', { name: 'Buy, sell and discover in Madinaty' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'My Account' })).toBeNull();
+  expect(sessionStorage.getItem('madinaty-signin-destination')).toBeNull();
 });
 
 it('preserves the posting destination after returning from managed sign-in', async () => {

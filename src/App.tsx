@@ -48,10 +48,11 @@ function rememberSignInDestination(destination?: string) {
   } catch { return; }
 }
 
-function readSignInDestination(): 'account' | 'saved' | 'activity' | 'my-listings' | 'post' | null {
+function readSignInDestination(): 'home' | 'saved' | 'activity' | 'my-listings' | 'post' | null {
   try {
     const value = sessionStorage.getItem('madinaty-signin-destination');
-    return value === 'account' || value === 'saved' || value === 'activity' || value === 'my-listings' || value === 'post' ? value : null;
+    if (value === 'account') return 'home';
+    return value === 'home' || value === 'saved' || value === 'activity' || value === 'my-listings' || value === 'post' ? value : null;
   } catch { return null; }
 }
 
@@ -146,7 +147,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const [account, setAccount] = useState<Account | null>(null);
   const savedState = useSavedItems(account?.id);
   const { favorites } = savedState;
-  const signInDestination = useRef<View | 'post'>('account');
+  const signInDestination = useRef<View | 'post'>('home');
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [cognitoEnabled, setCognitoEnabled] = useState(false);
@@ -167,7 +168,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       const destination = user ? readSignInDestination() : null;
       if (destination) {
         rememberSignInDestination();
-        setView(destination === 'post' ? 'account' : destination);
+        setView(destination === 'post' ? 'home' : destination);
         if (destination === 'post') setModal('post');
       }
     }).catch(() => {}).finally(() => { if (!cancelled) setAuthLoading(false); });
@@ -214,9 +215,10 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     return () => window.clearTimeout(timer);
   }, [t]);
 
-  const openSignIn = (destination: View | 'post' = 'account') => {
-    signInDestination.current = destination;
-    rememberSignInDestination(destination);
+  const openSignIn = (destination: View | 'post' = 'home') => {
+    const landing = destination === 'account' ? 'home' : destination;
+    signInDestination.current = landing;
+    rememberSignInDestination(landing);
     setModal('register');
   };
   const openPost = () => { if (!authLoading) { if (registered) setModal('post'); else openSignIn('post'); } };
@@ -444,7 +446,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
       {maintenanceMode && !registered && <div className="maintenance-banner" role="status"><ShieldCheck size={18} /><span><b>{t('Madinaty Deals is under maintenance')}</b><small>{t('Browsing remains available. Public sign-in and registration are temporarily paused.')}</small></span></div>}
       {toast && <div className="toast" role="status"><CircleCheck size={18} /> {t(toast)}</div>}
       {modal === 'post' && <PostModal onClose={() => setModal(null)} onVerify={() => setModal('verify')} onPublish={publishListing} onPublishService={publishService} onPublishStore={() => { setModal(null); setToast('Your online store is awaiting fee agreement and review'); window.dispatchEvent(new Event('madinaty-feed-refresh')); }} accountId={account?.id ?? ''} residentVerified={residentVerified} rentalPostsThisMonth={rentalPostsThisMonth} />}
-      {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal(signInDestination.current === 'post' ? 'post' : null); setView(signInDestination.current === 'post' ? 'account' : signInDestination.current); rememberSignInDestination(); track('account_signed_in'); }} />}
+      {modal === 'register' && <RegistrationModal signInError={signInError} registrationEnabled={registrationEnabled} cognitoEnabled={cognitoEnabled} onClose={() => setModal(null)} onRegistered={user => { setAccount(user); setSignInError(''); setModal(signInDestination.current === 'post' ? 'post' : null); setView(signInDestination.current === 'post' ? 'home' : signInDestination.current); rememberSignInDestination(); track('account_signed_in'); }} />}
       {modal === 'report' && selectedResult && <ReportModal result={selectedResult} onClose={() => setModal(null)} onSubmit={async (reason, details) => { await submitReport(selectedResult.type, selectedResult.id, reason, details); setModal(null); track('report_submitted', { result_type: selectedResult.type }); setToast('Thanks — our trust team will take a look'); }} />}
       {modal === 'verify' && <ModalShell title="Become a verified resident" eyebrow="A LITTLE MORE TRUST" onClose={() => setModal(null)}><VerificationForm onSkip={() => setModal(null)} onSubmitted={() => { setModal(null); setToast('Your verification request is awaiting review'); }} /></ModalShell>}
     </div>

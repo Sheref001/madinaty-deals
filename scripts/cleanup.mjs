@@ -2,9 +2,11 @@
 import { PrismaClient } from '@prisma/client';
 import { loadConfig } from '../server/config.js';
 import { createLocalStorage } from '../server/local-storage.js';
+import { createPhotoStorage } from '../server/photo-storage.js';
 const config = loadConfig();
 const prisma = new PrismaClient();
-const storage = createLocalStorage(config.uploadDirectory);
+const localStorage = createLocalStorage(config.uploadDirectory);
+const storage = config.photos.s3 ? createPhotoStorage({ bucket: config.photos.bucket, region: config.photos.region, localStorage }) : localStorage;
 try {
   const now = new Date();
   const cutoff = new Date(Date.now() - 86400000);

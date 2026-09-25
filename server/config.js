@@ -14,6 +14,9 @@ export function loadConfig(env = process.env) {
   const cognitoDomainUrl = env.COGNITO_DOMAIN_URL || '';
   const translationEnabled = env.TRANSLATION_ENABLED === 'true';
   const translationRegion = env.TRANSLATION_REGION || env.AWS_REGION || 'eu-north-1';
+  const s3Photos = env.PHOTO_STORAGE === 's3';
+  if (env.PHOTO_STORAGE && !['local', 's3'].includes(env.PHOTO_STORAGE)) throw new Error('PHOTO_STORAGE must be local or s3');
+  if (s3Photos && !env.S3_PHOTO_BUCKET) throw new Error('S3_PHOTO_BUCKET is required when PHOTO_STORAGE=s3');
   if (cognitoEnabled) {
     for (const [key, value] of [['COGNITO_ISSUER_URL', cognitoIssuerUrl], ['COGNITO_CLIENT_ID', cognitoClientId], ['COGNITO_CALLBACK_URL', cognitoCallbackUrl]]) {
       if (!value) throw new Error(`${key} is required when COGNITO_ENABLED=true`);
@@ -55,5 +58,6 @@ export function loadConfig(env = process.env) {
     graph: { tenantId: env.MS_TENANT_ID, clientId: env.MS_CLIENT_ID, tokenFile: env.MS_TOKEN_FILE || '/app/data/mail-auth/token.json' },
     from,
     uploadDirectory: env.UPLOAD_DIRECTORY || '/app/data/uploads',
+    photos: { s3: s3Photos, bucket: env.S3_PHOTO_BUCKET || '', region: env.S3_PHOTO_REGION || env.AWS_REGION || 'eu-north-1' },
   };
 }

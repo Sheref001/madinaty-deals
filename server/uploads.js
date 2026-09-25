@@ -35,11 +35,54 @@ export async function sanitizeFile(bytes, mimeType, purpose) {
 }
 
 const documentTypes = new Set(['NATIONAL_ID', 'MADINATY_ID', 'ELECTRICITY_BILL', 'WATER_BILL', 'GAS_BILL', 'LEASE_OR_OWNERSHIP', 'OTHER']);
+const photoTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']);
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
 export function createUploads({ prisma, config, auth, storage }) {
   let active = 0;
   async function handle(request, response, parts, send) {
     const url = new URL(request.url, config.origin);
+    if (parts[1] === 'uploads' && parts[2] === 'photo-intents' && parts.length === 3 && request.method === 'POST') {
+      if (!storage.s3Photos) throw new RequestError(404, 'Not found');
+      const current = await auth.protect(request);
+      await consumeLimit(prisma, 'upload', current.userId, 30, 3600000);
+      const body = await readJson(request);
+      if (!photoTypes.has(body.mimeType) || !Number.isSafeInteger(body.byteSize) || body.byteSize < 1 || body.byteSize > 5 * 1024 * 1024 || typeof body.fileName !== 'string' || !body.fileName.trim() || body.fileName.length > 160) throw new RequestError(400, 'Invalid photo');
+      const id = randomUUID();
+      const objectKey = `active/${current.userId}/${id}`;
+      const originalFileName = Array.from(body.fileName, character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127 || character === '/' || character === '\\' ? '_' : character).join('');
+      await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${current.userId}))::text`;
+        const total = await tx.upload.aggregate({ where: { userId: current.userId }, _sum: { byteSize: true } });
+        if ((total._sum.byteSize || 0) + body.byteSize > 200 * 1024 * 1024) throw new RequestError(413, 'Your upload storage limit has been reached');
+        await tx.upload.create({ data: { id, userId: current.userId, purpose: 'photo', objectKey, originalFileName, mimeType: body.mimeType, byteSize: body.byteSize, sha256: 'pending' } });
+      });
+      try {
+        const presigned = await storage.presign(objectKey, body.mimeType);
+        return send(response, 201, { upload: { id }, ...presigned });
+      } catch {
+        await prisma.upload.delete({ where: { id } });
+        throw new RequestError(503, 'Photo storage is unavailable. Please try again later.');
+      }
+    }
+    if (parts[1] === 'uploads' && parts.length === 4 && parts[3] === 'complete' && uuid(parts[2]) && request.method === 'POST') {
+      if (!storage.s3Photos) throw new RequestError(404, 'Not found');
+      const current = await auth.protect(request);
+      const upload = await prisma.upload.findUnique({ where: { id: parts[2] } });
+      if (!upload || upload.userId !== current.userId || upload.purpose !== 'photo' || upload.submissionId) throw new RequestError(404, 'Not found');
+      if (upload.status === 'READY') return send(response, 200, { upload: { id: upload.id, originalFileName: upload.originalFileName, mimeType: upload.mimeType, byteSize: upload.byteSize } });
+      let photo;
+      try { photo = await storage.head(upload.objectKey); }
+      catch (error) {
+        if (['NotFound', 'NoSuchKey'].includes(error.name) || error.$metadata?.httpStatusCode === 404) return send(response, 202, { processing: true });
+        throw error;
+      }
+      if (photo.ContentType !== 'image/webp' || !photo.ContentLength || photo.ContentLength > 5 * 1024 * 1024 || !/^[a-f0-9]{64}$/.test(photo.Metadata?.sha256 || '')) throw new RequestError(503, 'Processed photo is invalid');
+      await prisma.$transaction(async tx => {
+        const updated = await tx.upload.updateMany({ where: { id: upload.id, userId: current.userId, status: 'PENDING' }, data: { status: 'READY', mimeType: 'image/webp', byteSize: photo.ContentLength, sha256: photo.Metadata.sha256 } });
+        if (updated.count) await tx.auditLog.create({ data: { actorId: current.userId, action: 'upload.created', targetType: 'Upload', targetId: upload.id } });
+      });
+      return send(response, 200, { upload: { id: upload.id, originalFileName: upload.originalFileName, mimeType: 'image/webp', byteSize: photo.ContentLength } });
+    }
     if (parts[1] === 'public-uploads' && parts.length === 3 && uuid(parts[2]) && request.method === 'GET') {
       const upload = await prisma.upload.findUnique({ where: { id: parts[2] }, select: { mimeType: true, objectKey: true, purpose: true, status: true, submission: { select: { kind: true, status: true, ownerState: true, payload: true, user: { select: { status: true, profile: { select: { verificationState: true } } } } } } } });
       if (!upload || upload.purpose !== 'photo' || upload.status !== 'READY' || upload.submission?.status !== 'PUBLISHED' || upload.submission.user.status !== 'ACTIVE' || !vehicleResidenceAllowed(upload.submission) || !ownerListingActive(upload.submission)) throw new RequestError(404, 'Not found');
@@ -54,6 +97,7 @@ export function createUploads({ prisma, config, auth, storage }) {
       const purpose = url.searchParams.get('purpose');
       const documentType = url.searchParams.get('documentType');
       if (!['photo', 'verification'].includes(purpose) || (purpose === 'verification' && !documentTypes.has(documentType))) throw new RequestError(400, 'Invalid upload purpose');
+      if (purpose === 'photo' && storage.s3Photos) throw new RequestError(400, 'Use direct photo uploads');
       let originalFileName;
       // eslint-disable-next-line no-control-regex
       try { originalFileName = decodeURIComponent(String(request.headers['x-file-name'] || 'upload')).replace(/[\x00-\x1f\x7f/\\]/g, '_').slice(0, 160); } catch { throw new RequestError(400, 'Invalid file name'); }
@@ -128,5 +172,5 @@ export function createUploads({ prisma, config, auth, storage }) {
     }
     throw new RequestError(404, 'Not found');
   }
-  return { handle };
+  return { handle, storage };
 }

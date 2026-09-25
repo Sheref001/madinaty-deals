@@ -68,16 +68,16 @@ Dockerfile              Production build/runtime image
 
 - Application-generated email uses Nodemailer SMTP by default, or an optional Microsoft Graph delegated `Mail.Send` implementation. Graph refresh tokens are read from and rotated in a private server-side token file. The selected provider and credentials are runtime configuration, not committed values.
 - There is no direct Amazon SES SDK integration in the application. Cognito confirmation/password-reset delivery through SES is described as external Cognito configuration in the root deployment notes; its live SES identity, region, and production-access state are not verifiable from the repository. SMTP could be configured to an SES SMTP endpoint, but that is not established by the code.
-- AWS SDK v3 `@aws-sdk/client-translate` is used for optional on-demand translation. It is disabled by default, uses `TRANSLATION_REGION`/`AWS_REGION`, and caches successful translations in PostgreSQL. No S3 client, S3 presigning flow, CloudFront integration, or S3 image worker is implemented.
+- AWS SDK v3 `@aws-sdk/client-translate` is used for optional on-demand translation. It is disabled by default, uses `TRANSLATION_REGION`/`AWS_REGION`, and caches successful translations in PostgreSQL. An opt-in S3 photo path and Lambda-compatible `sharp` worker are implemented; CloudFront delivery is not yet integrated.
 - AWS credentials, if needed by the runtime, are provided outside source through the AWS SDK credential chain/environment. Compose forwards optional AWS credential environment variables; no AWS keys are present in frontend code.
 
 ## Uploads and images
 
-- Uploads are sent through the authenticated Node API as request bodies; they do not upload directly to S3. The server reads each file into memory before validation/processing.
+- By default uploads are sent through the authenticated Node API as request bodies and processed on the server. With `PHOTO_STORAGE=s3`, listing photos instead use a five-minute presigned S3 POST to `raw/`. The POST policy bounds object size to 5 MiB; the browser does not send photo bytes through the Node API. Verification documents still use the local server path.
 - Photos are limited to 5 MiB; verification documents to 10 MiB. Photo input types are JPEG, PNG, WebP, AVIF, and GIF; verification documents may also be PDF. Generated storage keys use the purpose, user ID, and server-generated UUID; user-supplied filenames are sanitized and are not used as storage paths.
-- `sharp` validates/decodes supported image data, rotates and resizes it, then emits WebP (up to 2000 px for photos and 4000 px for verification images). PDFs receive basic signature/EOF checks. No antivirus/ClamAV scanner is configured in the tracked application.
-- Bytes are stored on local disk through `server/local-storage.js`, normally under `/app/data/uploads` in the persistent `madinaty-uploads` Docker volume. The database records object key, MIME type, size, hash, ownership, purpose, and association/status.
-- Verification uploads remain private and are served only to their owner or an authorized reviewer. Published submission photos use `/api/public-uploads/:id`; the API checks publication, account, and moderation visibility before returning the file, and marks it `private, no-store`. This is not a public S3 bucket/CDN design.
+- `sharp` validates/decodes supported image data, rotates and resizes it, then emits WebP (up to 2000 px for photos and 4000 px for verification images). In S3 mode a separate S3-event Lambda worker does this for photos at quality 80, writes to private `active/`, and deletes `raw/`; the client polls the authenticated API until processing completes. PDFs receive basic signature/EOF checks. No antivirus/ClamAV scanner is configured in the tracked application.
+- Local mode stores bytes through `server/local-storage.js`, normally under `/app/data/uploads` in the persistent `madinaty-uploads` Docker volume. In S3 mode newly uploaded listing photos have `active/` object keys in the private configured bucket, while older local `photo/` objects and private verification files remain on disk. The database records object key, MIME type, size, hash, ownership, purpose, and association/status. This preserves existing production data rather than silently deleting it.
+- Verification uploads remain private and are served only to their owner or an authorized reviewer. Published submission photos use `/api/public-uploads/:id`; the API checks publication, account, and moderation visibility before returning either local or S3 bytes and marks it `private, no-store`. On owner close/sold/remove, new S3 photos are copied to `closed/` and deleted from `active/`. An archive failure is logged for operator retry. CloudFront/OAC delivery is not implemented because this authorization gate must not be bypassed by durable public CDN URLs.
 - `scripts/cleanup.mjs` removes expired auth records and up to 100 unsubmitted uploads older than 24 hours per run. A daily external scheduler is recommended by root `DEPLOYMENT.md`; no scheduler is configured in this repository. Submitted verification documents have no automatic retention deletion.
 
 ## Runtime configuration
@@ -89,6 +89,7 @@ The actual production `.env` is not checked in. Names below are verified from `s
 - Cognito: `COGNITO_ENABLED`, `COGNITO_ISSUER_URL`, `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, `COGNITO_CALLBACK_URL`, `COGNITO_DOMAIN_URL`.
 - Mail: `MAIL_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_TOKEN_FILE`.
 - AWS translation: `TRANSLATION_ENABLED`, `TRANSLATION_REGION`, `AWS_REGION`; Compose also passes optional `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
+- S3 photos: `PHOTO_STORAGE` (`local` by default, `s3` opt-in), `S3_PHOTO_BUCKET`, `S3_PHOTO_REGION`. The Lambda worker needs `S3_PHOTO_BUCKET` and region configuration. See `docs/S3_PHOTOS.md` for setup and limitations.
 - Frontend build: `VITE_API_BASE_URL`. It is public client configuration, not a secret.
 
 The application validates HTTPS `APP_ORIGIN` outside local mode and requires `AUTH_SECRET` of at least 32 characters. `server/index.js` does not load `.env` itself; Docker Compose injects it. `.env.example` is a template, not evidence of the deployed values.
@@ -110,7 +111,7 @@ The application validates HTTPS `APP_ORIGIN` outside local mode and requires `AU
 
 ## Not currently implemented or not verifiable
 
-- S3 storage, presigned browser uploads, CloudFront image delivery, and an asynchronous image-processing queue/worker are not implemented.
+- S3 photo storage, presigned browser uploads, and a Lambda-compatible S3-event image worker are implemented as opt-in code; the AWS bucket, event notification, IAM roles, and deployed Lambda are not verified or provisioned by this repository. CloudFront/OAC image delivery and an asynchronous queue/dead-letter setup are not implemented.
 - A direct SES API integration, payment gateway, production analytics/monitoring provider, and in-repository reverse-proxy configuration are not present.
 - Production environment values, live AWS/Cognito/SES configuration, production PostgreSQL hosting/backups, external scheduler state, DNS/TLS configuration, GitHub branch protection, and current deployed commit cannot be verified from checked-in files.
 - Database models for business/review/payment/subscription features should not be read as proof that end-user workflows or external services for those features are live.

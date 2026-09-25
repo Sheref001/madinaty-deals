@@ -49,6 +49,9 @@ services:
       MS_CLIENT_ID: ${MS_CLIENT_ID:-}
       MS_TOKEN_FILE: ${MS_TOKEN_FILE:-/app/data/mail-auth/token.json}
       UPLOAD_DIRECTORY: /app/data/uploads
+      PHOTO_STORAGE: ${PHOTO_STORAGE:-local}
+      S3_PHOTO_BUCKET: ${S3_PHOTO_BUCKET:-}
+      S3_PHOTO_REGION: ${S3_PHOTO_REGION:-eu-north-1}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       RUN_SEED: ${RUN_SEED:-false}
     ports:

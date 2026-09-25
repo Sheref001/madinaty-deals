@@ -4,6 +4,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { sanitizeFile, createUploads } from './uploads.js';
 
 describe('upload boundaries', () => {
+  it('rejects oversized S3 photo intents before creating an upload record', async () => {
+    const create = vi.fn();
+    const uploads = createUploads({ config: { origin: 'https://madinatydeals.com' }, storage: { s3Photos: true }, auth: { protect: async () => ({ userId: 'owner' }) }, prisma: { $queryRaw: async () => [{ count: 1 }], upload: { create } } });
+    const body = Buffer.from(JSON.stringify({ mimeType: 'image/jpeg', byteSize: 6 * 1024 * 1024, fileName: 'photo.jpg' }));
+    const request = { method: 'POST', url: '/api/uploads/photo-intents', iterator: async function* () { yield body; } };
+    await expect(uploads.handle(request, {}, ['api', 'uploads', 'photo-intents'], vi.fn())).rejects.toMatchObject({ status: 400 });
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('does not complete a photo without valid worker metadata', async () => {
+    const id = '12345678-1234-1234-1234-123456789012';
+    const storage = { s3Photos: true, head: vi.fn().mockResolvedValue({ ContentType: 'image/webp', ContentLength: 100, Metadata: {} }) };
+    const prisma = { upload: { findUnique: async () => ({ id, userId: 'owner', purpose: 'photo', status: 'PENDING', objectKey: 'active/owner/photo' }) } };
+    const uploads = createUploads({ config: { origin: 'https://madinatydeals.com' }, storage, auth: { protect: async () => ({ userId: 'owner' }) }, prisma });
+    await expect(uploads.handle({ method: 'POST', url: `/api/uploads/${id}/complete` }, {}, ['api', 'uploads', id, 'complete'], vi.fn())).rejects.toMatchObject({ status: 503 });
+  });
   it('re-encodes photos, strips metadata and rejects mismatched MIME types', async () => {
     const original = await sharp({ create: { width: 10, height: 10, channels: 3, background: 'red' } }).withExif({ IFD0: { Artist: 'private-name' } }).jpeg().toBuffer();
     const clean = await sanitizeFile(original, 'image/jpeg', 'photo');

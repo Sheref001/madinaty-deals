@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest';
-import { submitPost, uploadFile } from './api';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { getPublicConfig, submitPost, uploadFile } from './api';
 
+beforeEach(async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ photoStorage: 'local' })));
+  await getPublicConfig();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 it('explains an HTML 413 from Nginx and stops before submitting the listing', async () => {
@@ -40,4 +44,23 @@ it('sends the file bytes, then attaches the returned upload ID to the submission
   expect(fetch.mock.calls[0][1].body).toBe(photo);
   expect(fetch.mock.calls[0][1].headers['x-file-name']).toBe(encodeURIComponent(photo.name));
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ kind: 'listing', payload, uploadIds: ['photo-id'] });
+});
+
+it('uploads directly to S3 and waits for WebP processing before submitting', async () => {
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json({ photoStorage: 's3' }))
+    .mockResolvedValueOnce(Response.json({ upload: { id: 'photo-id' }, url: 'https://example-bucket.s3.amazonaws.com', fields: { key: 'raw/test', 'Content-Type': 'image/jpeg' } }, { status: 201 }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(Response.json({ upload: { id: 'photo-id', mimeType: 'image/webp', byteSize: 120 } }))
+    .mockResolvedValueOnce(Response.json({ id: 'submission-id', status: 'PUBLISHED' }, { status: 201 }))
+    .mockResolvedValueOnce(Response.json({ photoStorage: 'local' }));
+  vi.stubGlobal('fetch', fetch);
+  await getPublicConfig();
+  const photo = new File(['bytes'], 'test.jpg', { type: 'image/jpeg' });
+  expect(await submitPost('listing', { title: 'Table' }, [photo])).toMatchObject({ id: 'submission-id' });
+  expect(fetch.mock.calls[2][0]).toBe('https://example-bucket.s3.amazonaws.com');
+  expect(fetch.mock.calls[2][1].body).toBeInstanceOf(FormData);
+  expect(fetch.mock.calls[2][1].body.get('file')).toBe(photo);
+  expect(fetch.mock.calls[3][0]).toBe('/api/uploads/photo-id/complete');
+  await getPublicConfig();
 });

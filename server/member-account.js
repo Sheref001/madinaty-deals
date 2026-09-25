@@ -1,4 +1,5 @@
 import { URL } from 'node:url';
+import console from 'node:console';
 import { RequestError, readJson } from './request.js';
 import { consumeLimit } from './auth.js';
 import { isOnlineStoreZone, publicPayload, validateServiceDescription } from './submissions.js';
@@ -41,7 +42,7 @@ function editablePayload(item, changes) {
   return payload;
 }
 
-export function createMemberAccount({ prisma, auth }) {
+export function createMemberAccount({ prisma, auth, storage }) {
   async function handle(request, response, parts, send) {
     const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);
     const section = parts[2];
@@ -116,6 +117,15 @@ export function createMemberAccount({ prisma, auth }) {
       await tx.auditLog.create({ data: { actorId: current.userId, action: `submission.owner_${body.action}`, targetType: 'Submission', targetId: id, metadata: { previousVersion: item.version, from: item.ownerState, to: data.ownerState || item.ownerState, ...(data.payload ? { before: publicPayload(item.kind, item.payload), after: publicPayload(item.kind, data.payload) } : {}) } } });
       return ownerRecord(await tx.submission.findFirst({ where: { id, userId: current.userId }, select: ownedSelect }));
     });
+    if (storage?.archiveClosedAdPhoto && ['close', 'sold', 'remove'].includes(body.action)) {
+      const photos = await prisma.upload.findMany({ where: { submissionId: id, purpose: 'photo', status: 'READY', objectKey: { startsWith: 'active/' } }, select: { id: true, objectKey: true } });
+      for (const photo of photos) {
+        try {
+          const destination = await storage.archiveClosedAdPhoto(photo.objectKey);
+          if (destination) await prisma.upload.updateMany({ where: { id: photo.id, objectKey: photo.objectKey }, data: { objectKey: destination } });
+        } catch (error) { console.error('Failed to archive closed ad photo', { submissionId: id, uploadId: photo.id, reason: error.name }); }
+      }
+    }
     return send(response, 200, { listing: updated });
   }
   return { handle };

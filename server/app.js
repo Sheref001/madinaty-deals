@@ -11,7 +11,7 @@ import { createMemberAccount } from './member-account.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = join(root, 'dist'), auth, cognito, uploads, submissions, admin, reports, operations, translator, config = {} }) {
-  const memberAccount = auth ? createMemberAccount({ prisma, auth }) : null;
+  const memberAccount = auth ? createMemberAccount({ prisma, auth, storage: uploads?.storage }) : null;
   const commentLimit = createRateLimiter({ limit: 1, windowMs: 30000 });
   const translationLimit = createRateLimiter({ limit: 20, windowMs: 60000 });
   const requestLimit = createRateLimiter({ limit: 60, windowMs: 60000 });
@@ -41,7 +41,7 @@ export function createRequestHandler({ prisma, corsOrigin = '', distDirectory = 
     if (parts.length === 2 && parts[1] === 'health' && request.method === 'GET') return send(response, 200, { ok: true });
     if (parts.length === 2 && parts[1] === 'config' && request.method === 'GET') {
       const registrationEnabled = await publicRegistrationEnabled(prisma, config.registrationEnabled === true);
-      return send(response, 200, { registrationEnabled, maintenanceMode: !registrationEnabled, cognitoEnabled: config.cognitoEnabled === true, translationEnabled: config.translation?.enabled === true });
+      return send(response, 200, { registrationEnabled, maintenanceMode: !registrationEnabled, cognitoEnabled: config.cognitoEnabled === true, translationEnabled: config.translation?.enabled === true, photoStorage: config.photos?.s3 ? 's3' : 'local' });
     }
     if (parts[1] === 'auth' && parts[2] === 'cognito' && cognito) return cognito.handle(request, response, parts, send);
     if (parts[1] === 'auth' && auth) return auth.handle(request, response, parts, send);

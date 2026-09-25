@@ -44,7 +44,12 @@ export interface AdminUser extends Account { status: string; createdAt: string; 
 export type ModeratorPermission = 'DASHBOARD' | 'REPORTS' | 'RESIDENT_VERIFICATIONS' | 'CONTENT_REVIEW';
 export interface ModeratorAssignment { id: string; name: string; email?: string | null; phone?: string | null; permissions: ModeratorPermission[]; status: string; createdAt: string; matchedUser?: { id: string; name: string; email?: string | null; phone?: string | null } | null; }
 export interface AdminVerificationRequest { id: string; userId: string; name: string; email?: string | null; phone?: string | null; submittedAt: string; uploads: { id: string; documentType: string }[]; }
-export const getPublicConfig = () => request('/config') as Promise<{ registrationEnabled: boolean; maintenanceMode?: boolean; cognitoEnabled: boolean; translationEnabled?: boolean }>;
+let photoStorage: 'local' | 's3' | null = null;
+export async function getPublicConfig(): Promise<{ registrationEnabled: boolean; maintenanceMode?: boolean; cognitoEnabled: boolean; translationEnabled?: boolean; photoStorage?: 'local' | 's3' }> {
+  const config = await request('/config');
+  photoStorage = config.photoStorage === 's3' ? 's3' : 'local';
+  return config;
+}
 export interface PublicSubmission { id: string; kind: 'listing' | 'service' | 'store'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
 export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }>;
 export interface SavedItem { id: string; submission: PublicSubmission | null; }
@@ -79,6 +84,21 @@ export async function signOut(useCognito = false) {
 }
 export interface UploadedFile { id: string; originalFileName: string; mimeType: string; byteSize: number; }
 export async function uploadFile(file: File, purpose: 'photo' | 'verification', documentType?: string): Promise<UploadedFile> {
+  if (purpose === 'photo' && photoStorage === null) await getPublicConfig();
+  if (purpose === 'photo' && photoStorage === 's3') {
+    const { upload, url, fields } = await request('/uploads/photo-intents', { method: 'POST', body: JSON.stringify({ fileName: file.name, mimeType: file.type, byteSize: file.size }) }) as { upload: { id: string }; url: string; fields: Record<string, string> };
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    form.append('file', file);
+    const response = await fetch(url, { method: 'POST', body: form });
+    if (!response.ok) throw new Error('Photo upload failed. Please try again.');
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const result = await request(`/uploads/${encodeURIComponent(upload.id)}/complete`, { method: 'POST', body: '{}' }) as { upload?: UploadedFile; processing?: boolean };
+      if (result.upload) return result.upload;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error('Photo processing is taking longer than expected. Please try again.');
+  }
   const query = new URLSearchParams({ purpose, ...(documentType ? { documentType } : {}) });
   const result = await request(`/uploads?${query}`, { method: 'POST', headers: { 'content-type': file.type, 'x-file-name': encodeURIComponent(file.name) }, body: file });
   return result.upload;

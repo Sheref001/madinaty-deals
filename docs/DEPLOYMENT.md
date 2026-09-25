@@ -2,6 +2,8 @@
 
 This document defines how Madinaty Deals changes move from local development to Git and eventually to production.
 
+The optional S3 photo path is off by default. Provision and test the private bucket and Lambda worker per `docs/S3_PHOTOS.md` before setting `PHOTO_STORAGE=s3` in the production environment. A Git push or normal app rebuild does not create these AWS resources. Keep the existing upload volume because private verification evidence and any older local photos still use it.
+
 Deployment safety, data integrity, and rollback capability take priority over speed.
 
 ## 1. Core Deployment Principle

@@ -21,6 +21,7 @@ export interface BrowseFilters {
   fitnessProviderType?: string;
   petBusinessType?: string;
   onlineStoreCategory?: string;
+  kidsSection?: string;
 }
 
 export function matchesQuery(result: SearchResult, query: string): boolean {
@@ -35,7 +36,8 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const zoneMatches = filters.zone === 'All zones' || result.zone === filters.zone || result.zone === 'All zones';
     const verifiedMatches = !filters.verifiedOnly || result.verified === true || ('sellerVerified' in result && result.sellerVerified === true);
     const audienceMatches = !filters.advertiserType || (result.advertiserType || (result.type === 'business' ? 'small_business' : 'individual')) === filters.advertiserType;
-    const categoryMatches = !filters.category || result.category === filters.category || (filters.category === 'Cars & motorcycles' && result.type === 'service' && ['Moving', 'Private transportation'].includes(result.category));
+    const categoryMatches = !filters.category || result.category === filters.category || (filters.category === 'Cars & motorcycles' && result.type === 'service' && ['Moving', 'Private transportation'].includes(result.category)) || (filters.category === 'Kids & family' && result.type === 'service' && result.category === 'Nurseries');
+    const kidsSectionMatches = !filters.kidsSection || (filters.kidsSection === 'Nurseries' ? result.type === 'service' && result.category === 'Nurseries' : result.type === 'listing' && result.category === 'Kids & family' && (result.kidsItemType || 'Other kids items') === filters.kidsSection);
     const conditionMatches = !filters.condition || (result.type === 'listing' && result.condition === filters.condition);
     const furnishingMatches = !filters.furnishing || (result.type === 'listing' && result.furnishing === filters.furnishing);
     const vehicleTypeMatches = !filters.vehicleType || (result.type === 'listing' && result.category === 'Cars & motorcycles' && result.vehicleType === filters.vehicleType) || (result.type === 'service' && ((filters.vehicleType === 'Moving furniture' && result.category === 'Moving') || (filters.vehicleType === 'Private transportation' && result.category === 'Private transportation')));
@@ -49,7 +51,7 @@ export function filterResults(results: SearchResult[], filters: BrowseFilters): 
     const fitnessProviderTypeMatches = !filters.fitnessProviderType || (result.type === 'business' && result.fitnessProviderType === filters.fitnessProviderType);
     const petBusinessTypeMatches = !filters.petBusinessType || ((result.type === 'business' || result.type === 'service') && result.petBusinessType === filters.petBusinessType);
     const onlineStoreMatches = !filters.onlineStoreCategory || (result.type === 'business' && result.onlineStoreCategory === filters.onlineStoreCategory);
-    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && conditionMatches && furnishingMatches && vehicleTypeMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && onlineStoreMatches && matchesQuery(result, filters.query);
+    return audienceMatches && zoneMatches && verifiedMatches && categoryMatches && kidsSectionMatches && conditionMatches && furnishingMatches && vehicleTypeMatches && priceMatches && educationLevelMatches && subjectMatches && groceryActivityMatches && homeServiceTypeMatches && housekeepingTypeMatches && fitnessProviderTypeMatches && petBusinessTypeMatches && onlineStoreMatches && matchesQuery(result, filters.query);
   });
 
   return [...filtered].sort((a, b) => {

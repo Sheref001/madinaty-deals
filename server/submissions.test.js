@@ -31,6 +31,22 @@ const review = `api/admin/verifications/${verificationId}/review`;
 afterEach(() => vi.useRealTimers());
 
 describe('marketplace submission boundaries', () => {
+  it('holds nurseries for business review and rejects individual nursery posts', async () => {
+    const f = fixture();
+    const nursery = { title: 'Little Stars Nursery', subtitle: 'Early years childcare in Madinaty.', category: 'Nurseries', zone: 'B1', providerName: 'Little Stars Nursery', whatsapp: '+201001234567', advertiserType: 'small_business', feeStatus: 'PAID' };
+    await f.call({ kind: 'service', payload: nursery });
+    expect(f.prisma.submission.create.mock.calls[0][0].data).toMatchObject({ status: 'PENDING_REVIEW', payload: { advertiserType: 'small_business', feeStatus: 'AWAITING_AGREEMENT' } });
+    await expect(f.call({ kind: 'service', payload: { ...nursery, advertiserType: 'individual' } })).rejects.toMatchObject({ status: 400 });
+  });
+  it('validates kids item sections and assigns older posts to other items', async () => {
+    const f = fixture();
+    const kids = { ...payload, category: 'Kids & family' };
+    await f.call({ kind: 'listing', payload: { ...kids, kidsItemType: 'Baby gear' } });
+    expect(f.prisma.submission.create.mock.calls[0][0].data.payload.kidsItemType).toBe('Baby gear');
+    await f.call({ kind: 'listing', payload: kids });
+    expect(f.prisma.submission.create.mock.calls[1][0].data.payload.kidsItemType).toBe('Other kids items');
+    await expect(f.call({ kind: 'listing', payload: { ...kids, kidsItemType: 'Nurseries' } })).rejects.toMatchObject({ status: 400 });
+  });
   it('holds a local online store for commercial review without trusting client fee claims', async () => {
     const f = fixture();
     await f.call({ kind: 'store', payload: { ...storePayload, feeStatus: 'PAID' } });

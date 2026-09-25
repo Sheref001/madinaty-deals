@@ -1,5 +1,17 @@
 // English keys stay stable for the existing English interface and stored taxonomy.
 export const arabic: Record<string, string> = {
+  'Nurseries': 'الحضانات',
+  'Baby gear': 'مستلزمات الأطفال',
+  'Clothing & shoes': 'ملابس وأحذية الأطفال',
+  'Toys & games': 'ألعاب الأطفال',
+  'Books & learning': 'كتب وتعليم الأطفال',
+  'Other kids items': 'مستلزمات أطفال أخرى',
+  'Kids item section': 'قسم مستلزمات الأطفال',
+  'Choose a section': 'اختر قسمًا',
+  'Kids & family sections': 'أقسام الأطفال والأسرة',
+  'All kids & family': 'جميع أقسام الأطفال والأسرة',
+  'Find nurseries and browse useful items for children and families.': 'اكتشف الحضانات وتصفح مستلزمات الأطفال والأسرة.',
+  'Nursery listings are reviewed before publication. Parents should confirm licensing, staff, and safety directly.': 'تُراجع إعلانات الحضانات قبل النشر. على أولياء الأمور التأكد مباشرةً من الترخيص والموظفين وإجراءات السلامة.',
   'Online Finds': 'متاجر أونلاين',
   'Beauty & personal care': 'الجمال والعناية الشخصية',
   'Fashion & accessories': 'الأزياء والإكسسوارات',

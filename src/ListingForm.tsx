@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { categories, formatPrice, zones } from './data';
 import { useTranslation } from './i18n';
-import { groceryActivities, listingConditionOptions, vehicleTypes, type GroceryActivity, type Listing, type ListingCondition, type RentalFurnishing, type VehicleType } from './types';
+import { groceryActivities, kidsItemTypes, listingConditionOptions, vehicleTypes, type GroceryActivity, type KidsItemType, type Listing, type ListingCondition, type RentalFurnishing, type VehicleType } from './types';
 import MediaUpload from './MediaUpload';
 import { submitPost } from './api';
 import PostingAudience from './PostingAudience';
@@ -11,7 +11,7 @@ import { businessOnlyCategories, individualOnlyCategories } from './categoryPoli
 import type { AdvertiserType, BusinessRequest } from './types';
 
 const listingCategories = categories.filter(item => ['sofa', 'monitor', 'baby', 'car-front', 'building', 'shopping-basket'].includes(item.icon));
-type ListingDraft = { savedAt: number; category: string; title: string; description: string; price: string; zone: string; condition: ListingCondition; furnishing: RentalFurnishing; vehicleType: VehicleType; groceryActivity: GroceryActivity; advertiserType: AdvertiserType | ''; businessRequest: BusinessRequest };
+type ListingDraft = { savedAt: number; category: string; title: string; description: string; price: string; zone: string; condition: ListingCondition; furnishing: RentalFurnishing; vehicleType: VehicleType; groceryActivity: GroceryActivity; kidsItemType?: KidsItemType; advertiserType: AdvertiserType | ''; businessRequest: BusinessRequest };
 const draftKey = (accountId: string) => `madinaty-listing-draft:${accountId || 'local'}`;
 function readDraft(accountId: string): ListingDraft | null {
   try {
@@ -33,6 +33,7 @@ export default function ListingForm({ onPublish, onVerify, accountId = '', resid
   const [furnishing, setFurnishing] = useState<RentalFurnishing>(draft?.furnishing || 'Unfurnished');
   const [vehicleType, setVehicleType] = useState<VehicleType>(draft?.vehicleType || 'Cars');
   const [groceryActivity, setGroceryActivity] = useState<GroceryActivity>(draft?.groceryActivity || 'Grocery store');
+  const [kidsItemType, setKidsItemType] = useState<KidsItemType | ''>(draft?.kidsItemType || '');
   const [advertiserType, setAdvertiserType] = useState<AdvertiserType | ''>(draft?.advertiserType || '');
   const [businessRequest, setBusinessRequest] = useState<BusinessRequest>(draft?.businessRequest || 'posting');
   const [draftSaved, setDraftSaved] = useState(Boolean(draft));
@@ -45,17 +46,17 @@ export default function ListingForm({ onPublish, onVerify, accountId = '', resid
   const effectiveAdvertiserType: AdvertiserType | '' = businessOnlyCategories.includes(category) ? 'small_business' : individualOnlyCategories.includes(category) ? 'individual' : advertiserType;
   const setupValid = Boolean(category && effectiveAdvertiserType && !needsVerification);
   const conditionOptions = listingConditionOptions(category);
-  const valid = title.trim().length >= 5 && description.trim().length >= 10 && Number.isFinite(Number(price)) && Number(price) > 0;
+  const valid = title.trim().length >= 5 && description.trim().length >= 10 && Number.isFinite(Number(price)) && Number(price) > 0 && (category !== 'Kids & family' || Boolean(kidsItemType));
   function saveDraft() {
     try {
-      localStorage.setItem(draftKey(accountId), JSON.stringify({ savedAt: Date.now(), category, title, description, price, zone, condition, furnishing, vehicleType, groceryActivity, advertiserType, businessRequest } satisfies ListingDraft));
+      localStorage.setItem(draftKey(accountId), JSON.stringify({ savedAt: Date.now(), category, title, description, price, zone, condition, furnishing, vehicleType, groceryActivity, kidsItemType: kidsItemType || undefined, advertiserType, businessRequest } satisfies ListingDraft));
       setDraftSaved(true);
     } catch { setError(t('Could not save this draft on this browser.')); }
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!setupValid || !valid || busy || stage !== 'preview') return;
-    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(isVehicle ? { vehicleType } : {}), ...(category === 'Groceries' ? { groceryActivity } : {}), advertiserType: effectiveAdvertiserType as AdvertiserType, ...(effectiveAdvertiserType === 'small_business' && !businessOnlyCategories.includes(category) ? { businessRequest } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
+    const payload: Listing = { id: crypto.randomUUID(), type: 'listing', title: title.trim(), subtitle: description.trim(), category, ...(isApartmentRental ? { furnishing } : {}), ...(isVehicle ? { vehicleType } : {}), ...(category === 'Groceries' ? { groceryActivity } : {}), ...(category === 'Kids & family' && kidsItemType ? { kidsItemType } : {}), advertiserType: effectiveAdvertiserType as AdvertiserType, ...(effectiveAdvertiserType === 'small_business' && !businessOnlyCategories.includes(category) ? { businessRequest } : {}), price: Number(price), condition, seller: 'Sheref H.', sellerVerified: false, zone, createdAt: 'Just now', image: 'new', accent: 'lime', status: 'active' };
     setBusy(true); setError('');
     try { const result = await submitPost('listing', payload, photos); localStorage.removeItem(draftKey(accountId)); onPublish(payload, result.published === true); }
     catch (cause) { setError(t(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')); }
@@ -78,11 +79,12 @@ export default function ListingForm({ onPublish, onVerify, accountId = '', resid
       <span className="eyebrow">{t('Listing preview')}</span>
       <h3 dir="auto">{title}</h3><p dir="auto">{description}</p>
       <strong>{t(formatPrice(Number(price)))}</strong>
-      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd><dt>{t('Posting as')}</dt><dd>{t(effectiveAdvertiserType === 'small_business' ? 'Business' : 'Individual')}</dd>{isVehicle && <><dt>{t('Vehicle type')}</dt><dd>{t(vehicleType)}</dd></>}{isApartmentRental && <><dt>{t('Furnishing')}</dt><dd>{t(furnishing)}</dd></>}{category === 'Groceries' && <><dt>{t('Business type')}</dt><dd>{t(groceryActivity)}</dd></>}{!isApartmentRental && category !== 'Groceries' && <><dt>{t('Condition')}</dt><dd>{t(condition)}</dd></>}<dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
+      <dl><dt>{t('Category')}</dt><dd>{t(category)}</dd><dt>{t('Posting as')}</dt><dd>{t(effectiveAdvertiserType === 'small_business' ? 'Business' : 'Individual')}</dd>{category === 'Kids & family' && <><dt>{t('Kids item section')}</dt><dd>{t(kidsItemType)}</dd></>}{isVehicle && <><dt>{t('Vehicle type')}</dt><dd>{t(vehicleType)}</dd></>}{isApartmentRental && <><dt>{t('Furnishing')}</dt><dd>{t(furnishing)}</dd></>}{category === 'Groceries' && <><dt>{t('Business type')}</dt><dd>{t(groceryActivity)}</dd></>}{!isApartmentRental && category !== 'Groceries' && <><dt>{t('Condition')}</dt><dd>{t(condition)}</dd></>}<dt>{t('Broad zone')}</dt><dd>{t(zone)}</dd></dl>
       {effectiveAdvertiserType === 'small_business' && <p>{t('Business posts wait for fee agreement and review.')}</p>}
       <p className="privacy-note"><ShieldCheck size={16} />{t(isApartmentRental ? 'Apartment details stay private' : 'Verification evidence stays private')}</p>
     </section> : <>
       <p className="modal-intro">{t('Tell neighbours what makes your item useful. Mention any wear or defects so they know what to expect.')}</p>
+      {category === 'Kids & family' && <label>{t('Kids item section')}<select value={kidsItemType} onChange={event => setKidsItemType(event.target.value as KidsItemType)} required><option value="" disabled>{t('Choose a section')}</option>{kidsItemTypes.map(type => <option key={type} value={type}>{t(type)}</option>)}</select></label>}
       <label>{t('Price (EGP)')}<input type="number" min="0.01" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0" required /></label>
       <label>{t('What are you selling?')}<input dir="auto" value={title} onChange={event => setTitle(event.target.value)} placeholder={t('e.g. Solid oak coffee table')} minLength={5} maxLength={120} required /></label>
       <label>{t('Description')}<textarea dir="auto" rows={4} minLength={10} maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('Size, age, included accessories and any signs of use')} required /></label>

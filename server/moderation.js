@@ -3,7 +3,7 @@ import { RequestError } from './request.js';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export const contentTypes = new Set(['listing', 'service', 'business', 'offer']);
 export const contentActions = new Set(['HIDE', 'RESTORE', 'APPROVE', 'REMOVE']);
-export const publicationCategories = new Set(['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries', 'Online Finds', 'Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care', 'Deals & promotions']);
+export const publicationCategories = new Set(['Furniture & home', 'Electronics', 'Kids & family', 'Cars & motorcycles', 'Apartment rentals', 'Groceries', 'Online Finds', 'Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care', 'Nurseries', 'Deals & promotions']);
 
 export function publicContentType(kind) {
   return kind === 'store' ? 'business' : kind;

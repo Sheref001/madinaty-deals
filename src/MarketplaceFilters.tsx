@@ -4,14 +4,14 @@ import { listingConditionOptions } from './types';
 import { onlineStoreCategories } from './categoryPolicy';
 import { educationLevels, fitnessProviderTypes, groceryActivities, homeServiceTypes, housekeepingTypes, petBusinessTypes, transportServiceTypes, tutoringSubjects, vehicleTypes } from './types';
 
-export interface CollectionFilters { category: string; advertiserType: string; condition: string; furnishing: string; vehicleType: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string; homeServiceType: string; housekeepingType: string; fitnessProviderType: string; petBusinessType: string; onlineStoreCategory: string }
+export interface CollectionFilters { category: string; advertiserType: string; condition: string; furnishing: string; vehicleType: string; min: string; max: string; educationLevel: string; subject: string; groceryActivity: string; homeServiceType: string; housekeepingType: string; fitnessProviderType: string; petBusinessType: string; onlineStoreCategory: string; kidsSection: string }
 
 export default function MarketplaceFilters({ value, onChange, onClear, results, showPrice, showFurnishing, showAdvertiserType, conditionCategory }: { value: CollectionFilters; onClear: () => void; onChange: (value: CollectionFilters) => void; results: SearchResult[]; showPrice: boolean; showFurnishing?: boolean; showAdvertiserType?: boolean; conditionCategory?: string }) {
   const { t } = useTranslation();
   const categories = [...new Set(results.map(result => result.category))];
   function change(key: keyof CollectionFilters, next: string) {
     if (key === 'vehicleType' && transportServiceTypes.includes(next as typeof transportServiceTypes[number])) onChange({ ...value, vehicleType: next, condition: '', min: '', max: '' });
-    else onChange({ ...value, [key]: next });
+    else onChange({ ...value, [key]: next, ...(key === 'category' ? { kidsSection: '' } : {}) });
   }
   return <aside className="market-filters" aria-label={t('Refine results')}>
     <h2>{t('Refine results')}</h2>

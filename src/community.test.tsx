@@ -151,10 +151,26 @@ it('requires an explicit service category and offers every supported service typ
   const category = screen.getByLabelText('Choose your service category') as HTMLSelectElement;
   expect(category.value).toBe('');
   expect(Array.from(category.options).map(option => option.value)).toEqual([
-    '', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation',
+    '', 'Tutoring & education', 'Health & fitness', 'Nurseries', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation',
   ]);
   expect(screen.queryByLabelText('Education stage')).toBeNull();
   expect((screen.getByRole('button', { name: 'Continue to details' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('posts a nursery as a business service with its own name and review notice', async () => {
+  render(<LanguageContext.Provider value="en"><ServiceForm onPublish={vi.fn()} /></LanguageContext.Provider>);
+  fireEvent.change(screen.getByLabelText('Choose your service category'), { target: { value: 'Nurseries' } });
+  expect(screen.queryByRole('radiogroup', { name: 'Who is posting?' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to details' }));
+  expect(screen.getByText('Nursery listings are reviewed before publication. Parents should confirm licensing, staff, and safety directly.')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Early years childcare serving Madinaty families.' } });
+  fireEvent.change(screen.getByLabelText('Provider or business name'), { target: { value: 'Little Stars Nursery' } });
+  fireEvent.change(screen.getByLabelText('WhatsApp number'), { target: { value: '+201001234567' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Preview service' }));
+  expect(screen.getByRole('heading', { name: 'Nurseries · Little Stars Nursery' })).toBeTruthy();
+  expect(screen.getByText('Business posts wait for fee agreement and review.')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Publish service' }));
+  await waitFor(() => expect(submitPost).toHaveBeenCalledWith('service', expect.objectContaining({ category: 'Nurseries', advertiserType: 'small_business', providerName: 'Little Stars Nursery' }), [], undefined));
 });
 
 it('keeps the pet-care research category and its subcategories admin-only', async () => {

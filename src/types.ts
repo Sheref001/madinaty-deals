@@ -20,6 +20,8 @@ export type VehicleType = typeof vehicleTypes[number];
 export const transportServiceTypes = ['Moving furniture', 'Private transportation'] as const;
 export const groceryActivities = ['Grocery store', 'Butcher', 'Poultry', 'Bakery', 'Fishmonger', 'Fruits & vegetables', 'Dairy & cheese'] as const;
 export type GroceryActivity = typeof groceryActivities[number];
+export const kidsItemTypes = ['Baby gear', 'Clothing & shoes', 'Toys & games', 'Books & learning', 'Other kids items'] as const;
+export type KidsItemType = typeof kidsItemTypes[number];
 export const educationLevels = ['Before university', 'University'] as const;
 export type EducationLevel = typeof educationLevels[number];
 export const tutoringSubjects = ['Quran', 'Mathematics', 'English', 'Arabic', 'Physics', 'Chemistry', 'Biology', 'French', 'German', 'Computer science'] as const;
@@ -63,6 +65,7 @@ export interface Listing extends BaseResult {
   furnishing?: RentalFurnishing;
   vehicleType?: VehicleType;
   groceryActivity?: GroceryActivity;
+  kidsItemType?: KidsItemType;
   seller: string;
   sellerVerified?: boolean;
   status: 'active' | 'reserved' | 'sold';

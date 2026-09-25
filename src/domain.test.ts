@@ -46,4 +46,16 @@ describe('discovery domain rules', () => {
     expect(filterResults(vehicleResults, { ...base, vehicleType: 'Moving furniture' }).map(result => result.id)).toEqual(['test-moving']);
     expect(filterResults(vehicleResults, { ...base, vehicleType: 'Private transportation' }).map(result => result.id)).toEqual(['private-ride']);
   });
+
+  it('shows nurseries and kids items together, while keeping item sections distinct', () => {
+    const nursery = { ...results.find(result => result.type === 'service')!, id: 'nursery', category: 'Nurseries', advertiserType: 'small_business' as const };
+    const babyGear = { ...listings[0], id: 'baby-gear', category: 'Kids & family', kidsItemType: 'Baby gear' as const };
+    const legacyKidsItem = { ...listings[0], id: 'legacy-kids', category: 'Kids & family', kidsItemType: undefined };
+    const mixed = [nursery, babyGear, legacyKidsItem, listings[0]];
+    const base = { query: '', zone: 'All zones', verifiedOnly: false, sort: 'recommended' as const, category: 'Kids & family' };
+    expect(filterResults(mixed, base).map(result => result.id)).toEqual(['nursery', 'baby-gear', 'legacy-kids']);
+    expect(filterResults(mixed, { ...base, kidsSection: 'Nurseries' }).map(result => result.id)).toEqual(['nursery']);
+    expect(filterResults(mixed, { ...base, kidsSection: 'Baby gear' }).map(result => result.id)).toEqual(['baby-gear']);
+    expect(filterResults(mixed, { ...base, kidsSection: 'Other kids items' }).map(result => result.id)).toEqual(['legacy-kids']);
+  });
 });

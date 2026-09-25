@@ -36,7 +36,7 @@ function publicationStatus(payload) {
 
 function applyAdvertiserPolicy(clean, payload) {
   const individualOnly = clean.category === 'Apartment rentals';
-  const businessOnly = ['Groceries', 'Pet care', 'Online Finds'].includes(clean.category);
+  const businessOnly = ['Groceries', 'Pet care', 'Online Finds', 'Nurseries'].includes(clean.category);
   if ((individualOnly && payload.advertiserType !== undefined && payload.advertiserType !== 'individual') || (businessOnly && payload.advertiserType !== undefined && payload.advertiserType !== 'small_business')) throw new RequestError(400, 'Choose a valid advertiser type for this category');
   const advertiserType = individualOnly ? 'individual' : businessOnly ? 'small_business' : payload.advertiserType;
   if (!['individual', 'small_business'].includes(advertiserType)) throw new RequestError(400, 'Choose an advertiser type');
@@ -53,7 +53,7 @@ function applyAdvertiserPolicy(clean, payload) {
 export function publicPayload(kind, payload) {
   const common = ['title', 'subtitle', 'category', 'zone', 'advertiserType'];
   const fields = kind === 'listing'
-    ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType']
+    ? [...common, 'price', 'condition', 'furnishing', 'groceryActivity', 'vehicleType', 'kidsItemType']
     : kind === 'store' ? [...common, 'onlineStoreCategory', 'whatsapp', 'socialAccount']
       : [...common, 'providerName', 'whatsapp', 'socialAccount', 'pricing', 'availability', 'serviceArea', 'educationLevel', 'subjects', 'otherSubject', 'homeServiceType', 'housekeepingType', 'fitnessProviderType', 'petBusinessType', 'offer'];
   return Object.fromEntries(fields.filter(key => Object.prototype.hasOwnProperty.call(payload, key)).map(key => [key, payload[key]]));
@@ -131,6 +131,11 @@ export function createSubmissions({ prisma, auth }) {
         if (!['Cars', 'Motorcycles'].includes(payload.vehicleType)) throw new RequestError(400, 'Choose cars or motorcycles');
         clean.vehicleType = payload.vehicleType;
       }
+      if (clean.category === 'Kids & family') {
+        const kidsItemTypes = ['Baby gear', 'Clothing & shoes', 'Toys & games', 'Books & learning', 'Other kids items'];
+        if (payload.kidsItemType !== undefined && !kidsItemTypes.includes(payload.kidsItemType)) throw new RequestError(400, 'Choose a kids item section');
+        clean.kidsItemType = payload.kidsItemType || 'Other kids items';
+      }
     } else if (body.kind === 'store') {
       if (clean.category !== 'Online Finds') throw new RequestError(400, 'Invalid online store category');
       if (!['Beauty & personal care', 'Fashion & accessories', 'Home & handmade', 'Food & treats', 'Other online stores'].includes(payload.onlineStoreCategory)) throw new RequestError(400, 'Choose an online store type');
@@ -144,7 +149,7 @@ export function createSubmissions({ prisma, auth }) {
       }
       Object.assign(clean, { onlineStoreCategory: payload.onlineStoreCategory, whatsapp: payload.whatsapp.trim() });
     } else {
-      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
+      if (!['Tutoring', 'Tutoring & education', 'Health & fitness', 'Home services', 'Housekeeping & cleaning', 'Local delivery riders', 'Moving', 'Private transportation', 'Pet care', 'Nurseries'].includes(clean.category)) throw new RequestError(400, 'Invalid category');
       if (clean.category === 'Pet care' && current.user.role !== 'ADMIN') throw new RequestError(403, 'Pet care category is not yet public');
       const educationalService = ['Tutoring', 'Tutoring & education'].includes(clean.category);
       if (typeof payload.providerName !== 'string' || payload.providerName.trim().length < 2 || payload.providerName.trim().length > 100) throw new RequestError(400, 'Enter a valid provider or business name');

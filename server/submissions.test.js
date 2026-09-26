@@ -22,7 +22,7 @@ function fixture({ role = 'RESIDENT', verified = false, photos = [] } = {}) {
   const auth = { protect: vi.fn().mockResolvedValue(current), session: vi.fn().mockResolvedValue(current) };
   const handler = createSubmissions({ prisma, auth });
   const send = vi.fn();
-  const call = (body, path = 'api/submissions', method = 'POST') => handler.handle(Object.assign(Readable.from([JSON.stringify(body)]), { method, headers: {} }), {}, path.split('/'), send);
+  const call = (body, path = 'api/submissions', method = 'POST') => handler.handle(Object.assign(Readable.from([JSON.stringify(body)]), { method, headers: {}, url: `/${path}` }), {}, path.split('/'), send);
   return { prisma, auth, send, call };
 }
 const rental = { kind: 'listing', payload: { ...payload, category: 'Apartment rentals', furnishing: 'Unfurnished' } };

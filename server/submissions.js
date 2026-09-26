@@ -71,7 +71,7 @@ export function publicPayload(kind, payload) {
 export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
     if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
-      const url = new URL(request.url || 'http://localhost/api/public-submissions');
+      const url = new URL(request.url || '/api/public-submissions', 'http://localhost');
       const cursorValue = url.searchParams.get('cursor');
       const cursor = cursorValue ? decodeCursor(cursorValue) : null;
       if (cursorValue && !cursor) throw new RequestError(400, 'Invalid public submissions cursor');

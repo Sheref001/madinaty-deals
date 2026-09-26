@@ -82,6 +82,12 @@ Dockerfile              Production build/runtime image
 
 ## Runtime configuration
 
+## Public discovery and browsing
+
+The public marketplace uses `src/discovery.ts` as the shared taxonomy for category entry points, content scopes, activities, and compatible filters. Home tiles, the Buy & sell/Services/Businesses navigation, category pages, URL state, and the mobile filter drawer all use this catalog so a category has the same controls regardless of how it was opened. `src/publicSubmissions.ts` is the single API-payload conversion boundary; it preserves validated activity fields, real publication timestamps, and eligible service promotions.
+
+The public submissions endpoint is cursor-paginated by `(createdAt, id)` and the client follows all pages with an abortable request. Publication, active-owner, user-status, vehicle-residency, hidden-content, and moderation rules remain server-side. Service promotions stay service records for contact and moderation purposes and are included in the Offers view only while their validated expiry date is current.
+
 The actual production `.env` is not checked in. Names below are verified from `server/config.js`, Compose, and the example environment files; values must be supplied externally.
 
 - Core/server: `APP_ENV`, `APP_ORIGIN`, `PORT`, `APP_PORT`, `AUTH_SECRET`, `TRUSTED_PROXY_PEERS`, `REGISTRATION_ENABLED`, `UPLOAD_DIRECTORY`.

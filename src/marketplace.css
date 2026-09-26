@@ -43,6 +43,12 @@
 .market-filters legend { font-size: 13px; margin-block-end: 12px; }
 .price-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .market-filters p[role="alert"] { color: #9c2525; font-size: 12px; line-height: 1.6; }
+.close-mobile-filters { display: none; }
+.active-filter-list { display: flex; flex-wrap: wrap; gap: 7px; margin-block: 12px; }
+.active-filter { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #b8d2c4; border-radius: 999px; background: #eef7f1; color: var(--teal); padding: 6px 10px; font-size: 12px; cursor: pointer; }
+.active-filter:hover { background: #dceee3; }
+.promotion-detail { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 7px; background: #fff4d8; color: #704f00; font-size: 12px; }
+.promotion-detail strong { font-size: 13px; }
 .results-column { min-width: 0; }
 .results-controls,.layout-switch { display: flex; align-items: center; gap: 8px; }
 .layout-switch { border: 1px solid var(--line); border-radius: 8px; padding: 3px; background: white; }
@@ -85,8 +91,12 @@
   .home-listings,.results-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .category-grid { gap: 8px; }.category-card { padding: 14px 6px; }.category-card b { font-size: 11px; }
   .trust-strip { margin-block-end: 26px; }.hero-search { height: 48px; }.hero-search input { font-size: 12px; }
-  .market-results-layout { grid-template-columns: 1fr; gap: 12px; }.collection-filters, .collection-filters.is-open { display: block; }
-  .filter-button { display: none; }.market-filters { gap: 14px; }
+  .market-results-layout { grid-template-columns: 1fr; gap: 12px; }
+  .collection-filters { display: none; }
+  .collection-filters.is-open { display: block; }
+  .filter-button { display: inline-flex; align-items: center; gap: 6px; }
+  .market-filters { gap: 14px; }
+  .close-mobile-filters { display: block; width: 100%; margin-block-start: 12px; }
   .list-layout .result-card { grid-template-columns: 110px minmax(0,1fr); }.list-layout .result-image { min-height: 170px; }.list-layout .result-body { padding: 12px; }.list-layout .result-body h3 { font-size: 14px; }.list-layout .result-subtitle { font-size: 11px; }.list-layout .result-detail { flex-wrap: wrap; }.list-layout .result-detail strong { font-size: 16px; }.list-layout .result-footer { display: grid; }
   .page-intro h1 { font-size: 28px; }.results-meta { gap: 8px; }.brand > span:last-child { display: flex; }.language-switch { min-height: 38px; font-size: 12px; padding: 6px; }
 }

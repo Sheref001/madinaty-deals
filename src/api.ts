@@ -51,7 +51,22 @@ export async function getPublicConfig(): Promise<{ registrationEnabled: boolean;
   return config;
 }
 export interface PublicSubmission { id: string; kind: 'listing' | 'service' | 'store'; payload: Record<string, unknown>; uploadIds: string[]; createdAt: string; seller: string; verified: boolean; }
-export const getPublishedSubmissions = () => request('/public-submissions') as Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }>;
+export async function getPublishedSubmissions(signal?: AbortSignal): Promise<{ submissions: PublicSubmission[]; hiddenContentIds?: string[] }> {
+  const submissions: PublicSubmission[] = [];
+  let cursor = '';
+  const seen = new Set<string>();
+  let hiddenContentIds: string[] | undefined;
+  do {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    const page = await request(`/public-submissions${query}`, { signal }) as { submissions: PublicSubmission[]; hiddenContentIds?: string[]; nextCursor?: string };
+    submissions.push(...page.submissions);
+    hiddenContentIds ??= page.hiddenContentIds;
+    if (!page.nextCursor || seen.has(page.nextCursor)) break;
+    seen.add(page.nextCursor);
+    cursor = page.nextCursor;
+  } while (!signal?.aborted);
+  return { submissions, hiddenContentIds };
+}
 export interface SavedItem { id: string; submission: PublicSubmission | null; }
 export interface ContactActivity extends SavedItem { title: string; providerName: string; kind: 'service' | 'store'; openedAt: string; }
 export interface OwnedListing { id: string; kind: 'listing' | 'service' | 'store'; payload: Record<string, unknown>; status: string; ownerState: 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'SOLD' | 'REMOVED'; version: number; createdAt: string; updatedAt: string; assisted: boolean; feeStatus: string | null; }

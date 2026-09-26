@@ -200,7 +200,7 @@ it('routes the home services category to providers in Arabic', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'إزاي تستخدم مدينتي ديلز؟' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /خدمات منزلية/ }));
-  expect(screen.getByRole('heading', { name: 'خدمات محلية قريبة منك' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'خدمات منزلية' })).toBeTruthy();
   expect(await screen.findByRole('heading', { name: 'لا توجد نتائج' })).toBeTruthy();
 });
 

@@ -7,20 +7,20 @@ import {
   Wrench, X, Zap, BarChart3, Eye, MessageCircle, Sparkles, Bike, UserRound, PawPrint, ExternalLink,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { categories, formatPrice, zones } from './data';
+import { formatPrice, zones } from './data';
 import { track } from './analytics';
-import { filterResults, getViewResults, type BrowseFilters } from './domain';
+import { filterResults, getViewResults, hasActivePromotion, postedDate, type BrowseFilters } from './domain';
 import type { Listing, SearchResult, Service, View } from './types';
 import { initialLanguage, LanguageContext, languageKey, useTranslation } from './i18n';
 import type { Language } from './i18n';
 import { featureFlags } from './featureFlags';
-import { checkContentVisible, getComments, getPublishedSubmissions, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment, type PublicSubmission } from './api';
+import { checkContentVisible, getComments, getPublishedSubmissions, getPublicConfig, postComment, recordView, submitReport, translateText, type PublicComment } from './api';
 import { CommunityGuide, CommunityFooter } from './CommunityGuide';
 import ListingForm from './ListingForm';
 import ServiceForm from './ServiceForm';
 import OnlineStoreForm from './OnlineStoreForm';
 import MarketplaceFilters from './MarketplaceFilters';
-import type { CollectionFilters } from './MarketplaceFilters';
+import { categoryDefinition, categoryTiles, emptyFilters, cleanCollection, readCollection, writeCollection, readDiscoveryLocation, hasPriceFilter, type CollectionFilters } from './discovery';
 import RevenueDesk from './RevenueDesk';
 import AdminUsers from './AdminUsers';
 import AdminReviewQueue from './AdminReviewQueue';
@@ -28,15 +28,15 @@ import AdminReports from './AdminReports';
 import AdminOperations from './AdminOperations';
 import AdminModeration from './AdminModeration';
 import EliteAdSpace from './EliteAdSpace';
-import { splitCategories, businessOnlyCategories } from './categoryPolicy';
+import { businessOnlyCategories } from './categoryPolicy';
 import { kidsItemTypes } from './types';
+import { publicSubmissionResult } from './publicSubmissions';
 import AuthForm from './AuthForm';
 import VerificationForm from './VerificationForm';
 import AccountDashboard from './AccountDashboard';
 import useSavedItems from './useSavedItems';
 import { recordContactOpened } from './api';
 import { getSession, signOut, type Account } from './api';
-const emptyFilters: CollectionFilters = { category: '', advertiserType: '', condition: '', furnishing: '', vehicleType: '', min: '', max: '', educationLevel: '', subject: '', groceryActivity: '', homeServiceType: '', housekeepingType: '', fitnessProviderType: '', petBusinessType: '', onlineStoreCategory: '', kidsSection: '' };
 
 const getPublicAdId = (result: SearchResult) => result.publicAdId || `MD-${result.id.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 const getAdLink = (result: SearchResult) => { const url = new URL(window.location.href); url.searchParams.set('ad', result.id); return url.toString(); };
@@ -85,19 +85,6 @@ const navItems: { id: View; label: string; icon: LucideIcon }[] = [
 const searchScopes = (['search', 'browse', 'services', 'businesses', ...(featureFlags.offers ? ['offers'] : [])] as View[]);
 const searchScopeLabels = ['All categories', 'Buy & sell', 'Services', 'Businesses', ...(featureFlags.offers ? ['Offers'] : [])];
 
-function publicSubmissionResult(record: PublicSubmission): SearchResult | null {
-  const payload = record.payload;
-  if (record.kind === 'listing') {
-    if (typeof payload.title !== 'string' || typeof payload.subtitle !== 'string' || typeof payload.category !== 'string' || typeof payload.zone !== 'string') return null;
-    return { id: `submission-${record.id}`, publicAdId: `MD-${record.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`, type: 'listing', title: payload.title, subtitle: payload.subtitle, category: payload.category, zone: payload.zone, createdAt: 'Just now', image: 'new', accent: 'lime', imageUrl: record.uploadIds[0] ? `/api/public-uploads/${record.uploadIds[0]}` : undefined, price: typeof payload.price === 'number' ? payload.price : null, condition: (typeof payload.condition === 'string' ? payload.condition : 'Good') as Listing['condition'], seller: record.seller, sellerVerified: record.verified, status: 'active', ...(payload.advertiserType === 'small_business' || payload.advertiserType === 'individual' ? { advertiserType: payload.advertiserType } : {}), ...(typeof payload.furnishing === 'string' ? { furnishing: payload.furnishing as Listing['furnishing'] } : {}), ...(typeof payload.vehicleType === 'string' && ['Cars', 'Motorcycles'].includes(payload.vehicleType) ? { vehicleType: payload.vehicleType as Listing['vehicleType'] } : {}), ...(typeof payload.kidsItemType === 'string' && kidsItemTypes.includes(payload.kidsItemType as typeof kidsItemTypes[number]) ? { kidsItemType: payload.kidsItemType as Listing['kidsItemType'] } : {}) };
-  }
-  if (record.kind === 'store') {
-    if (typeof payload.title !== 'string' || typeof payload.subtitle !== 'string' || payload.category !== 'Online Finds' || typeof payload.zone !== 'string') return null;
-    return { id: `submission-${record.id}`, publicAdId: `MD-${record.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`, type: 'business', title: payload.title, subtitle: payload.subtitle, category: payload.category, zone: payload.zone, createdAt: 'Just now', image: 'new-service', accent: 'mint', imageUrl: record.uploadIds[0] ? `/api/public-uploads/${record.uploadIds[0]}` : undefined, rating: 0, reviewCount: 0, hours: 'Delivery or pickup', phone: '', whatsapp: typeof payload.whatsapp === 'string' ? payload.whatsapp : undefined, socialAccount: typeof payload.socialAccount === 'string' ? payload.socialAccount : undefined, onlineStoreCategory: typeof payload.onlineStoreCategory === 'string' ? payload.onlineStoreCategory : undefined, verified: false, advertiserType: 'small_business' };
-  }
-  if (typeof payload.title !== 'string' || typeof payload.subtitle !== 'string' || typeof payload.category !== 'string' || typeof payload.zone !== 'string') return null;
-  return { id: `submission-${record.id}`, publicAdId: `MD-${record.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`, type: 'service', title: payload.title, subtitle: payload.subtitle, category: payload.category, zone: payload.zone, createdAt: 'Just now', image: 'new-service', accent: 'mint', imageUrl: record.uploadIds[0] ? `/api/public-uploads/${record.uploadIds[0]}` : undefined, rating: 0, reviewCount: 0, serviceArea: typeof payload.serviceArea === 'string' ? payload.serviceArea : payload.zone, providerName: typeof payload.providerName === 'string' ? payload.providerName : record.seller, phone: '', whatsapp: typeof payload.whatsapp === 'string' ? payload.whatsapp : undefined, socialAccount: typeof payload.socialAccount === 'string' ? payload.socialAccount : undefined, otherSubject: typeof payload.otherSubject === 'string' ? payload.otherSubject : undefined, response: 'Response time to be configured', verified: record.verified, ...(payload.advertiserType === 'small_business' || payload.advertiserType === 'individual' ? { advertiserType: payload.advertiserType } : {}), pricing: typeof payload.pricing === 'string' ? payload.pricing : undefined, availability: typeof payload.availability === 'string' ? payload.availability : undefined };
-}
 
 function App() {
   const [language, setLanguage] = useState<Language>(initialLanguage);
@@ -121,7 +108,7 @@ function App() {
 
 function AppContent({ onLanguageChange }: { onLanguageChange: (language: Language) => void }) {
   const { t, language } = useTranslation();
-  const [view, setView] = useState<View>(() => new URLSearchParams(window.location.search).has('ad') ? 'search' : 'home');
+  const [view, setView] = useState<View>(() => readDiscoveryLocation().view);
   const scrollToCategories = useRef(false);
   useEffect(() => {
     if (view !== 'home' || !scrollToCategories.current) return;
@@ -130,16 +117,17 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     categoriesSection?.scrollIntoView({ behavior: 'instant', block: 'start' });
     categoriesSection?.focus({ preventScroll: true });
   }, [view]);
-  const [query, setQuery] = useState('');
-  const [zone, setZone] = useState('All zones');
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [sort, setSort] = useState<BrowseFilters['sort']>('recommended');
+  const [query, setQuery] = useState(() => readDiscoveryLocation().query);
+  const [zone, setZone] = useState(() => readDiscoveryLocation().zone);
+  const [verifiedOnly, setVerifiedOnly] = useState(() => readDiscoveryLocation().verifiedOnly);
+  const [sort, setSort] = useState<BrowseFilters['sort']>(() => readDiscoveryLocation().sort);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedUnavailable, setFeedUnavailable] = useState(false);
   const [searchType, setSearchType] = useState<View>('search');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [categoryNavigation, setCategoryNavigation] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(() => readDiscoveryLocation().category);
+  const [categoryNavigation, setCategoryNavigation] = useState(() => Boolean(readDiscoveryLocation().category));
+  const navigationView = selectedCategory ? (categoryDefinition(selectedCategory)?.views[0] === 'services' ? 'services' : categoryDefinition(selectedCategory)?.views[0] === 'businesses' ? 'businesses' : 'browse') : view;
   const [modal, setModal] = useState<'post' | 'register' | 'report' | 'verify' | null>(null);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [toast, setToast] = useState('');
@@ -240,8 +228,8 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
   const visibleResults = useMemo(() => isAdmin ? results : results.filter(result => result.category !== 'Pet care'), [isAdmin, results]);
   const activeResults = useMemo(() => {
     const scopedResults = view === 'saved' ? visibleResults.filter((result) => favorites.has(result.id)) : getViewResults(view, visibleResults);
-    return filterResults(scopedResults, { query, zone, verifiedOnly, sort, category: selectedCategory });
-  }, [favorites, query, visibleResults, sort, verifiedOnly, view, zone, selectedCategory]);
+    return filterResults(scopedResults, { query, zone, verifiedOnly: selectedCategory === 'Online Finds' || view === 'businesses' ? false : verifiedOnly, sort: 'recommended', category: selectedCategory });
+  }, [favorites, query, visibleResults, verifiedOnly, view, zone, selectedCategory]);
 
   const goTo = (nextView: View) => {
     if (nextView === 'offers' && !featureFlags.offers) return;
@@ -251,10 +239,12 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     }
     if (['account', 'activity', 'my-listings'].includes(nextView) && !registered) { openSignIn(nextView); return; }
     const url = new URL(window.location.href);
-    if (url.searchParams.has('ad')) {
-      url.searchParams.delete('ad');
-      window.history.replaceState({}, '', url);
-    }
+    url.searchParams.delete('ad');
+    url.searchParams.delete('category');
+    url.searchParams.delete('q');
+    for (const key of Object.keys(emptyFilters)) url.searchParams.delete(key);
+    if (nextView === 'home') url.searchParams.delete('view'); else url.searchParams.set('view', nextView);
+    window.history.pushState({}, '', url);
     setView(nextView);
     setQuery('');
     setSelectedCategory('');
@@ -282,35 +272,46 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
-  const openCategory = (nextView: View, category: string) => {
+  const openCategory = (_nextView: View, category: string) => {
+    if (!category) { goTo('search'); return; }
     if (category === 'Pet care' && !isAdmin) { setToast('Admin access required'); return; }
-    window.history.pushState({ madinatyDealsCategory: true }, '');
+    const nextView = categoryDefinition(category)?.view || 'search';
+    const url = new URL(window.location.href);
+    for (const key of [...Object.keys(emptyFilters), 'ad', 'q']) url.searchParams.delete(key);
+    url.searchParams.set('view', nextView);
+    url.searchParams.set('category', category);
+    window.history.pushState({ madinatyDealsCategory: true }, '', url);
     setCategoryNavigation(true);
     setSelectedCategory(category);
-    setView(category === 'Online Finds' ? 'businesses' : splitCategories.includes(category) || businessOnlyCategories.includes(category) ? 'search' : nextView);
+    setView(nextView);
     setQuery('');
     setMobileNavOpen(false);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   useEffect(() => {
-    const handlePopState = () => {
-      if (!categoryNavigation) return;
-      setView('home');
-      setQuery('');
-      setSelectedCategory('');
-      setCategoryNavigation(false);
-      setMobileNavOpen(false);
+    const restore = () => {
+      const next = readDiscoveryLocation();
+      setView(next.view); setSelectedCategory(next.category); setCategoryNavigation(Boolean(next.category));
+      setQuery(next.query); setZone(next.zone); setVerifiedOnly(next.verifiedOnly); setSort(next.sort); setMobileNavOpen(false);
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [categoryNavigation]);
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, []);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const values = { view: view === 'home' || view === 'admin' ? '' : view, category: selectedCategory, q: query, zone: zone === 'All zones' ? '' : zone, verified: verifiedOnly ? 'true' : '', sort: sort === 'recommended' ? '' : sort };
+    for (const [key, value] of Object.entries(values)) { if (value) url.searchParams.set(key, value); else url.searchParams.delete(key); }
+    window.history.replaceState(window.history.state, '', url);
+  }, [view, selectedCategory, query, zone, verifiedOnly, sort]);
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
-    setSelectedCategory('');
-    setCategoryNavigation(false);
-    setView(searchType);
-    track('search_performed', { query: query || 'empty', zone });
+    const searchQuery = query;
+    goTo(searchType);
+    setQuery(searchQuery);
+    track('search_performed', { query: searchQuery || 'empty', zone });
   };
 
   const toggleSaved = async (id: string) => {
@@ -389,14 +390,14 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
           <button className="language-switch" lang={language === 'ar' ? 'en' : 'ar'} onClick={changeLanguage} aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}>{language === 'ar' ? 'English' : 'العربية'}</button>
         </div>
       </header>
-      <div className="market-nav"><Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => goTo('admin')} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
+      <div className="market-nav"><Navigation view={navigationView} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => goTo('admin')} onVerify={() => setModal(registered ? 'verify' : 'register')} /></div>
 
       <div className={`mobile-drawer ${mobileNavOpen ? 'is-open' : ''}`}>
         <button className="drawer-backdrop" aria-label={t("Close navigation")} onClick={() => setMobileNavOpen(false)} />
         <aside className="drawer-panel">
           <div className="drawer-head"><span className="brand-small"><MadinatyLogo compact /></span><button className="icon-button" onClick={() => setMobileNavOpen(false)} aria-label={t("Close navigation")}><X size={20} /></button></div>
           {!registered && registrationEnabled && !maintenanceMode && <button className="drawer-register" type="button" onClick={() => { setMobileNavOpen(false); openSignIn(); }}><UserRound size={18} /><span><b>{t('Create your account')}</b><small>{t('Register before posting')}</small></span><ArrowRight size={16} /></button>}
-          <Navigation view={view} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
+          <Navigation view={navigationView} goTo={goTo} favoriteCount={favorites.size} isAdmin={canAccessAdmin} onAdmin={() => { setMobileNavOpen(false); goTo('admin'); }} onVerify={() => { setMobileNavOpen(false); setModal(registered ? 'verify' : 'register'); }} />
         </aside>
       </div>
 
@@ -406,11 +407,12 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
         {account && ['account', 'saved', 'activity', 'my-listings'].includes(view) ? (
           <AccountDashboard key={account.id} account={account} section={view as 'account' | 'saved' | 'activity' | 'my-listings'} onNavigate={goTo} onPost={openPost} onVerify={() => setModal('verify')} saved={savedState.items} savedReady={savedState.ready} savedError={savedState.error} onUnsave={id => void toggleSaved(id)} renderResult={record => { const result = publicSubmissionResult(record); return result ? <ResultCard result={result} favorite={favorites.has(result.id)} onFavorite={toggleFavorite} onContact={contactResult} onReport={reportResult} verifiedResident={residentVerified} translationEnabled={translationEnabled} /> : null; }} />
         ) : view === 'home' ? (
-          <HomeView isAdmin={isAdmin} residentVerified={residentVerified} translationEnabled={translationEnabled} results={visibleResults} feedLoading={feedLoading} feedUnavailable={feedUnavailable} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { setQuery(value); setView('search'); track('search_performed', { query: value }); }} onCategorySearch={(value) => value === 'Deals & promotions' ? goTo('offers') : openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
+          <HomeView isAdmin={isAdmin} residentVerified={residentVerified} translationEnabled={translationEnabled} results={visibleResults} feedLoading={feedLoading} feedUnavailable={feedUnavailable} favorites={favorites} onFavorite={toggleFavorite} goTo={goTo} onPost={openPost} onSearch={(value) => { goTo('search'); setQuery(value); track('search_performed', { query: value }); }} onCategorySearch={(value) => openCategory('search', value)} onServiceCategory={value => openCategory('services', value)} onBusinessCategory={value => { openCategory('businesses', value); track('category_opened', { category: value, type: 'business' }); }} />
         ) : view === 'admin' ? (
           canAccessAdmin ? <AdminView isAdmin={isAdmin} permissions={moderatorPermissions} onBack={() => goTo('home')} /> : <AdminAccessDenied onBack={() => goTo('home')} />
         ) : (
           <BrowseView key={`${view}-${selectedCategory}`} selectedCategory={selectedCategory}
+            isAdmin={isAdmin} onCategoryChange={category => openCategory('search', category)} loading={feedLoading} unavailable={feedUnavailable}
             view={view}
             query={query}
             zone={zone}
@@ -431,7 +433,7 @@ function AppContent({ onLanguageChange }: { onLanguageChange: (language: Languag
             onReport={reportResult}
             onPost={openPost}
             showBackHome={categoryNavigation}
-            onBackHome={() => window.history.back()}
+            onBackHome={() => goTo('home')}
           />
         )}
         <CommunityFooter goTo={goTo} onPost={openPost} />
@@ -508,8 +510,8 @@ function HomeView({ isAdmin, residentVerified, translationEnabled, goTo, onPost,
     <EliteAdSpace />
 
     <section id="categories" tabIndex={-1} className="section-block category-section">
-      <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('browse')} />
-      <div className="category-grid">{categories.filter(category => !category.adminOnly || isAdmin).map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike', 'graduation-cap', 'circle-help'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse', 'shopping-basket', 'paw-print', 'store'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onCategorySearch(category.label); else if (nextView === 'services') onServiceCategory(category.label); else onBusinessCategory(category.label); }}><span className={`category-icon ${category.icon}`}>{category.photo && <img src={category.photo} alt="" loading={category.label === 'Apartment rentals' ? 'eager' : 'lazy'} decoding="async" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} />}<span className="category-fallback"><Icon size={21} /></span></span><span><b>{t(category.label)}</b><small>{t(category.adminOnly ? 'Admin research preview' : 'Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
+      <SectionHeading eyebrow="BROWSE THE NEIGHBOURHOOD" title="What brings you here?" action="See everything" onAction={() => goTo('search')} />
+      <div className="category-grid">{categoryTiles(isAdmin).map((category) => { const Icon = iconMap[category.icon] ?? Grid2X2; return <button key={category.label} className="category-card" onClick={() => { const nextView = ['wrench', 'sparkles', 'bike', 'graduation-cap', 'circle-help'].includes(category.icon) ? 'services' : ['utensils', 'heart-pulse', 'shopping-basket', 'paw-print', 'store'].includes(category.icon) ? 'businesses' : 'browse'; if (nextView === 'browse') onCategorySearch(category.label); else if (nextView === 'services') onServiceCategory(category.label); else onBusinessCategory(category.label); }}><span className={`category-icon ${category.icon}`}>{category.photo && <img src={category.photo} alt="" loading={category.label === 'Apartment rentals' ? 'eager' : 'lazy'} decoding="async" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} />}<span className="category-fallback"><Icon size={21} /></span></span><span><b>{t(category.label)}</b><small>{t(category.adminOnly ? 'Admin research preview' : 'Explore')} <ArrowRight size={12} /></small></span><ChevronRight size={16} /></button>; })}</div>
     </section>
 
     <section className="section-block featured-section">
@@ -532,28 +534,58 @@ function SectionHeading({ eyebrow, title, action, onAction }: { eyebrow: string;
   return <div className="section-heading"><div><span className="eyebrow">{t(eyebrow)}</span><h2>{t(title)}</h2></div><button className="text-link" onClick={onAction}>{t(action)} <ArrowRight size={15} /></button></div>;
 }
 
-function BrowseView({ onClearFilters, selectedCategory, view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost, showBackHome, onBackHome, residentVerified, translationEnabled }: {
-  onClearFilters: () => void; selectedCategory: string; view: View; query: string; zone: string; verifiedOnly: boolean; sort: BrowseFilters['sort']; results: SearchResult[]; favorites: Set<string>;
+function BrowseView({ onClearFilters, selectedCategory, isAdmin, onCategoryChange, loading, unavailable, view, query, zone, verifiedOnly, sort, results, favorites, onQueryChange, onZoneChange, onVerifiedChange, onSortChange, onTabChange, onFavorite, onContact, onReport, onPost, showBackHome, onBackHome, residentVerified, translationEnabled }: {
+  onClearFilters: () => void; selectedCategory: string; isAdmin: boolean; onCategoryChange: (category: string) => void; loading: boolean; unavailable: boolean; view: View; query: string; zone: string; verifiedOnly: boolean; sort: BrowseFilters['sort']; results: SearchResult[]; favorites: Set<string>;
   onQueryChange: (value: string) => void; onZoneChange: (value: string) => void; onVerifiedChange: (value: boolean) => void; onSortChange: (value: BrowseFilters['sort']) => void; onTabChange: (view: View) => void; onFavorite: (result: SearchResult) => void; onContact: (result: SearchResult, method: 'whatsapp' | 'phone' | 'quote') => void; onReport: (result: SearchResult) => void; onPost: () => void; showBackHome: boolean; onBackHome: () => void; residentVerified: boolean; translationEnabled: boolean;
 }) {
   const { t } = useTranslation();
-  const [collection, setCollection] = useState<CollectionFilters>(emptyFilters);
+  const [collection, setCollection] = useState<CollectionFilters>(() => readCollection(selectedCategory, view));
   const [layout, setLayout] = useState<'grid' | 'list'>('list');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const clearCollectionFilters = () => { setCollection(emptyFilters); onClearFilters(); };
-  const displayed = filterResults(results, { query: '', zone: 'All zones', verifiedOnly: false, sort, advertiserType: businessOnlyCategories.includes(selectedCategory) ? 'small_business' : (collection.advertiserType || undefined) as 'individual' | 'small_business' | undefined, category: collection.category, condition: collection.condition, furnishing: collection.furnishing, vehicleType: collection.vehicleType, minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max), educationLevel: collection.educationLevel, subject: collection.subject, groceryActivity: collection.groceryActivity, homeServiceType: collection.homeServiceType, housekeepingType: collection.housekeepingType, fitnessProviderType: collection.fitnessProviderType, petBusinessType: collection.petBusinessType, onlineStoreCategory: collection.onlineStoreCategory, kidsSection: collection.kidsSection });
-  const categoryHeading = splitCategories.includes(selectedCategory) || businessOnlyCategories.includes(selectedCategory) || selectedCategory === 'Apartment rentals' || selectedCategory === 'Groceries' || selectedCategory === 'Pet care';
-  const heading = categoryHeading ? selectedCategory : (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Local services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
-  const subheading = selectedCategory === 'Kids & family' ? 'Find nurseries and browse useful items for children and families.' : selectedCategory === 'Online Finds' ? 'Online stores and home businesses serving Madinaty through delivery or pickup.' : view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Local providers with details and contact options.' : view === 'businesses' ? 'Local businesses and online stores serving Madinaty.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Buy and sell with people in the neighbourhood.';
-  const tabs: { id: View; label: string }[] = [{ id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, ...(featureFlags.offers ? [{ id: 'offers' as View, label: 'Offers' }] : [])];
+  useEffect(() => {
+    const restore = () => setCollection(readCollection(selectedCategory, view));
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, [selectedCategory, view]);
+  const changeCollection = (value: CollectionFilters) => { const next = cleanCollection(value, selectedCategory, view); setCollection(next); writeCollection(next); };
+  const clearCollectionFilters = () => { changeCollection(emptyFilters); onClearFilters(); };
+  const definition = categoryDefinition(selectedCategory);
+  const showPrice = hasPriceFilter(selectedCategory, view, collection);
+  const displayed = filterResults(getViewResults(collection.scope, results), {
+    query: '', zone: 'All zones', verifiedOnly: false,
+    sort: showPrice || !sort.startsWith('price') ? sort : 'recommended',
+    advertiserType: businessOnlyCategories.includes(selectedCategory) || collection.scope === 'businesses' ? 'small_business' : collection.advertiserType as 'individual' | 'small_business' || undefined,
+    condition: collection.condition, furnishing: collection.furnishing, vehicleType: collection.vehicleType,
+    minPrice: collection.min === '' ? undefined : Number(collection.min), maxPrice: collection.max === '' ? undefined : Number(collection.max),
+    educationLevel: collection.educationLevel, subject: collection.subject, groceryActivity: collection.groceryActivity,
+    homeServiceType: collection.homeServiceType, housekeepingType: collection.housekeepingType, fitnessProviderType: collection.fitnessProviderType,
+    petBusinessType: collection.petBusinessType, onlineStoreCategory: collection.onlineStoreCategory, kidsSection: collection.kidsSection,
+  });
+  const heading = selectedCategory || (view === 'search' ? 'Search results' : view === 'saved' ? 'Your saved shortlist' : view === 'services' ? 'Local services nearby' : view === 'businesses' ? 'Good places around you' : view === 'offers' ? 'Offers worth stepping out for' : 'Find your next good thing');
+  const subheading = selectedCategory === 'Kids & family' ? 'Find nurseries and browse useful items for children and families.' : selectedCategory === 'Online Finds' ? 'Online stores and home businesses serving Madinaty through delivery or pickup.' : view === 'saved' ? 'The things you want to come back to.' : view === 'services' ? 'Local providers with details and contact options.' : view === 'businesses' ? 'Local businesses and online stores serving Madinaty.' : view === 'offers' ? 'Time-limited deals from businesses in Madinaty.' : 'Choose a category to see its activities and filters.';
+  const allTabs: { id: View; label: string }[] = [{ id: 'search', label: 'All results' }, { id: 'browse', label: 'All items' }, { id: 'services', label: 'Services' }, { id: 'businesses', label: 'Businesses' }, ...(featureFlags.offers ? [{ id: 'offers' as View, label: 'Offers' }] : [])];
+  const tabs = definition ? allTabs.filter(tab => tab.id === 'search' || definition.views.includes(tab.id)) : allTabs;
+  const activeTab = selectedCategory ? collection.scope || definition?.view || 'search' : view;
+  const activeFilters = Object.entries(collection).filter(([key, value]) => value && key !== 'scope') as [keyof CollectionFilters, string][];
+  const labels: Partial<Record<keyof CollectionFilters, string>> = { advertiserType: 'Provider type', condition: 'Condition', min: 'Minimum price', max: 'Maximum price', ...Object.fromEntries((definition?.filters || []).map(filter => [filter.key, filter.label])) };
+  const filtersApplied = Boolean(activeFilters.length || query || zone !== 'All zones' || verifiedOnly || collection.scope);
+  const activeCount = activeFilters.length + (zone !== 'All zones' ? 1 : 0) + (verifiedOnly ? 1 : 0);
   return <div className="browse-view">
-    <div className="page-intro"><div>{showBackHome && <button className="text-link back-home-link" onClick={onBackHome}><ArrowLeft size={15} /> {t('Back to home')}</button>}<span className="eyebrow">{t(view === 'saved' ? 'YOUR SPACE' : 'DISCOVER IN MADINATY')}</span><h1>{t(heading)}</h1><p>{t(subheading)}</p></div><button className="button button-accent" onClick={onPost}><Plus size={17} /> {t(" Post a listing")}</button></div>
-    <div className="browse-tabs" role="tablist" aria-label={t("Discovery type")}>{tabs.map((tab) => <button key={tab.id} className={view === tab.id || (view === 'browse' && tab.id === 'browse') ? 'active' : ''} onClick={() => onTabChange(tab.id)} role="tab" aria-selected={view === tab.id}>{t(tab.label)}</button>)}{view === 'saved' && <span className="saved-tab-label"><Bookmark size={15} fill="currentColor" /> {t(" Saved only")}</span>}</div>
-    {selectedCategory === 'Kids & family' && <nav className="kids-section-nav" aria-label={t('Kids & family sections')}>{['All kids & family', 'Nurseries', ...kidsItemTypes].map(section => <button key={section} type="button" aria-pressed={(collection.kidsSection || 'All kids & family') === section} onClick={() => setCollection({ ...emptyFilters, kidsSection: section === 'All kids & family' ? '' : section })}>{t(section)}</button>)}</nav>}
-    <div className="browse-toolbar"><div className="inline-search"><Search size={17} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t("Search this collection")} aria-label={t("Search this collection")} /></div><div className="filter-actions"><label className="select-wrap"><MapPin size={15} /><select value={zone} onChange={(event) => onZoneChange(event.target.value)} aria-label={t("Filter by zone")}>{zones.map((option) => <option key={option} value={option}>{t(option)}</option>)}</select><ChevronDown size={14} /></label><label className={`verified-toggle ${verifiedOnly ? 'checked' : ''}`}><input type="checkbox" checked={verifiedOnly} onChange={(event) => onVerifiedChange(event.target.checked)} /><BadgeCheck size={15} /> {t(" Verified only")}</label><label className="select-wrap sort-select"><SlidersHorizontal size={15} /><select value={sort} onChange={(event) => onSortChange(event.target.value as BrowseFilters['sort'])} aria-label={t("Sort results")}><option value="recommended">{t("Recommended")}</option><option value="newest">{t("Newest first")}</option><option value="price-low">{t("Price: low to high")}</option><option value="price-high">{t("Price: high to low")}</option></select><ChevronDown size={14} /></label></div></div>
-    <div className="results-meta"><span><b>{displayed.length}</b> {t(displayed.length === 1 ? 'result' : 'results')} <span className="meta-dot" /> {t(zone)}</span><div className="results-controls"><button className="filter-button" aria-expanded={filtersOpen} aria-controls="collection-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={15} />{t('Refine results')}</button><div className="layout-switch" aria-label={t('Results layout')}><button aria-label={t('List view')} aria-pressed={layout === 'list'} onClick={() => setLayout('list')}><ListFilter size={16} /></button><button aria-label={t('Grid view')} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')}><Grid2X2 size={16} /></button></div></div></div>
-    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={clearCollectionFilters} value={collection} onChange={setCollection} results={results} showPrice={['browse','search','saved'].includes(view) && collection.kidsSection !== 'Nurseries' && collection.category !== 'Nurseries'} showFurnishing={selectedCategory === 'Apartment rentals'} showAdvertiserType={splitCategories.includes(selectedCategory) && !['Health & fitness', 'Kids & family'].includes(selectedCategory)} conditionCategory={selectedCategory} /></div><div className="results-column">
-    {displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map((result) => <ResultCard key={result.id} result={result} translationEnabled={translationEnabled} verifiedResident={residentVerified} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} onReset={clearCollectionFilters} />}
+    <div className="page-intro"><div>{showBackHome && <button className="text-link back-home-link" onClick={onBackHome}><ArrowLeft size={15} />{t('Back to home')}</button>}<span className="eyebrow">{t(view === 'saved' ? 'YOUR SPACE' : 'DISCOVER IN MADINATY')}</span><h1>{t(heading)}</h1><p>{t(subheading)}</p></div><button className="button button-accent" onClick={onPost}><Plus size={17} />{t('Post a listing')}</button></div>
+    <div className="browse-tabs" role="tablist" aria-label={t('Discovery type')}>{tabs.map(tab => <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => selectedCategory ? changeCollection({ ...collection, scope: tab.id === 'search' ? '' : tab.id }) : onTabChange(tab.id)} role="tab" aria-selected={activeTab === tab.id}>{t(tab.label)}</button>)}</div>
+    {selectedCategory === 'Kids & family' && <nav className="kids-section-nav" aria-label={t('Kids & family sections')}>{['All kids & family', 'Nurseries', ...kidsItemTypes].map(section => <button key={section} type="button" aria-pressed={(collection.kidsSection || 'All kids & family') === section} onClick={() => changeCollection({ ...collection, scope: '', kidsSection: section === 'All kids & family' ? '' : section })}>{t(section)}</button>)}</nav>}
+    <div className="browse-toolbar"><div className="inline-search"><Search size={17} /><input value={query} onChange={event => onQueryChange(event.target.value)} placeholder={t('Search this collection')} aria-label={t('Search this collection')} /></div><div className="filter-actions">
+      <label className="select-wrap"><MapPin size={15} /><select value={zone} onChange={event => onZoneChange(event.target.value)} aria-label={t('Filter by zone')}>{zones.map(option => <option key={option} value={option}>{t(option)}</option>)}</select><ChevronDown size={14} /></label>
+      {selectedCategory !== 'Online Finds' && view !== 'businesses' && <label className={`verified-toggle ${verifiedOnly ? 'checked' : ''}`}><input type="checkbox" checked={verifiedOnly} onChange={event => onVerifiedChange(event.target.checked)} /><BadgeCheck size={15} />{t('Verified residents only')}</label>}
+      <label className="select-wrap sort-select"><SlidersHorizontal size={15} /><select value={showPrice || !sort.startsWith('price') ? sort : 'recommended'} onChange={event => onSortChange(event.target.value as BrowseFilters['sort'])} aria-label={t('Sort results')}><option value="recommended">{t('Recommended')}</option><option value="newest">{t('Newest first')}</option>{showPrice && <><option value="price-low">{t('Price: low to high')}</option><option value="price-high">{t('Price: high to low')}</option></>}</select><ChevronDown size={14} /></label>
+    </div></div>
+    <div className="active-filter-list" aria-label={t('Active filters')}>
+      {activeFilters.map(([key, value]) => <button key={key} className="active-filter" onClick={() => changeCollection({ ...collection, [key]: '' })} aria-label={`${t('Remove filter')}: ${t(labels[key] || key)}`}><span>{t(labels[key] || key)}: {t(value === 'small_business' ? 'Small businesses' : value === 'individual' ? 'Individuals' : value)}</span><X size={13} /></button>)}
+      {verifiedOnly && <button className="active-filter" onClick={() => onVerifiedChange(false)}>{t('Verified residents only')}<X size={13} /></button>}
+    </div>
+    <div className="results-meta"><span aria-live="polite"><b>{displayed.length}</b> {t(displayed.length === 1 ? 'result' : 'results')} <span className="meta-dot" />{t(zone)}</span><div className="results-controls"><button className="filter-button" aria-expanded={filtersOpen} aria-controls="collection-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={15} />{t(filtersOpen ? 'Hide filters' : 'Refine results')}{activeCount ? ` (${activeCount})` : ''}</button><div className="layout-switch" aria-label={t('Results layout')}><button aria-label={t('List view')} aria-pressed={layout === 'list'} onClick={() => setLayout('list')}><ListFilter size={16} /></button><button aria-label={t('Grid view')} aria-pressed={layout === 'grid'} onClick={() => setLayout('grid')}><Grid2X2 size={16} /></button></div></div></div>
+    <div className="market-results-layout"><div id="collection-filters" className={filtersOpen ? 'collection-filters is-open' : 'collection-filters'}><MarketplaceFilters onClear={clearCollectionFilters} value={collection} onChange={changeCollection} category={selectedCategory} view={view} isAdmin={isAdmin} onCategoryChange={onCategoryChange} /><button className="button button-dark close-mobile-filters" onClick={() => setFiltersOpen(false)}>{t('Show results')}</button></div><div className="results-column">
+      {loading ? <p role="status">{t('Loading ads…')}</p> : unavailable ? <p role="alert">{t('Listings are temporarily unavailable. Please refresh this page shortly.')}</p> : displayed.length ? <div className={`card-grid results-grid ${layout === 'list' ? 'list-layout' : ''}`}>{displayed.map(result => <ResultCard key={result.id} result={result} translationEnabled={translationEnabled} verifiedResident={residentVerified} favorite={favorites.has(result.id)} onFavorite={onFavorite} onContact={onContact} onReport={onReport} />)}</div> : <EmptyState view={view} query={query} filtersApplied={filtersApplied} onReset={clearCollectionFilters} />}
     </div></div>
   </div>;
 }
@@ -638,9 +670,10 @@ function ResultCard({ result, compact = false, favorite = false, verifiedResiden
   return <article className={`result-card ${compact ? 'compact-card' : ''} type-${result.type}`}>
     <div className={`result-image image-${result.image} art-${result.accent}`}><ResultArt result={result} /><span className="result-type">{isOffer ? <Zap size={11} fill="currentColor" /> : isBusiness ? <Store size={11} /> : isService ? <Wrench size={11} /> : <Package size={11} />} {t(isOffer ? 'Local offer' : isBusiness ? 'Business' : isService ? 'Service' : 'For sale')}</span>{isOffer && result.featured ? <span className="featured-label">{t("Featured")}</span> : null}</div>
     <div className="result-body">
-      <div className="result-topline"><span>{t(result.zone)} <span className="meta-dot" /> {t(result.createdAt)}</span>{onFavorite && <button className={`save-button ${favorite ? 'saved' : ''}`} onClick={() => onFavorite(result)} aria-label={t(favorite ? `Remove ${result.title} from saved` : `Save ${result.title}`)}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button>}</div>
+      <div className="result-topline"><span>{t(result.zone)} <span className="meta-dot" /> {postedDate(result.createdAt, language)}</span>{onFavorite && <button className={`save-button ${favorite ? 'saved' : ''}`} onClick={() => onFavorite(result)} aria-label={t(favorite ? `Remove ${result.title} from saved` : `Save ${result.title}`)}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button>}</div>
       <h3><button className="listing-title" onClick={() => { const url = new URL(window.location.href); url.searchParams.set('ad', result.id); window.history.pushState({ madinatyDealsAd: result.id }, '', url); setDetailsOpen(true); }}>{t(result.title)}</button></h3><p className="result-subtitle">{t(result.subtitle)}</p>
       {isListing && <div className="result-detail"><strong>{t(formatPrice(result.price))}</strong><span>{t(result.condition)}</span></div>}
+      {isService && hasActivePromotion(result) && <div className="promotion-detail"><Tag size={15} /><strong>{result.offer?.discount}</strong><span>{t('Offer valid until')}: {postedDate(result.offer!.validUntil, language)}</span></div>}
       {isService && result.reviewCount > 0 && <div className="result-detail"><strong><Star size={14} fill="currentColor" /> {result.rating}</strong><span>{result.reviewCount} {t(" reviews")}</span></div>}
       {isBusiness && <div className="result-detail">{result.category === 'Online Finds' ? <strong>{t(result.onlineStoreCategory || 'Online store')}</strong> : <strong><Star size={14} fill="currentColor" /> {result.rating}</strong>}<span>{t(result.hours)}</span></div>}
       {isOffer && <div className="result-detail"><strong className="discount-text">{t(result.discount)}</strong><span>{t(result.validUntil)}</span></div>}
@@ -651,7 +684,7 @@ function ResultCard({ result, compact = false, favorite = false, verifiedResiden
       <nav className="ad-breadcrumbs" aria-label={t('Ad breadcrumbs')}><span>{t('Home')}</span><ChevronRight size={13} /><span>{t(result.category)}</span><ChevronRight size={13} /><b>{t(result.title)}</b></nav>
       <div className="ad-gallery"><div className={`result-image image-${result.image} art-${result.accent}`}><ResultArt result={result} /><span className="gallery-count">1 / 1</span></div><small>{t('Photos supplied by the advertiser')}</small></div>
       <div className="ad-primary-info"><div><span className="ad-status-label">{t(isOffer ? 'Local offer' : isBusiness ? 'Business profile' : isService ? 'Service listing' : 'For sale')}</span><h3>{t(result.title)}</h3></div>{isListing && <strong>{t(formatPrice(result.price))}</strong>}</div>
-      <div className="ad-meta-row"><span><MapPin size={15} />{t(result.zone)}</span><span>{t(result.createdAt)}</span>{liveViewCount !== null && <span><Eye size={14} />{liveViewCount.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-EG')} {t('views')}</span>}<span className="ad-id">{t('Ad ID')}: <bdi dir="ltr">{getPublicAdId(result)}</bdi></span></div>
+      <div className="ad-meta-row"><span><MapPin size={15} />{t(result.zone)}</span><span>{postedDate(result.createdAt, language)}</span>{liveViewCount !== null && <span><Eye size={14} />{liveViewCount.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-EG')} {t('views')}</span>}<span className="ad-id">{t('Ad ID')}: <bdi dir="ltr">{getPublicAdId(result)}</bdi></span></div>
       <section className="ad-section"><div className="translation-row"><h4>{t('Description')}</h4>{canTranslate && <button type="button" className="text-link translation-action" onClick={toggleTranslation} disabled={translationBusy}>{translationBusy ? t('Translating…') : t(translatedContent ? 'Show original' : language === 'ar' ? 'Translate to Arabic' : 'Translate to English')}</button>}</div><p dir="auto">{translatedContent?.subtitle || t(result.subtitle)}</p>{translatedContent && <small className="translation-note">{t('Machine translation')}</small>}{translationError && <p className="form-error" role="alert">{t(translationError)}</p>}{isListing && <p><b>{t('Condition')}:</b> {t(result.condition)}{result.furnishing && <> · <b>{t('Furnishing')}:</b> {t(result.furnishing)}</>}</p>}</section>
       {isListing && <section className="ad-section"><h4>{t('Transaction options')}</h4><div className="transaction-options"><span><CircleCheck size={15} /> {t('Cash accepted')}</span><span><CircleCheck size={15} /> {t('Arrange pickup or delivery')}</span><span><CircleCheck size={15} /> {t('Confirm final price before payment')}</span></div></section>}
       <section className="seller-panel"><div className="seller-avatar">{(isListing ? result.seller : isOffer ? result.business : isService ? result.providerName || result.title : result.title).charAt(0)}</div><div><span className="eyebrow">{t('Listed by')}</span><h4>{t(isListing ? result.seller : isOffer ? result.business : isBusiness ? result.title : isService ? result.providerName || 'Trusted provider' : 'Trusted provider')}</h4><p>{t(result.verified || ('sellerVerified' in result && result.sellerVerified) ? 'Verified profile' : 'Community profile')}</p></div><div className="seller-contact-actions"><button className="button button-accent" onClick={() => onContact?.(result, isService || isBusiness ? 'whatsapp' : 'quote')}><MessageCircle size={16} />{t(isService || isBusiness ? 'Contact on WhatsApp' : 'Send message')}</button>{(isService || isBusiness) && result.socialAccount && <a className="button button-outline" href={result.socialAccount} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />{t('View social profile')}</a>}</div></section>
@@ -700,9 +733,9 @@ function getSafetyMessage(result: SearchResult): string {
   return 'Check the offer terms, expiry date, redemption conditions and final price before paying. Use the business’s listed contact and avoid suspicious payment links.';
 }
 
-function EmptyState({ view, query, onReset }: { view: View; query: string; onReset: () => void }) {
+function EmptyState({ view, query, filtersApplied = false, onReset }: { view: View; query: string; filtersApplied?: boolean; onReset: () => void }) {
   const { t } = useTranslation();
-  return <div className="empty-state"><span className="empty-icon"><Search size={23} /></span><h2>{t("No matches yet")}</h2><p>{t(query ? `We couldn't find anything for “${query}”.` : view === 'saved' ? 'There are no saved items here yet.' : 'There are no ads in this collection yet.')}</p><button className="button button-outline" onClick={onReset}>{t("Clear filters")}</button></div>;
+  return <div className="empty-state"><span className="empty-icon"><Search size={23} /></span><h2>{t("No matches yet")}</h2><p>{t(query ? `We couldn't find anything for “${query}”.` : filtersApplied ? 'No ads match these filters. Try changing or clearing them.' : view === 'saved' ? 'There are no saved items here yet.' : 'There are no ads in this collection yet.')}</p><button className="button button-outline" onClick={onReset}>{t("Clear filters")}</button></div>;
 }
 
 function AdminAccessDenied({ onBack }: { onBack: () => void }) {

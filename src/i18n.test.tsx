@@ -31,11 +31,10 @@ describe('Arabic and English experience', () => {
     unmount();
     render(<App />);
     expect(document.documentElement.lang).toBe('en');
-    fireEvent.click(screen.getByRole('button', { name: 'Browse items' }));
     fireEvent.click(screen.getByRole('button', { name: 'التبديل إلى العربية' }));
     expect(document.documentElement.dir).toBe('rtl');
     await screen.findByRole('button', { name: 'تسجيل الخروج' });
-    expect(screen.getByRole('heading', { name: translate('Find your next good thing', 'ar') })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: translate('Saved', 'ar') })).toBeTruthy();
   }, 15000);
 
   it('keeps canonical zone and category values in Arabic forms', async () => {

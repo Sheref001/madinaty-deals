@@ -89,6 +89,7 @@ export interface Service extends BaseResult {
   otherSubject?: string;
   homeServiceType?: HomeServiceType;
   housekeepingType?: HousekeepingType;
+  fitnessProviderType?: FitnessProviderType;
   petBusinessType?: PetBusinessType;
   offer?: { kind: ServiceOfferKind; discount: string; validUntil: string };
 }

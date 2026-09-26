@@ -1,9 +1,18 @@
 import { URL } from 'node:url';
+import { Buffer } from 'node:buffer';
 import { RequestError, readJson } from './request.js';
 import { canReview, consumeLimit } from './auth.js';
 import { vehicleResidenceAllowed } from './moderation.js';
 
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
+const decodeCursor = value => {
+  if (typeof value !== 'string' || value.length > 256) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    return parsed && typeof parsed.createdAt === 'string' && uuid(parsed.id) && !Number.isNaN(Date.parse(parsed.createdAt)) ? parsed : null;
+  } catch { return null; }
+};
+const encodeCursor = record => Buffer.from(JSON.stringify({ createdAt: new Date(record.createdAt).toISOString(), id: record.id })).toString('base64url');
 const riskyText = /(?:guaranteed\s+profit|send\s+otp|password|weapon|firearm| наркот|مخدر|سلاح|احصل على ربح مضمون)/i;
 const descriptionMarkup = /<\s*\/?\s*[a-z!][^>]*>?|\bjavascript\s*:/i;
 const descriptionUrl = /(?:\b(?:https?|ftp):\/\/|\bwww\.)\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/i;
@@ -62,11 +71,19 @@ export function publicPayload(kind, payload) {
 export function createSubmissions({ prisma, auth }) {
   async function handle(request, response, parts, send) {
     if (parts.length === 2 && parts[1] === 'public-submissions' && request.method === 'GET') {
+      const url = new URL(request.url || 'http://localhost/api/public-submissions');
+      const cursorValue = url.searchParams.get('cursor');
+      const cursor = cursorValue ? decodeCursor(cursorValue) : null;
+      if (cursorValue && !cursor) throw new RequestError(400, 'Invalid public submissions cursor');
+      const baseWhere = { status: 'PUBLISHED', ownerState: 'ACTIVE', user: { is: { status: 'ACTIVE' } } };
+      const where = cursor ? { ...baseWhere, OR: [{ createdAt: { lt: new Date(cursor.createdAt) } }, { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } }] } : baseWhere;
       const [records, hidden] = await Promise.all([
-        prisma.submission.findMany({ where: { status: 'PUBLISHED', ownerState: 'ACTIVE', user: { is: { status: 'ACTIVE' } } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
+        prisma.submission.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 101, select: { id: true, kind: true, payload: true, createdAt: true, uploads: { where: { purpose: 'photo', status: 'READY' }, orderBy: { createdAt: 'asc' }, select: { id: true } }, user: { select: { profile: { select: { displayName: true, verificationState: true } } } } } }),
         prisma.contentControl.findMany({ where: { status: { in: ['HIDDEN', 'REMOVED'] } }, select: { contentType: true, contentId: true } }),
       ]);
-      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), submissions: records.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.kind === 'store' ? record.payload.title : record.payload?.assistedPosting ? record.payload.providerName : record.user.profile?.displayName || 'Neighbour', verified: record.kind !== 'store' && !record.payload?.assistedPosting && record.user.profile?.verificationState === 'VERIFIED' })) });
+      const hasMore = records.length > 100;
+      const page = hasMore ? records.slice(0, 100) : records;
+      return send(response, 200, { hiddenContentIds: hidden.map(item => `${item.contentType}:${item.contentId}`), nextCursor: hasMore ? encodeCursor(page[page.length - 1]) : undefined, submissions: page.filter(vehicleResidenceAllowed).map(record => ({ id: record.id, kind: record.kind, payload: publicPayload(record.kind, record.payload), uploadIds: record.uploads.map(upload => upload.id), createdAt: record.createdAt, seller: record.kind === 'store' ? record.payload.title : record.payload?.assistedPosting ? record.payload.providerName : record.user.profile?.displayName || 'Neighbour', verified: record.kind !== 'store' && !record.payload?.assistedPosting && record.user.profile?.verificationState === 'VERIFIED' })) });
     }
     if (parts[1] === 'admin') {
       const current = request.method === 'GET' ? await auth.session(request) : await auth.protect(request);

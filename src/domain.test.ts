@@ -24,7 +24,7 @@ describe('discovery domain rules', () => {
 
   it('scopes collection views to their domain type', () => {
     expect(getViewResults('services', results).every((result) => result.type === 'service')).toBe(true);
-    expect(getViewResults('businesses', results)).toEqual([]);
+    expect(getViewResults('businesses', results)).toEqual([results[8]]);
     expect(getViewResults('offers', results)).toEqual([]);
   });
 
